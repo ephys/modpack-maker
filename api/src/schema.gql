@@ -1,0 +1,41 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input AddModpackModInput {
+  byUrl: [String!]!
+  modpackId: ID!
+}
+
+input CreateModpackInput {
+  minecraftVersion: String!
+  modLoader: ModLoader!
+  name: String!
+}
+
+type CreateModpackPayload {
+  node: Modpack!
+}
+
+enum ModLoader {
+  FABRIC
+  FORGE
+}
+
+type Modpack {
+  id: ID!
+  minecraftVersion: String!
+  modLoader: ModLoader!
+  name: String!
+  processingUrls: Boolean!
+}
+
+type Mutation {
+  addModpackMod(input: AddModpackModInput!): CreateModpackPayload!
+  createModpack(input: CreateModpackInput!): CreateModpackPayload!
+}
+
+type Query {
+  modpack(id: ID!): Modpack
+  modpacks: [Modpack!]
+}

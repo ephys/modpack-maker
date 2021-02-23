@@ -1,0 +1,21 @@
+.dropZone {
+  display: flex;
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.dropActive {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgb(0 0 0 / 0.5);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 5vw;
+}

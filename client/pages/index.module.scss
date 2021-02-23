@@ -1,0 +1,20 @@
+.page {
+  margin: auto;
+  background: rgb(0 0 0 / 0.1);
+  padding: 32px;
+  border-radius: 4px;
+
+  h2 {
+    margin-bottom: 16px;
+  }
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formControl.formControl {
+  width: 100%;
+}
