@@ -37,6 +37,8 @@ export class ModpackService {
   async addModUrlsToModpack(modpack: Modpack, byUrl: string[]): Promise<Modpack> {
     const allUrls = new Set([...modpack.queuedUrls, ...byUrl]);
 
+    // TODO: if there is a version available for the given CURSEFORGE URL, add that version
+    //  otherwise, queue
     modpack.queuedUrls = Array.from(allUrls.values());
 
     await this.modDiscoveryService.discoverUrls(byUrl);

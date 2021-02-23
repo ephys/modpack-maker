@@ -5,21 +5,21 @@ import { Mod } from './mod.entity';
 import { ModVersion } from './mod-version.entity';
 import { ModDiscoveryService } from './mod-discovery.service';
 import { BullModule } from '@nestjs/bull';
-import { ModDiscoveryProcessor } from './mod-discovery.processor';
+import { CurseforgeFileCrawlerProcessor } from './curseforge-file-crawler.processor';
 import { CurseforgeSearchCrawlerService } from './curseforge-search-crawler.service';
 
 @Module({
   imports: [
     DatabaseModule,
     BullModule.registerQueue({
-      name: 'mod-discovery-url',
+      name: 'fetch-curse-project-files',
     }),
   ],
   exports: [
     ModDiscoveryService,
   ],
   providers: [
-    ModDiscoveryProcessor,
+    CurseforgeFileCrawlerProcessor,
     ModDiscoveryService,
     CurseforgeSearchCrawlerService,
     {

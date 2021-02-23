@@ -8,6 +8,9 @@ import { addModpackMod } from '../../api/add-modpack-mod';
 import { assertIsString } from '../../utils/typing';
 import { CircularProgress } from '@material-ui/core';
 
+// TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
+//  else display "STABLE UPDATE AVAILABLE"
+
 export default function ModpackRoute() {
   const router = useRouter();
   const { id } = router.query;
