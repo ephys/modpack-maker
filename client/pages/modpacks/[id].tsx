@@ -6,6 +6,7 @@ import { useCallback, useEffect } from 'react';
 import css from './[id].module.scss';
 import { addModpackMod } from '../../api/add-modpack-mod';
 import { assertIsString } from '../../utils/typing';
+import { CircularProgress } from '@material-ui/core';
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -76,7 +77,7 @@ function ModpackView(props: { id: string }) {
           <p>{modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
 
-          <h2>Mod List</h2>
+          <h2>Mod List {modpack.processingUrls && <CircularProgress />}</h2>
         </div>
       </DropZone>
     </>

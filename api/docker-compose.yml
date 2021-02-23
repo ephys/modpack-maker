@@ -1,8 +1,8 @@
 version: '2'
 services:
-  mmc-psql:
-    image: postgres:12.2
-    container_name: mmc-psql
+  psql:
+    image: postgres:12.2-alpine
+    container_name: mp-psql
     ports:
       - "19132:5432"
     environment:
@@ -11,3 +11,8 @@ services:
       POSTGRES_USER: user
       POSTGRES_DB: db
     mem_limit: 256M
+  redis:
+    image: redis:6.2-alpine
+    container_name: mp-redis
+    ports:
+      - "19133:6379"

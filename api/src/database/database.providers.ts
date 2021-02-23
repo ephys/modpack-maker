@@ -1,5 +1,8 @@
 import { Sequelize } from 'sequelize-typescript';
 import { Modpack } from '../modpack/modpack.entity';
+import { Mod } from '../mod/mod.entity';
+import { ModVersion } from '../mod/mod-version.entity';
+import { CurseforgeProject } from '../mod/curseforge-project.entity';
 
 export const databaseProviders = [
   {
@@ -12,10 +15,14 @@ export const databaseProviders = [
         username: 'user',
         password: 'password',
         database: 'db',
+        logging: false,
       });
 
       sequelize.addModels([
         Modpack,
+        Mod,
+        ModVersion,
+        CurseforgeProject,
       ]);
 
       await sequelize.sync();

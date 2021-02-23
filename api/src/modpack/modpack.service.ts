@@ -3,6 +3,7 @@ import { Modpack } from './modpack.entity';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { generateId } from '../utils/generic-utils';
 import { ModLoader } from '../../../common/modloaders';
+import { ModDiscoveryService } from '../mod/mod-discovery.service';
 
 type TCreateModpackInput = {
   name: string,
@@ -12,7 +13,10 @@ type TCreateModpackInput = {
 
 @Injectable()
 export class ModpackService {
-  constructor(@Inject(MODPACK_REPOSITORY) private modpackRepository: typeof Modpack) {}
+  constructor(
+    @Inject(MODPACK_REPOSITORY) private modpackRepository: typeof Modpack,
+    private modDiscoveryService: ModDiscoveryService,
+  ) {}
 
   async getModpacks(): Promise<Modpack[]> {
     return this.modpackRepository.findAll<Modpack>();
@@ -34,6 +38,8 @@ export class ModpackService {
     const allUrls = new Set([...modpack.queuedUrls, ...byUrl]);
 
     modpack.queuedUrls = Array.from(allUrls.values());
+
+    await this.modDiscoveryService.discoverUrls(byUrl);
 
     return modpack.save();
   }
