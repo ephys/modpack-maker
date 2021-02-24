@@ -81,6 +81,11 @@ function ModpackView(props: { id: string }) {
           <p>{modpack.modLoader}</p>
 
           <h2>Mod List {modpack.processingUrls && <CircularProgress />}</h2>
+          <ul>
+            {modpack.mods.map(mod => {
+              return <li key={mod.modId}>{mod.modId} - {mod.name} - {mod.modVersion}</li>
+            })}
+          </ul>
         </div>
       </DropZone>
     </>
@@ -98,6 +103,11 @@ function useData(modpackId: string) {
           modLoader
           processingUrls
           name
+          mods {
+            modId
+            modVersion
+            name
+          }
         }
       }
     `,
