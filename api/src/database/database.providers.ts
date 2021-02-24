@@ -3,6 +3,7 @@ import { Modpack } from '../modpack/modpack.entity';
 import { Mod } from '../mod/mod.entity';
 import { ModVersion } from '../mod/mod-version.entity';
 import { CurseforgeProject } from '../mod/curseforge-project.entity';
+import ModpackMod from '../modpack/modpack-mod.entity';
 
 export const SEQUELIZE_PROVIDER = 'SEQUELIZE';
 
@@ -22,6 +23,7 @@ export const databaseProviders = [
 
       sequelize.addModels([
         Modpack,
+        ModpackMod,
         Mod,
         ModVersion,
         CurseforgeProject,

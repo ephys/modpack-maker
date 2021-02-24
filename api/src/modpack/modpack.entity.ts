@@ -3,6 +3,7 @@ import { Field as GraphQl, ObjectType as GraphQlObject, ID } from '@nestjs/graph
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
+import ModpackMod from './modpack-mod.entity';
 
 @GraphQlObject()
 @DB.Table
@@ -36,13 +37,14 @@ export class Modpack extends DB.Model<Modpack> {
 
   @DB.AllowNull(false)
   @DB.Default([])
-  @DB.Column(DB.DataType.ARRAY(DB.DataType.TEXT))
-  queuedUrls: string[];
+  @DB.Column(DB.DataType.ARRAY(DB.DataType.INTEGER))
+  pendingCurseForgeProjectIds: number[];
 
-  // TODO: link to mod-versions
+  @DB.HasMany(() => ModpackMod)
+  installedMods: ModpackMod[];
 
   @GraphQl(() => Boolean)
   get processingUrls(): boolean {
-    return this.queuedUrls.length > 0;
+    return this.pendingCurseForgeProjectIds.length > 0;
   }
 }

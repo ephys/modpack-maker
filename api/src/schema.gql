@@ -22,10 +22,17 @@ enum ModLoader {
   FORGE
 }
 
+type ModVersion {
+  modId: String!
+  modVersion: String!
+  name: String!
+}
+
 type Modpack {
   id: ID!
   minecraftVersion: String!
   modLoader: ModLoader!
+  mods: [ModVersion!]!
   name: String!
   processingUrls: Boolean!
 }

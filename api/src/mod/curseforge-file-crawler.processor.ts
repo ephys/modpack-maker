@@ -27,9 +27,10 @@ export class CurseforgeFileCrawlerProcessor {
 
   @Process()
   async fetchCurseProjectFiles(job: Job<number>) {
-    console.log('Processing CurseForge mod ' + job.data);
+    const curseProjectId = job.data;
+    console.log('Processing CurseForge mod ' + curseProjectId);
 
-    const files = await getCurseForgeModFiles(job.data);
+    const files = await getCurseForgeModFiles(curseProjectId);
 
     const fileIds = [];
 
@@ -54,7 +55,7 @@ export class CurseforgeFileCrawlerProcessor {
       console.log('Processing file', file.id, `(${file.displayName})`);
 
       try {
-        const processedData = await this.processFile(file);
+        const processedData = await this.processFile(file, curseProjectId);
 
         // @ts-ignore
         await ModVersion.create(processedData);
@@ -66,13 +67,6 @@ export class CurseforgeFileCrawlerProcessor {
       }
     }
 
-    // -> get files
-    // -> for each file: Skip if ModVersionEntity exists for that file
-    // -> else download the file
-    // -> extract meta like in https://github.com/Ephys/mc-curseforge-updateJSONURL/blob/main/index.js
-    //   -> file.gameVersion (array): 1.6.4, Forge, Fabric
-    //   -> releaseType
-    // -> create ModVersionEntity (+ ModEntity if it does not exist, but maybe it will be dropped)
     // -> remove file from all ModpackEntity queuedUrls
     // -> add ModVersionEntity to ModpackEntities using best fit: We always link a file, even if not compatible
     //  -> most recent stable file for that version + modloader
@@ -85,7 +79,7 @@ export class CurseforgeFileCrawlerProcessor {
     // TODO: release date
   }
 
-  private async processFile(fileData: TForgeFile) {
+  private async processFile(fileData: TForgeFile, curseProjectId: number) {
     const fileBuffer = await downloadModFile(fileData.downloadUrl);
 
     const meta = await getModMetaFromJar(fileBuffer);
@@ -132,6 +126,7 @@ export class CurseforgeFileCrawlerProcessor {
       supportedMinecraftVersions: Array.from(supportedMcVersions),
       supportedModLoaders: [meta.loader || curseMetaModLoader],
       curseFileId: fileData.id,
+      curseProjectId,
       downloadUrl: fileData.downloadUrl,
       releaseDate: fileData.fileDate,
       releaseType: getCurseReleaseType(fileData.releaseType),

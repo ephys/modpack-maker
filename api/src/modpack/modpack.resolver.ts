@@ -1,9 +1,21 @@
-import { Mutation, ObjectType, Resolver, Query, Field, Args, InputType, ID, registerEnumType } from '@nestjs/graphql';
+import {
+  Mutation,
+  ObjectType,
+  Resolver,
+  Query,
+  Field,
+  Args,
+  InputType,
+  ID,
+  registerEnumType,
+  ResolveField, Parent,
+} from '@nestjs/graphql';
 import { MinLength, MaxLength, IsEnum, IsIn } from 'class-validator';
 import { ModpackService } from './modpack.service';
 import { Modpack } from './modpack.entity';
 import { ModLoader } from '../../../common/modloaders';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import { ModVersion } from '../mod/mod-version.entity';
 
 registerEnumType(ModLoader, {
   name: 'ModLoader',
@@ -46,7 +58,7 @@ class AddModpackModInput {
   byUrl: string[];
 }
 
-@Resolver('Modpack')
+@Resolver(() => Modpack)
 export class ModpackResolver {
 
   constructor(private modpackService: ModpackService) {}
@@ -81,6 +93,12 @@ export class ModpackResolver {
     await this.modpackService.addModUrlsToModpack(modpack, input.byUrl);
 
     return new CreateModpackPayload().withNode(modpack);
+  }
+
+  // TODO: Pagination
+  @ResolveField('mods', () => [ModVersion])
+  async getModpackMods(@Parent() modpack: Modpack): Promise<ModVersion[]> {
+    return this.modpackService.getModpackMods(modpack);
   }
 }
 

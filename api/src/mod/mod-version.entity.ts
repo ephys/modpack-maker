@@ -2,6 +2,9 @@ import * as DB from 'sequelize-typescript';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
+import { Modpack } from '../modpack/modpack.entity';
+import { Field as GraphQl, ID, ObjectType as GraphQlObject } from '@nestjs/graphql';
+import ModpackMod from '../modpack/modpack-mod.entity';
 
 export enum ReleaseType {
   STABLE = 'STABLE',
@@ -10,6 +13,7 @@ export enum ReleaseType {
 }
 
 @DB.Table
+@GraphQlObject()
 export class ModVersion extends DB.Model<ModVersion> {
 
   @DB.BeforeValidate
@@ -39,10 +43,12 @@ export class ModVersion extends DB.Model<ModVersion> {
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.TEXT)
+  @GraphQl(() => String, { name: 'modId' })
   modId: string;
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.TEXT)
+  @GraphQl(() => String, { name: 'name' })
   displayName: string;
 
   @DB.AllowNull(false)
@@ -56,6 +62,16 @@ export class ModVersion extends DB.Model<ModVersion> {
   curseFileId: number;
 
   @DB.AllowNull(false)
+  @DB.Column(DB.DataType.INTEGER)
+  /**
+   * For files retrieved from curseforge: The curseforge project ID
+   * Used for finding mods by curseforge project ID
+   *
+   * @type {number}
+   */
+  curseProjectId: number;
+
+  @DB.AllowNull(false)
   @DB.Column(DB.DataType.TEXT)
   /**
    * Where this version can be downloaded
@@ -66,6 +82,7 @@ export class ModVersion extends DB.Model<ModVersion> {
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.TEXT)
+  @GraphQl(() => String, { name: 'modVersion' })
   /**
    * Mod version, retrieved from internal files
    *
@@ -103,6 +120,9 @@ export class ModVersion extends DB.Model<ModVersion> {
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.DATE)
   releaseDate: Date;
+
+  @DB.HasMany(() => ModpackMod)
+  inModpacks: ModpackMod[];
 
   // TODO: dependencies
 }
