@@ -36,6 +36,10 @@ export class CurseforgeSearchCrawlerService {
     for await (const item of iterateForgeModList({ pageSize: PAGE_SIZE })) {
       const itemLastUpdate = getLastEditDate(item);
 
+      if (itemLastUpdate == null) {
+        continue;
+      }
+
       // we only go up to the first item whose update is already stored
       if (new Date(itemLastUpdate).getTime() <= lastUpdateAt.getTime()) {
         break;
@@ -125,10 +129,16 @@ export class CurseforgeSearchCrawlerService {
       let itemCount = 0;
 
       for await (const item of iterateForgeModList({ pageSize: PAGE_SIZE, categoryId: category.id })) {
+        const lastUpload = getLastEditDate(item);
+
+        if (lastUpload == null) {
+          continue;
+        }
+
         allItems.set(item.id, {
           forgeId: item.id,
           slug: item.slug,
-          lastForgeEditAt: getLastEditDate(item),
+          lastForgeEditAt: lastUpload,
           versionListUpToDate: false,
         });
 
@@ -148,9 +158,9 @@ export class CurseforgeSearchCrawlerService {
   }
 }
 
-function getLastEditDate(curseProject): string {
+function getLastEditDate(curseProject): string | null {
   const mostRecentFile = lastItem(curseProject.latestFiles);
   // FIXME Typings
   // @ts-ignore
-  return mostRecentFile.fileDate;
+  return mostRecentFile?.fileDate;
 }
