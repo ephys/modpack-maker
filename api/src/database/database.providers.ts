@@ -4,9 +4,11 @@ import { Mod } from '../mod/mod.entity';
 import { ModVersion } from '../mod/mod-version.entity';
 import { CurseforgeProject } from '../mod/curseforge-project.entity';
 
+export const SEQUELIZE_PROVIDER = 'SEQUELIZE';
+
 export const databaseProviders = [
   {
-    provide: 'SEQUELIZE',
+    provide: SEQUELIZE_PROVIDER,
     useFactory: async () => {
       const sequelize = new Sequelize({
         dialect: 'postgres',
