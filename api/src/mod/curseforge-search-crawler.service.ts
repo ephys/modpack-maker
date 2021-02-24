@@ -78,11 +78,13 @@ export class CurseforgeSearchCrawlerService {
         await Promise.all([
           CurseforgeProject.bulkCreate(newItems, {
             fields: ['forgeId', 'slug', 'lastForgeEditAt', 'versionListUpToDate'],
+            transaction,
           }),
           Promise.all(
             updatableItems.map(item => {
               return CurseforgeProject.update(item, {
                 where: { forgeId: item.forgeId },
+                transaction,
               });
             }),
           ),
