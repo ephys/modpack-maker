@@ -1,7 +1,19 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
-import { getCurseForgeModFiles } from '../curseforge.api';
+import { getCurseForgeModFiles, getCurseReleaseType, TForgeFile } from '../curseforge.api';
+import { ModVersion } from './mod-version.entity';
+import { Op } from 'sequelize';
+import fetch from 'node-fetch';
+import { getModMetaFromJar } from '../mod-data-extractor';
+import * as minecraftVersion from '../../../common/minecraft-versions.json';
+import { ModLoader } from '../../../common/modloaders';
+
+// TODO: every 15 minutes, if queue is empty, fill it with every mod that is in a modpack & whose versionListUpToDate is false
+
+// TODO: extract MC version from Jar (using loaderVersion and mod.deps)
+// TODO: extract forge version from Jar (either mod.deps and loaderVersion)
+// TODO: extract other mod (required) deps
 
 enum CurseReleaseType {
   RELEASE = 1,
@@ -15,20 +27,50 @@ export class CurseforgeFileCrawlerProcessor {
 
   @Process()
   async fetchCurseProjectFiles(job: Job<number>) {
-    this.logger.log('Fetching files for Curse Project ' + job.data);
+    console.log('Processing CurseForge mod ' + job.data);
 
     const files = await getCurseForgeModFiles(job.data);
+
+    const fileIds = [];
+
+    for (const file of files) {
+      fileIds.push(file.id);
+    }
+
+    const existingFiles = await ModVersion.findAll({
+      attributes: ['curseFileId'],
+      where: { curseFileId: { [Op.in]: fileIds } },
+    });
+
+    const existingFilesIds = new Set(existingFiles.map(item => item.curseFileId));
+
+    for (const file of files) {
+      // file has already been processed
+      // TODO: cache mod file metadata so we can update the forge meta without having to parse the Jar again
+      if (existingFilesIds.has(file.id)) {
+        continue;
+      }
+
+      console.log('Processing file', file.id, `(${file.displayName})`);
+
+      try {
+        const processedData = await this.processFile(file);
+
+        // @ts-ignore
+        await ModVersion.create(processedData);
+      } catch (e) {
+        console.error('Processing Curse file ' + file.id + ' failed:');
+        console.error(e);
+
+        return;
+      }
+    }
 
     // -> get files
     // -> for each file: Skip if ModVersionEntity exists for that file
     // -> else download the file
     // -> extract meta like in https://github.com/Ephys/mc-curseforge-updateJSONURL/blob/main/index.js
-    //   -> name
-    //   -> modVersion
-    //   -> modid
-    //   -> downloadUrl
     //   -> file.gameVersion (array): 1.6.4, Forge, Fabric
-    //   -> curseFileId
     //   -> releaseType
     // -> create ModVersionEntity (+ ModEntity if it does not exist, but maybe it will be dropped)
     // -> remove file from all ModpackEntity queuedUrls
@@ -39,35 +81,66 @@ export class CurseforgeFileCrawlerProcessor {
     //  -> else, fallback to most recent file in same minecraft version
     //  -> else, fallback to most recent file
 
-
     // TODO: dependencies
+    // TODO: release date
+  }
 
-    console.dir(files, {
-      depth: 10,
-      colors: true,
-    });
+  private async processFile(fileData: TForgeFile) {
+    const fileBuffer = await downloadModFile(fileData.downloadUrl);
+
+    const meta = await getModMetaFromJar(fileBuffer);
+
+    const supportedPlatforms = fileData.gameVersion.map(version => version.toUpperCase());
+    const supportedMcVersions = new Set();
+    if (meta.mcVersion) {
+      supportedMcVersions.add(meta.mcVersion);
+    }
+
+    let curseMetaModLoader = null;
+    for (const platform of supportedPlatforms) {
+      if (minecraftVersion.includes(platform)) {
+        supportedMcVersions.add(platform);
+        continue;
+      }
+
+      if (Object.keys(ModLoader).includes(platform)) {
+        if (curseMetaModLoader) {
+          throw new Error('[CurseForge File ' + fileData.id + '] declared supporting two modLoaders: ' + curseMetaModLoader + ' & ' + platform)
+        }
+
+        curseMetaModLoader = platform;
+        continue;
+      }
+
+      throw new Error('[CurseForge File ' + fileData.id + '] Unknown Platform: ' + platform);
+    }
+
+    if (meta.loader && curseMetaModLoader && meta.loader !== curseMetaModLoader) {
+      throw new Error('[CurseForge File ' + fileData.id + '] Platform mismatch between curseforge & file jar');
+    }
+
+    // forbid uploading the default project mod name.
+    if (meta.modId === 'examplemod') {
+      throw new Error('Mod file ' + fileData.id + ' is declaring a mod named examplemod');
+    }
+
+    return {
+      modId: meta.modId,
+      displayName: meta.name,
+      modVersion: meta.version,
+      // TODO: extract from Jar & use range
+      supportedMinecraftVersions: Array.from(supportedMcVersions),
+      supportedModLoaders: [meta.loader || curseMetaModLoader],
+      curseFileId: fileData.id,
+      downloadUrl: fileData.downloadUrl,
+      releaseDate: fileData.fileDate,
+      releaseType: getCurseReleaseType(fileData.releaseType),
+    };
   }
 }
 
-// [start:dev:app]   {
-//   [start:dev:app]     id: 2209879,
-//     [start:dev:app]     displayName: 'SoundFilters-0.2_beta.jar',
-//     [start:dev:app]     fileName: 'SoundFilters-0.2_beta.jar',
-//     [start:dev:app]     fileDate: '2014-07-28T18:17:05.067Z',
-//     [start:dev:app]     fileLength: 34586,
-//     [start:dev:app]     releaseType: 2,
-//     [start:dev:app]     fileStatus: 4,
-//     [start:dev:app]     downloadUrl: 'https://edge.forgecdn.net/files/2209/879/SoundFilters-0.2_beta.jar',
-//     [start:dev:app]     isAlternate: false,
-//     [start:dev:app]     alternateFileId: 0,
-//     [start:dev:app]     dependencies: [],
-//     [start:dev:app]     isAvailable: true,
-//     [start:dev:app]     modules: [],
-//     [start:dev:app]     packageFingerprint: 4049317632,
-//     [start:dev:app]     gameVersion: [ '1.6.4' ],
-//     [start:dev:app]     installMetadata: null,
-//     [start:dev:app]     serverPackFileId: null,
-//     [start:dev:app]     hasInstallScript: false,
-//     [start:dev:app]     gameVersionDateReleased: '2013-09-19T00:00:00Z',
-//     [start:dev:app]     gameVersionFlavor: null
-//     [start:dev:app]   }
+async function downloadModFile(url) {
+  const result = await fetch(url);
+
+  return result.buffer();
+}

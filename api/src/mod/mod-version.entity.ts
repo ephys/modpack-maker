@@ -3,8 +3,8 @@ import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
 
-enum ReleaseType {
-  RELEASE = 'RELEASE',
+export enum ReleaseType {
+  STABLE = 'STABLE',
   BETA = 'BETA',
   ALPHA = 'ALPHA',
 }
@@ -12,11 +12,38 @@ enum ReleaseType {
 @DB.Table
 export class ModVersion extends DB.Model<ModVersion> {
 
+  @DB.BeforeValidate
+  static validate(instance: ModVersion) {
+    if (instance.supportedMinecraftVersions.includes(null)) {
+      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) has null in supportedMinecraftVersions`);
+    }
+
+    if (instance.supportedMinecraftVersions.length === 0) {
+      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) must support at least one minecraft version`);
+    }
+
+    if (instance.supportedModLoaders.includes(null)) {
+      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) has null in supportedModLoaders`);
+    }
+
+    if (instance.supportedModLoaders.length === 0) {
+      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) must support at least one minecraft version`);
+    }
+  }
+
   @DB.AllowNull(false)
   @DB.PrimaryKey
   @DB.AutoIncrement
   @DB.Column(DB.DataType.INTEGER)
   internalId: number;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.TEXT)
+  modId: string;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.TEXT)
+  displayName: string;
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.INTEGER)
@@ -72,6 +99,10 @@ export class ModVersion extends DB.Model<ModVersion> {
    * @type {number}
    */
   releaseType: ReleaseType;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.DATE)
+  releaseDate: Date;
 
   // TODO: dependencies
 }

@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import { ReleaseType } from './mod/mod-version.entity';
 
 // https://twitchappapi.docs.apiary.io/#/reference/0/
 
@@ -52,11 +53,37 @@ export function getCurseForgeModCategories() {
   return fetchCurseForge('/category/section/6');
 }
 
-export function getCurseForgeModFiles(curseProjectId: number) {
+export type TForgeFile = {
+  id: number,
+  displayName: string,
+  fileName: string,
+  fileDate: string,
+  fileLength: number,
+  releaseType: number,
+  fileStatus: number,
+  downloadUrl: string,
+  isAlternate: boolean,
+  alternateFileId: number,
+  dependencies: [], // TODO
+  isAvailable: boolean,
+  modules: Array<{
+    foldername: string,
+    fingerprint: number,
+  }>,
+  packageFingerprint: number,
+  gameVersion: string[], // "Forge", "1.16.4"
+  // installMetadata:
+  // serverPackFileId
+  // hasInstallScript
+  // gameVersionDateReleased
+  // gameVersionFlavor
+}
+
+export function getCurseForgeModFiles(curseProjectId: number): Promise<TForgeFile[]> {
   return fetchCurseForge(`/addon/${curseProjectId}/files`);
 }
 
-async function fetchCurseForge(path) {
+async function fetchCurseForge<T>(path) {
   const res = await fetch(`https://addons-ecs.forgesvc.net/api/v2${path}`);
 
   if (!res.ok) {
@@ -64,4 +91,13 @@ async function fetchCurseForge(path) {
   }
 
   return res.json();
+}
+
+export function getCurseReleaseType(releaseTypeId: number): ReleaseType {
+  switch (releaseTypeId) {
+    case 1: return ReleaseType.STABLE;
+    case 2: return ReleaseType.BETA;
+    case 3: return ReleaseType.ALPHA;
+    default: throw new Error('Unknown Curse release type ID ' + releaseTypeId);
+  }
 }
