@@ -26,5 +26,3 @@ import { ModModule } from './mod/mod.module';
   providers: [],
 })
 export class AppModule {}
-
-
