@@ -34,7 +34,7 @@ type Modpack {
   modLoader: ModLoader!
   mods: [ModVersion!]!
   name: String!
-  processingUrls: Boolean!
+  processingCount: Int!
 }
 
 type Mutation {

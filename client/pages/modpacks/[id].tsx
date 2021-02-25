@@ -50,7 +50,7 @@ function ModpackView(props: { id: string }) {
     }
 
     let timeout;
-    if (modpack.processingUrls) {
+    if (modpack.processingCount > 0) {
       timeout = setTimeout(() => {
         swr.revalidate();
       }, 4000);
@@ -80,7 +80,7 @@ function ModpackView(props: { id: string }) {
           <p>{modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
 
-          <h2>Mod List {modpack.processingUrls && <CircularProgress />}</h2>
+          <h2>Mod List ({modpack.mods.length} mods, {modpack.processingCount} processing)</h2>
           <ul>
             {modpack.mods.map(mod => {
               return <li key={mod.modId}>{mod.modId} - {mod.name} - {mod.modVersion}</li>
@@ -101,7 +101,7 @@ function useData(modpackId: string) {
           id
           minecraftVersion
           modLoader
-          processingUrls
+          processingCount
           name
           mods {
             modId
