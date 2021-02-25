@@ -8,6 +8,8 @@ import { uniq } from 'lodash';
 import { ModVersion } from '../mod/mod-version.entity';
 import { Sequelize } from 'sequelize';
 import ModpackMod from './modpack-mod.entity';
+import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import { parseMinecraftVersion } from '../utils/minecraft-utils';
 
 type TCreateModpackInput = {
   name: string,
@@ -71,25 +73,26 @@ export class ModpackService {
 
     // TODO: forbid adding the same modId twice
 
+    const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
+
     const mod = await ModVersion.findOne({
       attributes: ['internalId'],
       where: {
         modId,
       },
-      // TODO: dynamic parameters
-      // TODO: add all valid minecraft versions, with
-      //  - modpack MC version first
-      //  - else those before that version but same MC MAJOR
-      //  - else any other
       order: Sequelize.literal(`
-        "supportedMinecraftVersions"::text[] @> ARRAY['1.16.4'] DESC,
-        -- other valid MC versions here
-        "supportedModLoaders"::text[] @> ARRAY['FORGE'] DESC,
+        ${validMcVersions.map(mcVersion => {
+          return `"supportedMinecraftVersions"::text[] @> ARRAY['${mcVersion}'] DESC,\n`  
+        }).join('')}
+        "supportedModLoaders"::text[] @> ARRAY[:modLoader] DESC,
         "releaseType" = 'STABLE' DESC,
         "releaseType" = 'BETA' DESC,
         "releaseType" = 'ALPHA' DESC,
         "releaseDate" DESC
       `),
+      replacements: {
+        modLoader: modpack.modLoader,
+      }
     });
 
     if (!mod) {
@@ -120,4 +123,31 @@ export class ModpackService {
       }]
     })
   }
+}
+
+export function getPreferredMinecraftVersions(mainVersionStr: string, existingMcVersions: string[]) {
+  const validMcVersions = [mainVersionStr];
+  const mainVersion = parseMinecraftVersion(mainVersionStr);
+
+  for (const versionStr of existingMcVersions) {
+    const version = parseMinecraftVersion(versionStr);
+
+    if (version.major === mainVersion.major && version.minor <= mainVersion.minor) {
+      validMcVersions.push(versionStr);
+    }
+  }
+
+  validMcVersions.sort((aStr, bStr) => {
+    const a = parseMinecraftVersion(aStr);
+    const b = parseMinecraftVersion(bStr);
+
+    // sort with most recent release first
+    if (a.major !== b.major) {
+      return b.major - a.major;
+    }
+
+    return b.minor - a.minor;
+  });
+
+  return validMcVersions;
 }

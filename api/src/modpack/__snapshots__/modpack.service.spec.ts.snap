@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`getPreferredMinecraftVersions returns 1`] = `
+Array [
+  "1.16.4",
+  "1.16.4",
+  "1.16.3",
+  "1.16.2",
+  "1.16.1",
+  "1.16",
+]
+`;
