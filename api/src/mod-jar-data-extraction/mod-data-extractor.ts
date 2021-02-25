@@ -16,46 +16,59 @@ export type TModMeta = {
 
 // FIXME: bow infinity fix uses "bifmod.info" :/
 
-export async function getModMetaFromJar(modJar: Buffer): Promise<Partial<TModMeta>> {
+export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<TModMeta>>> {
   const data = await Zip.loadAsync(modJar);
+
+  const hasFabric = data.files['fabric.mod.json'];
+  const hasLegacyForge = data.files['mcmod.info'];
+  const hasNewForge = data.files['META-INF/mods.toml'];
+
+  // safeguard
+  if (hasLegacyForge && hasNewForge) {
+    throw new Error('Found a Jar declaring both a legacy forge mod & a new forge mod.');
+  }
+
+  // safeguard, but this might be allowed.
+  if (hasFabric && (hasLegacyForge || hasNewForge)) {
+    throw new Error('Found a Jar declaring both forge & fabric.');
+  }
+
+  // FABRIC MOD
+  if (data.files['fabric.mod.json']) {
+    // fabric can only contain one mod
+    return [
+      getMetaFromFabricManifest(await data.file('fabric.mod.json').async('string'))
+    ];
+  }
+
+  // LEGACY FORGE MOD
+  if (data.files['mcmod.info']) {
+    return getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string'));
+  }
+
   let modMeta = {};
 
-  // TODO support fabric.mod.json
-  // TODO: deps + mc + fabric loader
-  if (data.files['fabric.mod.json']) {
-    return getMetaFromFabricManifest(await data.file('fabric.mod.json').async('string'));
-  }
-
-  // TODO: deps + mc + forge version
-  if (data.files['mcmod.info']) {
-    const newMeta = getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string'));
-
-    mergeModMeta(modMeta, newMeta);
-
-    if (isMetaComplete(modMeta)) {
-      return modMeta;
-    }
-  }
-
+  // NEW FORGE MOD
   if (data.files['META-INF/mods.toml']) {
     const newMeta = getMetaFromModsToml(await data.file('META-INF/mods.toml').async('string'));
     mergeModMeta(modMeta, newMeta);
 
     if (isMetaComplete(modMeta)) {
-      return modMeta;
+      return [modMeta];
     }
   }
 
+  // NEW FORGE META
   if (data.files['META-INF/MANIFEST.MF']) {
     const newMeta = getMetaFromJarManifest(await data.file('META-INF/MANIFEST.MF').async('string'));
     mergeModMeta(modMeta, newMeta);
 
     if (isMetaComplete(modMeta)) {
-      return modMeta;
+      return [modMeta];
     }
   }
 
-  return modMeta;
+  return [modMeta];
 }
 
 function isMetaComplete(t: Partial<TModMeta>): t is TModMeta {
@@ -80,6 +93,8 @@ function mergeModMeta(main: Partial<TModMeta>, toAdd: Partial<TModMeta>): Partia
 
 function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
   const manifest = JSON.parse(fileContents);
+
+  // TODO: deps + mc + fabric loader
 
   /* TODO:
     "depends": {
@@ -191,7 +206,7 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
 
   // TODO: what if there is more than one mod in the package?
   if (manifest.mods.length !== 1) {
-    throw new Error('Found a mods.toml with more than one mod declaration. What do we do?');
+    throw new Error('Found a mods.toml mod with more than one mod declaration. What do we do?');
   }
 
   const firstMod = manifest.mods[0];
@@ -247,25 +262,27 @@ function permissivelyParseJson(fileContents) {
   return JSON.parse(fileContents.replaceAll('\n', ''));
 }
 
-export function getMetaFromLegacyMcModInfo(fileContents): Partial<TModMeta> {
+export function getMetaFromLegacyMcModInfo(fileContents): Array<Partial<TModMeta>> {
   const mcModInfo = permissivelyParseJson(fileContents);
 
   if (!Array.isArray(mcModInfo)) {
-    return null;
+    throw new Error('Invalid mcmod.info file');
   }
 
-  if (mcModInfo.length !== 1) {
-    // TODO: what if there is more than one mod in the package? should compare with modId from somewhere
-    console.log(mcModInfo);
-    throw new Error('Found a mods.toml with more than one mod declaration. What do we do?');
-  }
+  return mcModInfo.map(mod => {
+    if (mod.modId === 'examplemod') {
+      throw new Error('Found a mod called examplemod (mcmod.info)');
+    }
 
-  return omitFalsy({
-    loader: ModLoader.FORGE,
-    name: mcModInfo[0].name,
-    modId: mcModInfo[0].modid,
-    version: mcModInfo[0].version,
-    minecraftVersionRange: mcModInfo[0].mcversion,
+    // TODO: deps + mc + forge version
+
+    return {
+      loader: ModLoader.FORGE,
+      name: mod.name,
+      modId: mod.modid,
+      version: mod.version,
+      minecraftVersionRange: mod.mcversion,
+    };
   });
 }
 

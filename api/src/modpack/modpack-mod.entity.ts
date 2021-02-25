@@ -1,6 +1,6 @@
 import * as DB from 'sequelize-typescript';
 import { Modpack } from './modpack.entity';
-import { ModVersion } from '../mod/mod-version.entity';
+import { ModJar } from '../mod/mod-jar.entity';
 
 @DB.Table
 export default class ModpackMod extends DB.Model<ModpackMod> {
@@ -13,11 +13,11 @@ export default class ModpackMod extends DB.Model<ModpackMod> {
   @DB.Column
   modpackId: number;
 
-  @DB.BelongsTo(() => ModVersion)
-  mod: ModVersion;
+  @DB.BelongsTo(() => ModJar)
+  jar: ModJar;
 
-  @DB.ForeignKey(() => ModVersion)
+  @DB.ForeignKey(() => ModJar)
   @DB.PrimaryKey
   @DB.Column
-  modId: number;
+  jarId: number;
 }

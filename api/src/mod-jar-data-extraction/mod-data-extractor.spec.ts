@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { groupBy } from 'lodash';
-import { getModMetaFromJar } from './mod-data-extractor';
+import { getModMetasFromJar } from './mod-data-extractor';
 
 describe('getModMetaFromJar', () => {
 
@@ -22,7 +22,7 @@ describe('getModMetaFromJar', () => {
       const jar: Buffer = await fs.readFile(path.join(dir, jarFile));
       const expectedOutput = JSON.parse(await fs.readFile(path.join(dir, expectedOutputFile), 'utf8'))
 
-      const output = await getModMetaFromJar(jar);
+      const output = await getModMetasFromJar(jar);
 
       expect(output).toEqual(expectedOutput);
     }

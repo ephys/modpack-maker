@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { ReleaseType } from './mod/mod-version.entity';
+import { ReleaseType } from './mod/mod-jar.entity';
 
 // https://twitchappapi.docs.apiary.io/#/reference/0/
 

@@ -39,9 +39,13 @@ class ModDiscoveryService {
       // TODO: use DISTINCT (modId, curseProjectId) so we don't load the same line many times
       const existingMods = await ModVersion.findAll({
         attributes: ['modId'],
-        where: {
-          curseProjectId: project.forgeId,
-        },
+        include: [{
+          association: ModVersion.associations.jar,
+          required: true,
+          where: {
+            curseProjectId: project.forgeId,
+          },
+        }],
       });
 
       if (existingMods.length > 0) {

@@ -10,6 +10,7 @@ import { CircularProgress, List, ListItem } from '@material-ui/core';
 import classnames from 'classnames';
 import { parseMinecraftVersion } from '../../../common/minecraft-utils';
 import { HelpOutlined } from '@material-ui/icons';
+import { ModLoader } from '../../../common/modloaders';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -84,8 +85,9 @@ function ModpackView(props: { id: string }) {
           <p>{modpack.modLoader}</p>
           <button>Download All Mods</button>
           <button>Add Mod</button>
+          <button>Edit modpack details</button>
 
-          <h2>Mod List ({modpack.mods.length} mods, {modpack.processingCount} processing)</h2>
+          <h2>Mod List ({modpack.modJars.length} mods, {modpack.processingCount} processing)</h2>
           {modpack.processingCount > 0 && (
             <>
               <CircularProgress />
@@ -93,8 +95,8 @@ function ModpackView(props: { id: string }) {
             </>
           )}
           <List>
-            {modpack.mods.map(mod => {
-              return <ModListItem key={mod.modId} mod={mod} modpack={modpack} />;
+            {modpack.modJars.map(jar => {
+              return <JarListItem key={jar.id} jar={jar} modpack={modpack} />;
             })}
           </List>
           <h2>Automatic Dependencies</h2>
@@ -168,7 +170,35 @@ function comparePrimitives(a, b): number {
   throw new Error('Unsupported type ' + type);
 }
 
-type TModListItemProps = {};
+function JarListItem(props: { jar: TModJar, modpack: TModpack }) {
+  const { jar, modpack } = props;
+
+  if (jar.mods.length === 1) {
+    return <ModListItem mod={jar.mods[0]} modpack={modpack} />;
+  }
+
+  return (
+    <li style={{ background: 'rgb(0 0 0 / 0.2)', padding: '16px', borderRadius: '8px' }}>
+      <h3>{props.jar.fileName}</h3>
+      <p>This file contains more than one mod</p>
+      <div className={css.actions}>
+        <button>Change version</button>
+        <button>remove</button>
+      </div>
+      <List>
+        {props.jar.mods.map(mod => {
+          return <ModListItem mod={mod} modpack={modpack} disableActions />;
+        })}
+      </List>
+    </li>
+  );
+}
+
+type TModListItemProps = {
+  modpack: TModpack,
+  mod: TModVersion,
+  disableActions?: boolean,
+};
 
 function ModListItem(props: TModListItemProps) {
   const { mod, modpack } = props;
@@ -195,13 +225,13 @@ function ModListItem(props: TModListItemProps) {
         continue;
       }
 
-      if (!modpack.mods.find(mod => mod.modId === modId)) {
+      if (modpack.modJars.find(jar => jar.mods.find(mod => mod.modId === modId) != null) == null) {
         missing.push(modId);
       }
     }
 
     return missing;
-  }, [mod.dependencies, modpack.mods]);
+  }, [mod.dependencies, modpack.modJars]);
 
   return (
     <ListItem>
@@ -210,9 +240,9 @@ function ModListItem(props: TModListItemProps) {
       (<span className={css.modId} title="Mod ID">{mod.modId}</span>)
       {' '}
       <span className={css.modVersion}>{mod.modVersion}</span>
-      {!mod.supportedModLoaders.includes(modpack.modLoader) && (
+      {mod.supportedModLoader != modpack.modLoader && (
         <Tag type="error" title="This mod does not support your mod loader">
-          {mod.supportedModLoaders.join(', ')} only
+          {mod.supportedModLoader} only
           <HelpOutlined />
         </Tag>
       )}
@@ -237,10 +267,12 @@ function ModListItem(props: TModListItemProps) {
           <HelpOutlined />
         </Tag>
       ))}
-      <div className={css.actions}>
-        <button>Change version</button>
-        <button>remove</button>
-      </div>
+      {!props.disableActions && (
+        <div className={css.actions}>
+          <button>Change version</button>
+          <button>remove</button>
+        </div>
+      )}
     </ListItem>
   );
 }
@@ -250,8 +282,37 @@ function Tag(props: ComponentProps<'span'> & { type: 'error' | 'warn' }) {
   return <span {...passDown} className={classnames(css.tag, css[type])} />;
 }
 
+type TModpack = {
+  id: string,
+  minecraftVersion: string,
+  modLoader: ModLoader,
+  processingCount: number,
+  name: string,
+  modJars: TModJar[],
+};
+
+type TModJar = {
+  id: string,
+  downloadUrl: string,
+  fileName: string,
+  releaseType: string,
+  mods: TModVersion[],
+};
+
+type TModVersion = {
+  modId: string,
+  modVersion: string,
+  name: string,
+  supportedMinecraftVersions: string[],
+  supportedModLoader: ModLoader,
+  dependencies: Array<{
+    modId: string,
+    versionRange: string,
+  }>
+};
+
 function useData(modpackId: string) {
-  return useGraphQl({
+  return useGraphQl<{ modpack: TModpack | null }, Error>({
     // language=GraphQL
     query: `
       query Data($id: ID!) {
@@ -261,15 +322,21 @@ function useData(modpackId: string) {
           modLoader
           processingCount
           name
-          mods {
-            modId
-            modVersion
-            name
-            supportedMinecraftVersions
-            supportedModLoaders
-            dependencies {
+          modJars {
+            id
+            downloadUrl
+            fileName
+            releaseType
+            mods {
               modId
-              versionRange
+              modVersion
+              name
+              supportedMinecraftVersions
+              supportedModLoader
+              dependencies {
+                modId
+                versionRange
+              }
             }
           }
         }

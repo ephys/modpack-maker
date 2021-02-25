@@ -3,18 +3,12 @@ import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
 import { Field, Field as GraphQl, ObjectType, ObjectType as GraphQlObject } from '@nestjs/graphql';
-import ModpackMod from '../modpack/modpack-mod.entity';
+import { ModJar } from './mod-jar.entity';
 
 export type TModDependency = {
   modId: string,
   versionRange: string,
 };
-
-export enum ReleaseType {
-  STABLE = 'STABLE',
-  BETA = 'BETA',
-  ALPHA = 'ALPHA',
-}
 
 @ObjectType()
 export class GqlModDependency {
@@ -32,19 +26,11 @@ export class ModVersion extends DB.Model<ModVersion> {
   @DB.BeforeValidate
   static validate(instance: ModVersion) {
     if (instance.supportedMinecraftVersions.includes(null)) {
-      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) has null in supportedMinecraftVersions`);
+      throw new Error(`Mod ${instance.displayName} (${instance.modVersion}) has null in supportedMinecraftVersions`);
     }
 
     if (instance.supportedMinecraftVersions.length === 0) {
-      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) must support at least one minecraft version`);
-    }
-
-    if (instance.supportedModLoaders.includes(null)) {
-      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) has null in supportedModLoaders`);
-    }
-
-    if (instance.supportedModLoaders.length === 0) {
-      throw new Error(`Mod ${instance.displayName} (${instance.curseFileId}) must support at least one minecraft version`);
+      throw new Error(`Mod ${instance.displayName} (${instance.modVersion}) must support at least one minecraft version`);
     }
   }
 
@@ -63,35 +49,6 @@ export class ModVersion extends DB.Model<ModVersion> {
   @DB.Column(DB.DataType.TEXT)
   @GraphQl(() => String, { name: 'name' })
   displayName: string;
-
-  @DB.AllowNull(false)
-  @DB.Column(DB.DataType.INTEGER)
-  /**
-   * For files retrieved from curseforge: The curseforge file ID
-   * Used to process the file only once
-   *
-   * @type {number}
-   */
-  curseFileId: number;
-
-  @DB.AllowNull(false)
-  @DB.Column(DB.DataType.INTEGER)
-  /**
-   * For files retrieved from curseforge: The curseforge project ID
-   * Used for finding mods by curseforge project ID
-   *
-   * @type {number}
-   */
-  curseProjectId: number;
-
-  @DB.AllowNull(false)
-  @DB.Column(DB.DataType.TEXT)
-  /**
-   * Where this version can be downloaded
-   *
-   * @type {number}
-   */
-  downloadUrl: string;
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.TEXT)
@@ -125,28 +82,17 @@ export class ModVersion extends DB.Model<ModVersion> {
   dependencies: TModDependency[];
 
   @DB.AllowNull(false)
-  @DB.Column(DB.DataType.ARRAY(tsEnum(ModLoader)))
-  @GraphQl(() => [ModLoader], { name: 'supportedModLoaders' })
+  @DB.Column(tsEnum(ModLoader))
+  @GraphQl(() => ModLoader, { name: 'supportedModLoader' })
   /**
-   * Which versions of Minecraft are supported by this mod
-   *
-   * @type {number}
+   * Which mod loader is supported by this mod (forge vs fabric)
    */
-  supportedModLoaders: ModLoader[];
+  supportedModLoader: ModLoader;
 
-  @DB.AllowNull(false)
-  @DB.Column(tsEnum(ReleaseType))
-  /**
-   * Mod version, retrieved from internal files
-   *
-   * @type {number}
-   */
-  releaseType: ReleaseType;
+  @DB.BelongsTo(() => ModJar)
+  jar: ModJar;
 
-  @DB.AllowNull(false)
-  @DB.Column(DB.DataType.DATE)
-  releaseDate: Date;
-
-  @DB.HasMany(() => ModpackMod)
-  inModpacks: ModpackMod[];
+  @DB.ForeignKey(() => ModJar)
+  @DB.Column
+  jarId: number;
 }

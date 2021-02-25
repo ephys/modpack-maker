@@ -3,8 +3,12 @@ import { Modpack } from '../modpack/modpack.entity';
 import { ModVersion } from '../mod/mod-version.entity';
 import { CurseforgeProject } from '../mod/curseforge-project.entity';
 import ModpackMod from '../modpack/modpack-mod.entity';
+import { Inject } from '@nestjs/common';
+import { ModJar } from '../mod/mod-jar.entity';
 
 export const SEQUELIZE_PROVIDER = 'SEQUELIZE';
+
+export const InjectSequelize = Inject(SEQUELIZE_PROVIDER);
 
 export const databaseProviders = [
   {
@@ -23,12 +27,12 @@ export const databaseProviders = [
       sequelize.addModels([
         Modpack,
         ModpackMod,
+        ModJar,
         ModVersion,
         CurseforgeProject,
       ]);
 
       await sequelize.sync();
-      // await sequelize.sync({ force: true });
       return sequelize;
     },
   },

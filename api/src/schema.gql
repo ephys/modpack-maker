@@ -22,6 +22,14 @@ type GqlModDependency {
   versionRange: String!
 }
 
+type ModJar {
+  downloadUrl: String!
+  fileName: String!
+  id: ID!
+  mods: [ModVersion!]!
+  releaseType: ReleaseType!
+}
+
 enum ModLoader {
   FABRIC
   FORGE
@@ -33,14 +41,14 @@ type ModVersion {
   modVersion: String!
   name: String!
   supportedMinecraftVersions: [String!]!
-  supportedModLoaders: [ModLoader!]!
+  supportedModLoader: ModLoader!
 }
 
 type Modpack {
   id: ID!
   minecraftVersion: String!
+  modJars: [ModJar!]!
   modLoader: ModLoader!
-  mods: [ModVersion!]!
   name: String!
   processingCount: Int!
 }
@@ -53,4 +61,10 @@ type Mutation {
 type Query {
   modpack(id: ID!): Modpack
   modpacks: [Modpack!]
+}
+
+enum ReleaseType {
+  ALPHA
+  BETA
+  STABLE
 }

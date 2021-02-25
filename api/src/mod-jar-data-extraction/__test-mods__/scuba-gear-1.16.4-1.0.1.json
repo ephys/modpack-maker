@@ -1,4 +1,4 @@
-{
+[{
   "version": "1.0.1",
   "name": "Scuba Gear",
   "modId": "scuba_gear",
@@ -8,4 +8,4 @@
     "modId": "forge",
     "versionRange": ">=35.0.0"
   }]
-}
+}]

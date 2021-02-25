@@ -1,4 +1,4 @@
-{
+[{
   "name": "Leap",
   "modId": "leap",
   "version": "1.0.0",
@@ -8,4 +8,4 @@
     "modId": "forge",
     "versionRange": ">=28.2.0"
   }]
-}
+}]

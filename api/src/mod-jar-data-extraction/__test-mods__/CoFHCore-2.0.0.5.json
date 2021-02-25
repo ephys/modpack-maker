@@ -1,0 +1,43 @@
+[{
+  "name": "CoFH Core",
+  "modId": "CoFHCore",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+},{
+  "name": "CoFH HUD",
+  "modId": "CoFHHUD",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+},{
+  "name": "CoFH Lexicon",
+  "modId": "CoFHLexicon",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+},{
+  "name": "CoFH Loot",
+  "modId": "CoFHLoot",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+},{
+  "name": "CoFH Masquerade",
+  "modId": "CoFHMasquerade",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+},{
+  "name": "CoFH Social",
+  "modId": "CoFHSocial",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+},{
+  "name": "CoFH World",
+  "modId": "CoFHWorld",
+  "version": "2.0.0.5",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.6.4"
+}]

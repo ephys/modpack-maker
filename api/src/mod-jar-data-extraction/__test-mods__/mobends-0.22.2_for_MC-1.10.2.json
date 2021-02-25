@@ -1,6 +1,7 @@
-{
+[{
   "loader": "FORGE",
   "modId": "mobends",
   "name": "Mo'Bends",
+  "minecraftVersionRange": "1.10.2",
   "version": "0.22.2"
-}
+}]

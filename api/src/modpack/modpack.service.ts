@@ -5,11 +5,11 @@ import { generateId } from '../utils/generic-utils';
 import { ModLoader } from '../../../common/modloaders';
 import { ModDiscoveryService } from '../mod/mod-discovery.service';
 import { uniq } from 'lodash';
-import { ModVersion } from '../mod/mod-version.entity';
 import { Sequelize } from 'sequelize';
 import ModpackMod from './modpack-mod.entity';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/minecraft-utils';
+import { ModJar } from '../mod/mod-jar.entity';
 
 type TCreateModpackInput = {
   name: string,
@@ -22,7 +22,8 @@ export class ModpackService {
   constructor(
     @Inject(MODPACK_REPOSITORY) private modpackRepository: typeof Modpack,
     private modDiscoveryService: ModDiscoveryService,
-  ) {}
+  ) {
+  }
 
   async getModpacks(): Promise<Modpack[]> {
     return this.modpackRepository.findAll<Modpack>();
@@ -37,7 +38,7 @@ export class ModpackService {
   }
 
   getModpackByEid(externalId: string) {
-    return Modpack.findOne({ where: { externalId }});
+    return Modpack.findOne({ where: { externalId } });
   }
 
   async addModUrlsToModpack(modpack: Modpack, byUrl: string[]): Promise<Modpack> {
@@ -46,7 +47,7 @@ export class ModpackService {
     const { modIds, curseProjectIds, unknownUrls } = await this.modDiscoveryService.discoverUrls(byUrl);
 
     if (curseProjectIds.length > 0) {
-      modpack.pendingCurseForgeProjectIds = uniq([...modpack.pendingCurseForgeProjectIds, ...curseProjectIds])
+      modpack.pendingCurseForgeProjectIds = uniq([...modpack.pendingCurseForgeProjectIds, ...curseProjectIds]);
     }
 
     await Promise.all(modIds.map(modId => this.addModToModpack(modpack, modId)));
@@ -76,12 +77,16 @@ export class ModpackService {
         modpackId: modpack.internalId,
       },
       include: [{
-        association: ModpackMod.associations.mod,
-        where: {
-          modId,
-        },
+        association: ModpackMod.associations.jar,
         required: true,
-      }]
+        include: [{
+          association: ModJar.associations.mods,
+          required: true,
+          where: {
+            modId,
+          },
+        }]
+      }],
     });
 
     if (installedModVersion != null) {
@@ -90,24 +95,29 @@ export class ModpackService {
 
     const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
 
-    const mod = await ModVersion.findOne({
+    const mod = await ModJar.findOne({
       attributes: ['internalId'],
-      where: {
-        modId,
-      },
+      include: [{
+        association: ModJar.associations.mods,
+        required: true,
+        where: {
+          modId,
+        },
+      }],
       order: Sequelize.literal(`
         ${validMcVersions.map(mcVersion => {
-          return `"supportedMinecraftVersions"::text[] @> ARRAY['${mcVersion}'] DESC,\n`  
-        }).join('')}
-        "supportedModLoaders"::text[] @> ARRAY[:modLoader] DESC,
+        return `mods."supportedMinecraftVersions"::text[] @> ARRAY['${mcVersion}'] DESC,\n`;
+      }).join('')}
+        mods."supportedModLoader" = :modLoader DESC,
         "releaseType" = 'STABLE' DESC,
         "releaseType" = 'BETA' DESC,
         "releaseType" = 'ALPHA' DESC,
         "releaseDate" DESC
       `),
+      subQuery: false,
       replacements: {
         modLoader: modpack.modLoader,
-      }
+      },
     });
 
     if (!mod) {
@@ -117,16 +127,16 @@ export class ModpackService {
     // @ts-ignore
     await ModpackMod.create({
       modpackId: modpack.internalId,
-      modId: mod.internalId,
+      jarId: mod.internalId,
     });
 
     return modpack;
   }
 
-  async getModpackMods(modpack: Modpack): Promise<ModVersion[]> {
-    return ModVersion.findAll({
+  getModpackJars(modpack: Modpack): Promise<ModJar[]> {
+    return ModJar.findAll({
       include: [{
-        association: ModVersion.associations.inModpacks,
+        association: ModJar.associations.inModpacks,
         required: true,
         include: [{
           association: ModpackMod.associations.modpack,
@@ -135,8 +145,8 @@ export class ModpackService {
             internalId: modpack.internalId,
           },
         }],
-      }]
-    })
+      }],
+    });
   }
 }
 
