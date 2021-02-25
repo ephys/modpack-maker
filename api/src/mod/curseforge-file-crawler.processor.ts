@@ -1,29 +1,23 @@
-import { Processor, Process } from '@nestjs/bull';
-import { Job } from 'bull';
+import { Processor, Process, InjectQueue } from '@nestjs/bull';
+import { Job, Queue } from 'bull';
 import { Logger } from '@nestjs/common';
 import { getCurseForgeModFiles, getCurseReleaseType, TForgeFile } from '../curseforge.api';
 import { ModVersion } from './mod-version.entity';
 import { Op } from 'sequelize';
 import fetch from 'node-fetch';
-import { getModMetaFromJar } from '../mod-data-extractor';
+import { getModMetaFromJar } from '../mod-jar-data-extraction/mod-data-extractor';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
+import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
+import { getMinecraftVersionsInRange } from '../utils/minecraft-utils';
 
 // TODO: every 15 minutes, if queue is empty, fill it with every mod that is in a modpack & whose versionListUpToDate is false
-
-// TODO: extract MC version from Jar (using loaderVersion and mod.deps)
-// TODO: extract forge version from Jar (either mod.deps and loaderVersion)
-// TODO: extract other mod (required) deps
-
-enum CurseReleaseType {
-  RELEASE = 1,
-  BETA = 2,
-  ALPHA = 3,
-}
 
 @Processor('fetch-curse-project-files')
 export class CurseforgeFileCrawlerProcessor {
   private readonly logger = new Logger(CurseforgeFileCrawlerProcessor.name);
+
+  constructor(@InjectQueue(INSERT_DISCOVERED_MODS_QUEUE) private insertDiscoveredModsQueue: Queue) {}
 
   @Process()
   async fetchCurseProjectFiles(job: Job<number>) {
@@ -67,16 +61,7 @@ export class CurseforgeFileCrawlerProcessor {
       }
     }
 
-    // -> remove file from all ModpackEntity queuedUrls
-    // -> add ModVersionEntity to ModpackEntities using best fit: We always link a file, even if not compatible
-    //  -> most recent stable file for that version + modloader
-    //  -> if no stable, fallback to beta
-    //  -> else, fallback to alpha
-    //  -> else, fallback to most recent file in same minecraft version
-    //  -> else, fallback to most recent file
-
-    // TODO: dependencies
-    // TODO: release date
+    await this.insertDiscoveredModsQueue.add(curseProjectId);
   }
 
   private async processFile(fileData: TForgeFile, curseProjectId: number) {
@@ -86,9 +71,17 @@ export class CurseforgeFileCrawlerProcessor {
 
     const supportedPlatforms = fileData.gameVersion.map(version => version.toUpperCase());
     const supportedMcVersions = new Set();
-    if (meta.mcVersion) {
-      supportedMcVersions.add(meta.mcVersion);
-    }
+
+    // FIXME: we tried extracting it but a lot of mod are declaring their version as >=1.x
+    //  meaning the following Major version is considered valid
+    //  For mods coming from curse, we'll just use the curse list
+    //  If we start uploading mods ourselves, we'll warn the user if their version range is fishy (ie. unbound)
+    // if (meta.minecraftVersionRange) {
+    //   // denormalize version range for easier DB querying
+    //   for (const version of getMinecraftVersionsInRange(meta.minecraftVersionRange)) {
+    //     supportedMcVersions.add(version);
+    //   }
+    // }
 
     let curseMetaModLoader = null;
     for (const platform of supportedPlatforms) {
@@ -103,6 +96,10 @@ export class CurseforgeFileCrawlerProcessor {
         }
 
         curseMetaModLoader = platform;
+        continue;
+      }
+
+      if (platform.endsWith('-SNAPSHOT')) {
         continue;
       }
 
@@ -122,14 +119,19 @@ export class CurseforgeFileCrawlerProcessor {
       modId: meta.modId,
       displayName: meta.name,
       modVersion: meta.version,
-      // TODO: extract from Jar & use range
       supportedMinecraftVersions: Array.from(supportedMcVersions),
+      // FIXME: we tried extracting it but a lot of mod are declaring their version as >=1.x
+      //  meaning the following Major version is considered valid
+      //  For mods coming from curse, we'll just use the curse list
+      //  If we start uploading mods ourselves, we'll warn the user if their version range is fishy (ie. unbound)
+      supportedMinecraftVersionRange: '', // meta.minecraftVersionRange,
       supportedModLoaders: [meta.loader || curseMetaModLoader],
       curseFileId: fileData.id,
       curseProjectId,
       downloadUrl: fileData.downloadUrl,
       releaseDate: fileData.fileDate,
       releaseType: getCurseReleaseType(fileData.releaseType),
+      dependencies: meta.dependencies || [],
     };
   }
 }

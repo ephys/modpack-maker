@@ -5,12 +5,17 @@ import { Modpack } from './modpack.entity';
 import { ModpackService } from './modpack.service';
 import { ModpackResolver } from './modpack.resolver';
 import { ModModule } from '../mod/mod.module';
+import { InsertDiscoveredModsProcessor } from './insert-discovered-mods.processor';
 
 @Module({
-  imports: [DatabaseModule, ModModule],
+  imports: [
+    DatabaseModule,
+    ModModule,
+  ],
   providers: [
     ModpackService,
     ModpackResolver,
+    InsertDiscoveredModsProcessor,
     {
       provide: MODPACK_REPOSITORY,
       useValue: Modpack,

@@ -1,27 +1,38 @@
+import * as minecraftVersion from '../../../common/minecraft-versions.json';
+import * as semver from 'semver';
+import { parseMinecraftVersion } from '../../../common/minecraft-utils';
 
-export type TMinecraftVersion = {
-  major: number,
-  minor: number,
-};
+export { parseMinecraftVersion };
 
-const versionCache = new Map();
+export function minecraftVersionComparator(order: 'DESC' | 'ASC') {
+  return (aStr, bStr) => {
+    if (order === 'ASC') {
+      const tmp = aStr;
+      aStr = bStr;
+      bStr = tmp;
+    }
 
-export function parseMinecraftVersion(minecraftVersion: string): TMinecraftVersion {
-  if (versionCache.has(minecraftVersion)) {
-    return versionCache.get(minecraftVersion);
+    const a = parseMinecraftVersion(aStr);
+    const b = parseMinecraftVersion(bStr);
+
+    if (a.major !== b.major) {
+      return b.major - a.major;
+    }
+
+    return b.minor - a.minor;
+  };
+}
+
+export function getMinecraftVersionsInRange(range: string): string[] {
+  const valid = [];
+
+  for (const version of minecraftVersion) {
+    if (semver.satisfies(semver.coerce(version), range)) {
+      valid.push(version);
+    }
   }
 
-  //   v major
-  // 1.16.1 <- minor
-  // ^ discarded
-  const parts = minecraftVersion.split('.');
+  valid.sort(minecraftVersionComparator('DESC'));
 
-  const data = Object.freeze({
-    major: Number(parts[1]),
-    minor: parts[2] ? Number(parts[2]) : 0
-  });
-
-  versionCache.set(minecraftVersion, data);
-
-  return data;
+  return valid;
 }

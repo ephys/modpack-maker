@@ -2,14 +2,27 @@ import * as DB from 'sequelize-typescript';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
-import { Modpack } from '../modpack/modpack.entity';
-import { Field as GraphQl, ID, ObjectType as GraphQlObject } from '@nestjs/graphql';
+import { Field, Field as GraphQl, ObjectType, ObjectType as GraphQlObject } from '@nestjs/graphql';
 import ModpackMod from '../modpack/modpack-mod.entity';
+
+export type TModDependency = {
+  modId: string,
+  versionRange: string,
+};
 
 export enum ReleaseType {
   STABLE = 'STABLE',
   BETA = 'BETA',
   ALPHA = 'ALPHA',
+}
+
+@ObjectType()
+export class GqlModDependency {
+  @Field()
+  modId: string;
+
+  @Field()
+  versionRange: string;
 }
 
 @DB.Table
@@ -92,15 +105,28 @@ export class ModVersion extends DB.Model<ModVersion> {
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.ARRAY(DB.DataType.ENUM(...minecraftVersion)))
+  @GraphQl(() => [String], { name: 'supportedMinecraftVersions' })
   /**
-   * Which versions of Minecraft are supported by this mod
+   * Which versions of Minecraft are supported by this mod.
+   *
+   * Denormalized version of supportedMinecraftVersionRange
    *
    * @type {number}
    */
   supportedMinecraftVersions: string[];
 
   @DB.AllowNull(false)
+  @DB.Column(DB.DataType.STRING)
+  supportedMinecraftVersionRange: string;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.JSON)
+  @GraphQl(() => [GqlModDependency])
+  dependencies: TModDependency[];
+
+  @DB.AllowNull(false)
   @DB.Column(DB.DataType.ARRAY(tsEnum(ModLoader)))
+  @GraphQl(() => [ModLoader], { name: 'supportedModLoaders' })
   /**
    * Which versions of Minecraft are supported by this mod
    *
@@ -123,6 +149,4 @@ export class ModVersion extends DB.Model<ModVersion> {
 
   @DB.HasMany(() => ModpackMod)
   inModpacks: ModpackMod[];
-
-  // TODO: dependencies
 }

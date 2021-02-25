@@ -16,3 +16,33 @@
     font-size: 37.90px;
   }
 }
+
+.modId,
+.modVersion {
+  font-family: 'Space Mono', monospace;
+}
+
+.modVersion {
+  margin-left: 8px;
+}
+
+.actions {
+  margin-left: auto;
+}
+
+.tag {
+  background: white;
+  color: black;
+  border-radius: 4px;
+  border: 1px black solid;
+  padding: 8px;
+  margin: 8px;
+
+  &.error {
+    background: red;
+  }
+
+  &.warn {
+    background: yellow;
+  }
+}

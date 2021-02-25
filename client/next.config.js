@@ -2,7 +2,7 @@ module.exports = {
   webpack: (config) => {
     config.module.rules.push({
       test(arg) {
-        return arg.endsWith('/common/modloaders.ts');
+        return /\/common\/.*\.ts/.test(arg);
       },
       loader: 'babel-loader',
       options: {

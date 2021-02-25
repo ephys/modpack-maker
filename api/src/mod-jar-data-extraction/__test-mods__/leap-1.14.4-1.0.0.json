@@ -1,0 +1,11 @@
+{
+  "name": "Leap",
+  "modId": "leap",
+  "version": "1.0.0",
+  "loader": "FORGE",
+  "minecraftVersionRange": "1.14.4",
+  "dependencies": [{
+    "modId": "forge",
+    "versionRange": ">=28.2.0"
+  }]
+}

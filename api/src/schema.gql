@@ -17,15 +17,23 @@ type CreateModpackPayload {
   node: Modpack!
 }
 
+type GqlModDependency {
+  modId: String!
+  versionRange: String!
+}
+
 enum ModLoader {
   FABRIC
   FORGE
 }
 
 type ModVersion {
+  dependencies: [GqlModDependency!]!
   modId: String!
   modVersion: String!
   name: String!
+  supportedMinecraftVersions: [String!]!
+  supportedModLoaders: [ModLoader!]!
 }
 
 type Modpack {

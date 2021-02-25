@@ -9,7 +9,7 @@ import { ModVersion } from '../mod/mod-version.entity';
 import { Sequelize } from 'sequelize';
 import ModpackMod from './modpack-mod.entity';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
-import { parseMinecraftVersion } from '../utils/minecraft-utils';
+import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/minecraft-utils';
 
 type TCreateModpackInput = {
   name: string,
@@ -71,7 +71,22 @@ export class ModpackService {
    */
   async addModToModpack(modpack: Modpack, modId: string): Promise<Modpack> {
 
-    // TODO: forbid adding the same modId twice
+    const installedModVersion = await ModpackMod.findOne({
+      where: {
+        modpackId: modpack.internalId,
+      },
+      include: [{
+        association: ModpackMod.associations.mod,
+        where: {
+          modId,
+        },
+        required: true,
+      }]
+    });
+
+    if (installedModVersion != null) {
+      return modpack;
+    }
 
     const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
 
@@ -137,17 +152,7 @@ export function getPreferredMinecraftVersions(mainVersionStr: string, existingMc
     }
   }
 
-  validMcVersions.sort((aStr, bStr) => {
-    const a = parseMinecraftVersion(aStr);
-    const b = parseMinecraftVersion(bStr);
-
-    // sort with most recent release first
-    if (a.major !== b.major) {
-      return b.major - a.major;
-    }
-
-    return b.minor - a.minor;
-  });
+  validMcVersions.sort(minecraftVersionComparator('DESC'));
 
   return validMcVersions;
 }
