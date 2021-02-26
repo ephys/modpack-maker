@@ -21,4 +21,9 @@ export class CurseforgeProject extends DB.Model<CurseforgeProject> {
   @DB.Column(DB.DataType.BOOLEAN)
   versionListUpToDate: boolean;
   // last crawled
+
+  @DB.AllowNull(false)
+  @DB.Default([])
+  @DB.Column(DB.DataType.ARRAY(DB.DataType.INTEGER))
+  failedFileIds: number[];
 }

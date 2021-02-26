@@ -12,6 +12,7 @@ import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { ModJar } from './mod-jar.entity';
 import { InjectSequelize } from '../database/database.providers';
 import { generateId } from '../utils/generic-utils';
+import { CurseforgeProject } from './curseforge-project.entity';
 
 // TODO: every 15 minutes, if queue is empty, fill it with every mod that is in a modpack & whose versionListUpToDate is false
 
@@ -58,9 +59,20 @@ export class CurseforgeFileCrawlerProcessor {
         await this.processFile(file, curseProjectId);
       } catch (e) {
         console.error('Processing Curse file ' + file.id + ' failed:');
-        console.error(e);
+        console.error(e.message);
 
-        return;
+        const cfProject = await CurseforgeProject.findOne({
+          where: { forgeId: curseProjectId },
+        });
+
+        if (!cfProject.failedFileIds.includes(file.id)) {
+          cfProject.failedFileIds = [
+            ...cfProject.failedFileIds,
+            file.id,
+          ];
+
+          await cfProject.save();
+        }
       }
     }
 
