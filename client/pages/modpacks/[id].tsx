@@ -121,7 +121,7 @@ function JarListItem(props: { jar: TModJar, modpack: TModpack, onChange: () => v
   }, [onChange, jar.id, modpack.id]);
 
   if (jar.mods.length === 1) {
-    return <ModListItem mod={jar.mods[0]} jar={jar} modpack={modpack} onChange={onChange} />;
+    return <ModListItem mod={jar.mods[0]} jar={jar} modpack={modpack} onChange={onChange} title={jar.fileName} />;
   }
 
   return (
@@ -130,6 +130,8 @@ function JarListItem(props: { jar: TModJar, modpack: TModpack, onChange: () => v
       <p>This file contains more than one mod</p>
       <div className={css.actions}>
         <button>Change version</button>
+        <button>Download</button>
+        <button>Store</button>
         <button onClick={removeJar}>remove</button>
       </div>
       <List>
@@ -147,6 +149,7 @@ type TModListItemProps = {
   jar: TModJar,
   disableActions?: boolean,
   onChange: () => void,
+  title?: string,
 };
 
 function ModListItem(props: TModListItemProps) {
@@ -192,7 +195,7 @@ function ModListItem(props: TModListItemProps) {
   }, [mod.dependencies, modpack.modJars]);
 
   return (
-    <ListItem>
+    <ListItem title={props.title}>
       {mod.name}
       {' '}
       (<span className={css.modId} title="Mod ID">{mod.modId}</span>)
@@ -228,6 +231,8 @@ function ModListItem(props: TModListItemProps) {
       {!props.disableActions && (
         <div className={css.actions}>
           <button>Change version</button>
+          <button>Download</button>
+          <button>Store</button>
           <button onClick={removeJar}>remove</button>
         </div>
       )}
