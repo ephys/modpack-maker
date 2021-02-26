@@ -47,16 +47,23 @@ type ModVersion {
 type Modpack {
   id: ID!
   minecraftVersion: String!
-  modJars: [ModJar!]!
+  modJars: [ModpackMod!]!
   modLoader: ModLoader!
   name: String!
   processingCount: Int!
+}
+
+type ModpackMod {
+  addedAt: Boolean!
+  isLibraryDependency: Boolean!
+  jar: ModJar!
 }
 
 type Mutation {
   addModToModpack(input: AddModpackModInput!): CreateModpackPayload!
   createModpack(input: CreateModpackInput!): CreateModpackPayload!
   removeJarFromModpack(input: RemoveJarFromModpackInput!): CreateModpackPayload!
+  setModpackJarIsLibrary(input: SetModpackJarIsLibraryInput!): SetModpackJarIsLibraryPayload!
 }
 
 type Query {
@@ -73,4 +80,14 @@ enum ReleaseType {
 input RemoveJarFromModpackInput {
   jarId: ID!
   modpackId: ID!
+}
+
+input SetModpackJarIsLibraryInput {
+  isLibrary: Boolean!
+  jarId: ID!
+  modpackId: ID!
+}
+
+type SetModpackJarIsLibraryPayload {
+  node: ModpackMod!
 }

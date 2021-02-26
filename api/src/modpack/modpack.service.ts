@@ -244,21 +244,29 @@ export class ModpackService {
     return modpack;
   }
 
-  getModpackJars(modpack: Modpack): Promise<ModJar[]> {
-    return ModJar.findAll({
+  getModpackInstalledJars(modpack: Modpack): Promise<ModpackMod[]> {
+    return modpack.$get('installedMods', {
       include: [{
-        association: ModJar.associations.inModpacks,
-        required: true,
-        include: [{
-          association: ModpackMod.associations.modpack,
-          required: true,
-          where: {
-            internalId: modpack.internalId,
-          },
-        }],
+        association: ModpackMod.associations.jar,
       }],
     });
   }
+
+  // getModpackJars(modpack: Modpack): Promise<ModJar[]> {
+  //   return ModJar.findAll({
+  //     include: [{
+  //       association: ModJar.associations.inModpacks,
+  //       required: true,
+  //       include: [{
+  //         association: ModpackMod.associations.modpack,
+  //         required: true,
+  //         where: {
+  //           internalId: modpack.internalId,
+  //         },
+  //       }],
+  //     }],
+  //   });
+  // }
 
   async removeJarFromModpack(modpack: Modpack, jar: ModJar) {
     return ModpackMod.destroy({
@@ -267,6 +275,26 @@ export class ModpackService {
         jarId: jar.internalId,
       },
     });
+  }
+
+  async setModpackJarIsLibrary(modpack: ModJar | Modpack, jar: ModJar | Modpack, isLibrary: boolean) {
+    const modpackMod: ModpackMod = await ModpackMod.findOne({
+      where: {
+        modpackId: modpack.internalId,
+        jarId: jar.internalId,
+      },
+    });
+
+    if (modpackMod == null) {
+      return null;
+    }
+
+    if (modpackMod.isLibraryDependency !== isLibrary) {
+      modpackMod.isLibraryDependency = isLibrary;
+      await modpackMod.save();
+    }
+
+    return modpackMod;
   }
 }
 

@@ -10,11 +10,17 @@ import { CircularProgress, List, ListItem } from '@material-ui/core';
 import classnames from 'classnames';
 import { getMostCompatibleMcVersion, parseMinecraftVersion } from '../../../common/minecraft-utils';
 import { HelpOutlined } from '@material-ui/icons';
-import { TModJar, TModpack, TModVersion } from '../../api/schema-typings';
+import { TModpack, TModpackMod, TModVersion } from '../../api/schema-typings';
 import { removeJarFromModpack } from '../../api/remove-jar-from-modpack';
+import { MoreMenu } from '../../components/action-menu';
+import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
+
+// TODO: warn for duplicate modIds
+// TODO: differentiate optional & required dependencies
+// TODO
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -96,76 +102,120 @@ function ModpackView(props: { id: string }) {
             </>
           )}
           <List>
-            {modpack.modJars.map(jar => {
-              return <JarListItem key={jar.id} jar={jar} modpack={modpack} onChange={swr.revalidate} />;
+            {modpack.modJars.filter(mod => !mod.isLibraryDependency).map(mod => {
+              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
             })}
           </List>
-          <h2>Automatic Dependencies</h2>
-          <p>Mods in this category will be automatically removed if none of your mods need them</p>
+          <h2>Libraries</h2>
+          <p>Put in this section the mods that are library dependencies of other mods, we'll tell you if they can be safely removed.</p>
+          <List>
+            {modpack.modJars.filter(mod => mod.isLibraryDependency).map(mod => {
+              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
+            })}
+          </List>
         </div>
       </DropZone>
     </>
   );
 }
 
-function JarListItem(props: { jar: TModJar, modpack: TModpack, onChange: () => void }) {
-  const { jar, modpack, onChange } = props;
+function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onChange: () => void }) {
+  const { installedMod, modpack, onChange } = props;
 
-  const removeJar = useCallback(async () => {
-    await removeJarFromModpack({
-      jarId: jar.id,
-      modpackId: modpack.id,
-    });
-
-    onChange();
-  }, [onChange, jar.id, modpack.id]);
+  const jar = installedMod.jar;
 
   if (jar.mods.length === 1) {
-    return <ModListItem mod={jar.mods[0]} jar={jar} modpack={modpack} onChange={onChange} title={jar.fileName} />;
+    return <ModListItem mod={jar.mods[0]} installedMod={installedMod} modpack={modpack} onChange={onChange} title={jar.fileName} />;
   }
 
   return (
     <li style={{ background: 'rgb(0 0 0 / 0.2)', padding: '16px', borderRadius: '8px' }}>
-      <h3>{props.jar.fileName}</h3>
+      <h3>{jar.fileName}</h3>
       <p>This file contains more than one mod</p>
-      <div className={css.actions}>
-        <button>Change version</button>
-        <button>Download</button>
-        <button>Store</button>
-        <button onClick={removeJar}>remove</button>
-      </div>
+      <JarListItem installedMod={installedMod} modpack={modpack} onChange={onChange} />
       <List>
-        {props.jar.mods.map(mod => {
-          return <ModListItem mod={mod} jar={jar} modpack={modpack} onChange={onChange} disableActions />;
+        {jar.mods.map(mod => {
+          return <ModListItem mod={mod} installedMod={installedMod} modpack={modpack} onChange={onChange} disableActions />;
         })}
       </List>
     </li>
   );
 }
 
+function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange: () => void }) {
+  const { onChange, jar, modpack } = props;
+
+  const jarId = jar.jar.id;
+
+  const removeJar = useCallback(async () => {
+    await removeJarFromModpack({
+      jarId: jarId,
+      modpackId: modpack.id,
+    });
+
+    onChange();
+  }, [onChange, jarId, modpack.id]);
+
+  const isLibrary = props.jar.isLibraryDependency;
+  const switchModType = useCallback(async () => {
+    await setModpackJarIsLibrary({
+      isLibrary: !isLibrary,
+      jarId,
+      modpackId: modpack.id,
+    });
+
+    onChange();
+  }, [jarId, modpack.id, isLibrary]);
+
+  return (
+    <div className={css.actions}>
+      <button>Store Page</button>
+      <MoreMenu
+        actions={[
+          {
+            key: 0,
+            onClick: () => {
+              alert('NYI');
+            },
+            title: 'Change Version',
+          },
+          {
+            key: 1,
+            onClick: () => {
+              alert('NYI');
+            },
+            title: 'Download',
+          },
+          {
+            key: 2,
+            onClick: switchModType,
+            title: isLibrary ? 'Move to mod list' : 'Move to Automatic Dependencies',
+          },
+          {
+            key: 3,
+            onClick: removeJar,
+            title: 'Remove from Modpack',
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
 type TModListItemProps = {
   modpack: TModpack,
   mod: TModVersion,
-  jar: TModJar,
+  installedMod: TModpackMod,
   disableActions?: boolean,
   onChange: () => void,
   title?: string,
 };
 
 function ModListItem(props: TModListItemProps) {
-  const { mod, modpack, jar, onChange } = props;
+  const { mod, modpack, installedMod, onChange } = props;
 
   // TODO: warn for MC version
   // TODO: warn if dependency is missing
-
-  const removeJar = useCallback(async () => {
-    await removeJarFromModpack({
-      jarId: jar.id,
-      modpackId: modpack.id,
-    });
-
-    onChange();
-  }, [onChange, jar.id, modpack.id]);
 
   const mostCompatibleMcVersion = useMemo(
     () => getMostCompatibleMcVersion(modpack.minecraftVersion, mod.supportedMinecraftVersions),
@@ -186,7 +236,7 @@ function ModListItem(props: TModListItemProps) {
         continue;
       }
 
-      if (modpack.modJars.find(jar => jar.mods.find(mod => mod.modId === modId) != null) == null) {
+      if (modpack.modJars.find(jar => jar.jar.mods.find(mod => mod.modId === modId) != null) == null) {
         missing.push(modId);
       }
     }
@@ -194,55 +244,75 @@ function ModListItem(props: TModListItemProps) {
     return missing;
   }, [mod.dependencies, modpack.modJars]);
 
+  const usedBy = useMemo(() => {
+    const ids = [];
+
+    for (const installedJar of modpack.modJars) {
+      for (const installedMod of installedJar.jar.mods) {
+        if (installedMod.dependencies.find(dep => dep.modId === mod.modId) != null) {
+          ids.push(installedMod.modId);
+        }
+      }
+    }
+
+    return ids;
+  }, [mod.modId, modpack.modJars]);
+
   return (
     <ListItem title={props.title}>
-      {mod.name}
-      {' '}
-      (<span className={css.modId} title="Mod ID">{mod.modId}</span>)
-      {' '}
-      <span className={css.modVersion}>{mod.modVersion}</span>
-      {mod.supportedModLoader != modpack.modLoader && (
-        <Tag type="error" title="This mod does not support your mod loader">
-          {mod.supportedModLoader} only
-          <HelpOutlined />
-        </Tag>
-      )}
-      {mostCompatibleMcVersion !== modpack.minecraftVersion && (
-        <Tag
-          type={isMcProbablyCompatible ? 'warn' : 'error'}
-          title={isMcProbablyCompatible
-            ? 'This mod does not explicitly support your minecraft version but could work'
-            : 'This mod does not support your minecraft version'}
-        >
-          Minecraft {mostCompatibleMcVersion}
-          <HelpOutlined />
-        </Tag>
-      )}
-      {/*<Tag>Update available!</Tag>*/}
-      {/*<Tag>Beta available!</Tag>*/}
-      {/*<Tag>Alpha available!</Tag>*/}
-      {missingDependencies.map(dependency => (
-        <Tag type="error" title={`This mod depends on ${dependency}, but that mod is missing from your modpack.`}>
-          Missing dependency {dependency}
-          <button>Add</button>
-          <HelpOutlined />
-        </Tag>
-      ))}
-      {!props.disableActions && (
-        <div className={css.actions}>
-          <button>Change version</button>
-          <button>Download</button>
-          <button>Store</button>
-          <button onClick={removeJar}>remove</button>
+      <div className={css.modListItemDetails}>
+        <p>
+          <strong>
+            {mod.name}
+            {' '}
+            (<span className={css.modId} title="Mod ID">{mod.modId}</span>)
+            {' '}
+            <span className={css.modVersion}>{mod.modVersion}</span>
+          </strong>
+          {usedBy.length > 0 && (
+            <><br/>Used by {usedBy.join(', ')}</>
+          )}
+        </p>
+        {/*<Tag>Update available!</Tag>*/}
+        {/*<Tag>Beta available!</Tag>*/}
+        {/*<Tag>Alpha available!</Tag>*/}
+        <div className={css.tags}>
+          {mod.supportedModLoader != modpack.modLoader && (
+            <Tag type="error" title="This mod does not support your mod loader">
+              {mod.supportedModLoader} only
+              <HelpOutlined />
+            </Tag>
+          )}
+          {mostCompatibleMcVersion !== modpack.minecraftVersion && (
+            <Tag
+              type={isMcProbablyCompatible ? 'warn' : 'error'}
+              title={isMcProbablyCompatible
+                ? 'This mod does not explicitly support your minecraft version but could work'
+                : 'This mod does not support your minecraft version'}
+            >
+              Minecraft {mostCompatibleMcVersion}
+              <HelpOutlined />
+            </Tag>
+          )}
+          {missingDependencies.map(dependency => (
+            <Tag type="error" title={`This mod depends on ${dependency}, but that mod is missing from your modpack.`}>
+              Missing dependency {dependency}
+              <button>Add</button>
+              <HelpOutlined />
+            </Tag>
+          ))}
         </div>
+      </div>
+      {!props.disableActions && (
+        <JarActions jar={installedMod} modpack={modpack} onChange={onChange} />
       )}
     </ListItem>
   );
 }
 
-function Tag(props: ComponentProps<'span'> & { type: 'error' | 'warn' }) {
+function Tag(props: ComponentProps<'div'> & { type: 'error' | 'warn' }) {
   const { type, ...passDown } = props;
-  return <span {...passDown} className={classnames(css.tag, css[type])} />;
+  return <div {...passDown} className={classnames(css.tag, css[type])} />;
 }
 
 function useData(modpackId: string) {
@@ -257,19 +327,23 @@ function useData(modpackId: string) {
           processingCount
           name
           modJars {
-            id
-            downloadUrl
-            fileName
-            releaseType
-            mods {
-              modId
-              modVersion
-              name
-              supportedMinecraftVersions
-              supportedModLoader
-              dependencies {
+            addedAt
+            isLibraryDependency
+            jar {
+              id
+              downloadUrl
+              fileName
+              releaseType
+              mods {
                 modId
-                versionRange
+                modVersion
+                name
+                supportedMinecraftVersions
+                supportedModLoader
+                dependencies {
+                  modId
+                  versionRange
+                }
               }
             }
           }

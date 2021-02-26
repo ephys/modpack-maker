@@ -18,6 +18,7 @@ import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { ModVersion } from '../mod/mod-version.entity';
 import { ModJar, ReleaseType } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
+import ModpackMod from './modpack-mod.entity';
 
 registerEnumType(ModLoader, {
   name: 'ModLoader',
@@ -131,9 +132,9 @@ export class ModpackResolver {
   }
 
   // TODO: Pagination
-  @ResolveField('modJars', () => [ModJar])
-  async getModpackMods(@Parent() modpack: Modpack): Promise<ModJar[]> {
-    return this.modpackService.getModpackJars(modpack);
+  @ResolveField('modJars', () => [ModpackMod])
+  async getModpackMods(@Parent() modpack: Modpack): Promise<ModpackMod[]> {
+    return this.modpackService.getModpackInstalledJars(modpack);
   }
 }
 

@@ -6,7 +6,13 @@ export type TModpack = {
   modLoader: ModLoader,
   processingCount: number,
   name: string,
-  modJars: TModJar[],
+  modJars: TModpackMod[],
+};
+
+export type TModpackMod = {
+  addedAt: string,
+  isLibraryDependency: boolean,
+  jar: TModJar,
 };
 
 export type TModJar = {

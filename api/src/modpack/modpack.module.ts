@@ -6,6 +6,7 @@ import { ModpackService } from './modpack.service';
 import { ModpackResolver } from './modpack.resolver';
 import { ModModule } from '../mod/mod.module';
 import { InsertDiscoveredModsProcessor } from './insert-discovered-mods.processor';
+import { ModpackModResolver } from './modpack-mod.resolver';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { InsertDiscoveredModsProcessor } from './insert-discovered-mods.processo
   providers: [
     ModpackService,
     ModpackResolver,
+    ModpackModResolver,
     InsertDiscoveredModsProcessor,
     {
       provide: MODPACK_REPOSITORY,

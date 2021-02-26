@@ -1,7 +1,9 @@
 import * as DB from 'sequelize-typescript';
 import { Modpack } from './modpack.entity';
 import { ModJar } from '../mod/mod-jar.entity';
+import { Field as GraphQl, ID, ObjectType as GraphQlObject } from '@nestjs/graphql';
 
+@GraphQlObject()
 @DB.Table
 export default class ModpackMod extends DB.Model<ModpackMod> {
 
@@ -20,4 +22,12 @@ export default class ModpackMod extends DB.Model<ModpackMod> {
   @DB.PrimaryKey
   @DB.Column
   jarId: number;
+
+  @DB.Column
+  @GraphQl(() => Boolean)
+  isLibraryDependency: boolean;
+
+  @DB.Column
+  @GraphQl(() => Boolean, { name: 'addedAt' })
+  createdAt: Date;
 }
