@@ -8,9 +8,8 @@ import { addModToModpack } from '../../api/add-mod-to-modpack';
 import { assertIsString } from '../../utils/typing';
 import { CircularProgress, List, ListItem } from '@material-ui/core';
 import classnames from 'classnames';
-import { parseMinecraftVersion } from '../../../common/minecraft-utils';
+import { getMostCompatibleMcVersion, parseMinecraftVersion } from '../../../common/minecraft-utils';
 import { HelpOutlined } from '@material-ui/icons';
-import { ModLoader } from '../../../common/modloaders';
 import { TModJar, TModpack, TModVersion } from '../../api/schema-typings';
 import { removeJarFromModpack } from '../../api/remove-jar-from-modpack';
 
@@ -107,69 +106,6 @@ function ModpackView(props: { id: string }) {
       </DropZone>
     </>
   );
-}
-
-function getMostCompatibleMcVersion(requestedStr: string, availableStr: string[]): string {
-  const requested = parseMinecraftVersion(requestedStr);
-
-  sqlSort(availableStr, [
-    [item => parseMinecraftVersion(item).major === requested.major, 'DESC'],
-    [item => parseMinecraftVersion(item).major < requested.major, 'DESC'],
-    [item => parseMinecraftVersion(item).minor === requested.minor, 'DESC'],
-    [item => parseMinecraftVersion(item).minor < requested.minor, 'DESC'],
-    [item => parseMinecraftVersion(item).major, 'DESC'],
-    [item => parseMinecraftVersion(item).minor, 'DESC'],
-  ]);
-
-  return availableStr[0];
-}
-
-function sqlSort<T>(array: T[], orders): T[] {
-  return array.sort((a, b) => {
-    for (const [order, direction] of orders) {
-      const aValue = typeof order === 'function' ? order(a) : a[order];
-      const bValue = typeof order === 'function' ? order(b) : b[order];
-
-      const result = comparePrimitives(aValue, bValue);
-
-      if (result !== 0) {
-        return direction === 'DESC' ? -result : result;
-      }
-    }
-
-    return 0;
-  });
-}
-
-function comparePrimitives(a, b): number {
-  const type = typeof a;
-  if (type !== typeof b) {
-    throw new Error('a & b do not have the same type');
-  }
-
-  if (type === 'string') {
-    return a.localeCompare(b);
-  }
-
-  if (type === 'number' || type === 'bigint') {
-    return a - b;
-  }
-
-  if (type === 'boolean') {
-    if (a === b) {
-      return 0;
-    }
-
-    if (a) {
-      return 1;
-    }
-
-    if (b) {
-      return -1;
-    }
-  }
-
-  throw new Error('Unsupported type ' + type);
 }
 
 function JarListItem(props: { jar: TModJar, modpack: TModpack, onChange: () => void }) {

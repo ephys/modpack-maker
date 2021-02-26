@@ -1,15 +1,17 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Modpack } from './modpack.entity';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { generateId } from '../utils/generic-utils';
 import { ModLoader } from '../../../common/modloaders';
 import { ModDiscoveryService } from '../mod/mod-discovery.service';
 import { uniq } from 'lodash';
-import { Sequelize } from 'sequelize';
+import { QueryTypes, Sequelize } from 'sequelize';
 import ModpackMod from './modpack-mod.entity';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/minecraft-utils';
 import { ModJar } from '../mod/mod-jar.entity';
+import { InjectSequelize } from '../database/database.providers';
+import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '../../../common/minecraft-utils';
 
 type TCreateModpackInput = {
   name: string,
@@ -22,6 +24,7 @@ export class ModpackService {
   constructor(
     @Inject(MODPACK_REPOSITORY) private modpackRepository: typeof Modpack,
     private modDiscoveryService: ModDiscoveryService,
+    @InjectSequelize private sequelize: Sequelize,
   ) {
   }
 
@@ -44,17 +47,105 @@ export class ModpackService {
   async addModUrlsToModpack(modpack: Modpack, byUrl: string[]): Promise<Modpack> {
     // TODO: transaction
 
-    const { modIds, curseProjectIds, unknownUrls } = await this.modDiscoveryService.discoverUrls(byUrl);
+    const {
+      availableCurseProjectIds,
+      pendingCurseProjectIds,
+      unknownUrls,
+    } = await this.modDiscoveryService.discoverUrls(byUrl);
 
-    if (curseProjectIds.length > 0) {
-      modpack.pendingCurseForgeProjectIds = uniq([...modpack.pendingCurseForgeProjectIds, ...curseProjectIds]);
+    if (pendingCurseProjectIds.length > 0) {
+      modpack.pendingCurseForgeProjectIds = uniq([...modpack.pendingCurseForgeProjectIds, ...pendingCurseProjectIds]);
     }
 
-    await Promise.all(modIds.map(modId => this.addModToModpack(modpack, modId)));
+    await Promise.all(availableCurseProjectIds.map(projectId => {
+      return this.addCurseProjectToModpack(modpack, projectId);
+    }));
 
     // TODO: return unknownUrls to front
 
     return modpack.save();
+  }
+
+  async addCurseProjectToModpack(modpack: Modpack, curseProjectId: number): Promise<Modpack> {
+    const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
+
+    type TQueryOutput = {
+      jarId: number,
+      modId: string,
+      supportedMinecraftVersions: string,
+    };
+
+    // this query selects every modId found on the Curse Project Page matching curseProjectId
+    //  and returns the ID of the Jar that contains the best available version of that ModId, for the given modpack
+    // It does so by partitioning the list of mods by modID
+    //  sorting each partition by whether the mod would be a good fit or not
+    //  then picks the first (so, best fitting) item of each partition
+    const jarCandidates = await this.sequelize.query<TQueryOutput>(`
+      SELECT "jarId", "modId", "supportedMinecraftVersions"
+      FROM (
+        SELECT j."internalId" as "jarId",
+          v."modId",
+          v."supportedMinecraftVersions",
+            row_number() over (
+            PARTITION BY "modId"
+            ORDER BY 
+              ${validMcVersions.map(mcVersion => {
+      return `v."supportedMinecraftVersions"::text[] @> ARRAY['${mcVersion}'] DESC,\n`;
+    }).join('')}
+              v."supportedModLoader" = :modLoader DESC,
+              j."releaseType" = 'STABLE' DESC,
+              j."releaseType" = 'BETA' DESC,
+              j."releaseType" = 'ALPHA' DESC,
+              j."releaseDate" DESC
+            )
+        FROM "ModJars" j
+          LEFT JOIN "ModVersions" v on j."internalId" = v."jarId"
+        WHERE "curseProjectId" = :curseProjectId
+      ) sub1
+      WHERE sub1.row_number = 1
+    `, {
+      type: QueryTypes.SELECT,
+      replacements: {
+        curseProjectId,
+        modLoader: modpack.modLoader,
+      },
+    });
+
+    // We only add the mods for *one* minecraft version
+    // so first, determine which minecraft version would be the best available for this mod
+
+    const allMcVersions = new Set<string>();
+    for (const candidate of jarCandidates) {
+      for (const version of candidate.supportedMinecraftVersions) {
+        allMcVersions.add(version);
+      }
+    }
+
+    const idealAvailableMcVersion = getMostCompatibleMcVersion(modpack.minecraftVersion, Array.from(allMcVersions));
+    const jarIds = new Set<number>();
+
+    for (const candidate of jarCandidates) {
+      for (const version of candidate.supportedMinecraftVersions) {
+        // if "idealAvailableMcVersion" is 1.16.4,
+        // add all jars that declare support for [1.16, 1.16.4]
+        if (isMcVersionLikelyCompatibleWith(idealAvailableMcVersion, version)) {
+          jarIds.add(candidate.jarId);
+          break;
+        }
+      }
+    }
+
+    // @ts-ignore
+    await ModpackMod.bulkCreate(Array.from(jarIds).map(jarId => {
+      return {
+        modpackId: modpack.internalId,
+        jarId,
+      };
+    }), {
+      updateOnDuplicate: ['jarId', 'modpackId'],
+    });
+
+    return modpack;
   }
 
   /**
@@ -70,7 +161,7 @@ export class ModpackService {
    * @param {string} modId
    * @returns {Promise<void>}
    */
-  async addModToModpack(modpack: Modpack, modId: string): Promise<Modpack> {
+  async addModIdToModpack(modpack: Modpack, modId: string): Promise<Modpack> {
 
     const installedModVersion = await ModpackMod.findOne({
       where: {
