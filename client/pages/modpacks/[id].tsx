@@ -20,7 +20,6 @@ import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
 
 // TODO: warn for duplicate modIds
 // TODO: differentiate optional & required dependencies
-// TODO
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -241,25 +240,25 @@ function ModListItem(props: TModListItemProps) {
       }
     }
 
-    return missing;
+    return missing.sort();
   }, [mod.dependencies, modpack.modJars]);
 
   const usedBy = useMemo(() => {
-    const ids = [];
+    const ids = new Set();
 
     for (const installedJar of modpack.modJars) {
       for (const installedMod of installedJar.jar.mods) {
         if (installedMod.dependencies.find(dep => dep.modId === mod.modId) != null) {
-          ids.push(installedMod.modId);
+          ids.add(installedMod.modId);
         }
       }
     }
 
-    return ids;
+    return Array.from(ids).sort();
   }, [mod.modId, modpack.modJars]);
 
   return (
-    <ListItem title={props.title}>
+    <ListItem title={props.title} id={mod.modId} className={css.modListItem}>
       <div className={css.modListItemDetails}>
         <p>
           <strong>
@@ -270,7 +269,14 @@ function ModListItem(props: TModListItemProps) {
             <span className={css.modVersion}>{mod.modVersion}</span>
           </strong>
           {usedBy.length > 0 && (
-            <><br/>Used by {usedBy.join(', ')}</>
+            <><br/>Required by <span className={css.usedByList}>
+              {usedBy.map(modId => (
+                <>
+                  <a href={`#${modId}`}>{modId}</a>
+                  {' '}
+                </>
+              ))}
+            </span></>
           )}
         </p>
         {/*<Tag>Update available!</Tag>*/}

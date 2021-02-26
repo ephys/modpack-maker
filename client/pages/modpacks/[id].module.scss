@@ -23,6 +23,21 @@
   display: contents;
 }
 
+.modListItem:target {
+  border-radius: 4px;
+  animation: modListTargetAnimation 0.23s forwards;
+}
+
+@keyframes modListTargetAnimation {
+  from {
+    background: #f7258500;
+  }
+
+  to {
+    background: rgba(#f72585, 0.5);
+  }
+}
+
 .modListItemDetails {
   display: flex;
   flex-wrap: wrap;

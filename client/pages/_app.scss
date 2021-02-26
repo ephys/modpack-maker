@@ -52,6 +52,8 @@ ol[class] {
 /* A elements that don't have a class get default styles */
 a:not([class]) {
   text-decoration-skip-ink: auto;
+  color: inherit;
+  text-underline-position: under;
 }
 
 /* Make images easier to work with */
