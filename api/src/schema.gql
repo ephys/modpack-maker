@@ -54,8 +54,9 @@ type Modpack {
 }
 
 type Mutation {
-  addModpackMod(input: AddModpackModInput!): CreateModpackPayload!
+  addModToModpack(input: AddModpackModInput!): CreateModpackPayload!
   createModpack(input: CreateModpackInput!): CreateModpackPayload!
+  removeJarFromModpack(input: RemoveJarFromModpackInput!): CreateModpackPayload!
 }
 
 type Query {
@@ -67,4 +68,9 @@ enum ReleaseType {
   ALPHA
   BETA
   STABLE
+}
+
+input RemoveJarFromModpackInput {
+  jarId: ID!
+  modpackId: ID!
 }

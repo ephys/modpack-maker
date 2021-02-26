@@ -1,20 +1,17 @@
 import { callMutation } from './graphql';
+import { TModpack } from './schema-typings';
 
 type TAddModpackModInput = {
   byUrl: string[],
   modpackId: string,
 };
 
-export type TModpack = {
-  id: string,
-}
-
-export async function addModpackMod(input: TAddModpackModInput): Promise<TModpack> {
+export async function addModToModpack(input: TAddModpackModInput): Promise<TModpack> {
   const response = await callMutation({
     // language=GraphQL
     query: `
       mutation Mutation($input: AddModpackModInput!) {
-        addModpackMod(input: $input) {
+        addModToModpack(input: $input) {
           node {
             id
           }
@@ -24,5 +21,5 @@ export async function addModpackMod(input: TAddModpackModInput): Promise<TModpac
     variables: { input },
   });
 
-  return response.addModpackMod.node;
+  return response.addModToModpack.node;
 }

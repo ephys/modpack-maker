@@ -17,6 +17,7 @@ import { ModLoader } from '../../../common/modloaders';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { ModVersion } from '../mod/mod-version.entity';
 import { ModJar, ReleaseType } from '../mod/mod-jar.entity';
+import { ModService } from '../mod/mod.service';
 
 registerEnumType(ModLoader, {
   name: 'ModLoader',
@@ -63,10 +64,22 @@ class AddModpackModInput {
   byUrl: string[];
 }
 
+@InputType()
+class RemoveJarFromModpackInput {
+  @Field(() => ID)
+  modpackId: string;
+
+  @Field(() => ID)
+  jarId: string;
+}
+
 @Resolver(() => Modpack)
 export class ModpackResolver {
 
-  constructor(private modpackService: ModpackService) {}
+  constructor(
+    private modpackService: ModpackService,
+    private modService: ModService,
+  ) {}
 
   @Query(() => Modpack, {
     nullable: true,
@@ -92,10 +105,27 @@ export class ModpackResolver {
   }
 
   @Mutation(() => CreateModpackPayload)
-  async addModpackMod(@Args('input') input: AddModpackModInput): Promise<CreateModpackPayload> {
+  async addModToModpack(@Args('input') input: AddModpackModInput): Promise<CreateModpackPayload> {
     const modpack = await this.modpackService.getModpackByEid(input.modpackId);
 
+    // TODO: error if modpack = null
+
     await this.modpackService.addModUrlsToModpack(modpack, input.byUrl);
+
+    return new CreateModpackPayload().withNode(modpack);
+  }
+
+  @Mutation(() => CreateModpackPayload)
+  async removeJarFromModpack(@Args('input') input: RemoveJarFromModpackInput): Promise<CreateModpackPayload> {
+    const [modpack, jar] = await Promise.all([
+      this.modpackService.getModpackByEid(input.modpackId),
+      this.modService.getJar(input.jarId),
+    ]);
+
+    // TODO: error if modpack = null
+    // TODO: error if jar = null
+
+    await this.modpackService.removeJarFromModpack(modpack, jar);
 
     return new CreateModpackPayload().withNode(modpack);
   }

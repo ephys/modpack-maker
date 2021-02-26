@@ -4,13 +4,15 @@ import { isLoadedSwr } from '../../api/swr';
 import DropZone, { getAsStringAsync } from '../../components/dropzone';
 import { ComponentProps, useCallback, useEffect, useMemo } from 'react';
 import css from './[id].module.scss';
-import { addModpackMod } from '../../api/add-modpack-mod';
+import { addModToModpack } from '../../api/add-mod-to-modpack';
 import { assertIsString } from '../../utils/typing';
 import { CircularProgress, List, ListItem } from '@material-ui/core';
 import classnames from 'classnames';
 import { parseMinecraftVersion } from '../../../common/minecraft-utils';
 import { HelpOutlined } from '@material-ui/icons';
 import { ModLoader } from '../../../common/modloaders';
+import { TModJar, TModpack, TModVersion } from '../../api/schema-typings';
+import { removeJarFromModpack } from '../../api/remove-jar-from-modpack';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -38,7 +40,7 @@ function ModpackView(props: { id: string }) {
   const swr = useData(id);
 
   const onDrop = useCallback(async data => {
-    await addModpackMod({
+    await addModToModpack({
       byUrl: data.items,
       modpackId: id,
     });
@@ -96,7 +98,7 @@ function ModpackView(props: { id: string }) {
           )}
           <List>
             {modpack.modJars.map(jar => {
-              return <JarListItem key={jar.id} jar={jar} modpack={modpack} />;
+              return <JarListItem key={jar.id} jar={jar} modpack={modpack} onChange={swr.revalidate} />;
             })}
           </List>
           <h2>Automatic Dependencies</h2>
@@ -170,11 +172,20 @@ function comparePrimitives(a, b): number {
   throw new Error('Unsupported type ' + type);
 }
 
-function JarListItem(props: { jar: TModJar, modpack: TModpack }) {
-  const { jar, modpack } = props;
+function JarListItem(props: { jar: TModJar, modpack: TModpack, onChange: () => void }) {
+  const { jar, modpack, onChange } = props;
+
+  const removeJar = useCallback(async () => {
+    await removeJarFromModpack({
+      jarId: jar.id,
+      modpackId: modpack.id,
+    });
+
+    onChange();
+  }, [onChange, jar.id, modpack.id]);
 
   if (jar.mods.length === 1) {
-    return <ModListItem mod={jar.mods[0]} modpack={modpack} />;
+    return <ModListItem mod={jar.mods[0]} jar={jar} modpack={modpack} onChange={onChange} />;
   }
 
   return (
@@ -183,11 +194,11 @@ function JarListItem(props: { jar: TModJar, modpack: TModpack }) {
       <p>This file contains more than one mod</p>
       <div className={css.actions}>
         <button>Change version</button>
-        <button>remove</button>
+        <button onClick={removeJar}>remove</button>
       </div>
       <List>
         {props.jar.mods.map(mod => {
-          return <ModListItem mod={mod} modpack={modpack} disableActions />;
+          return <ModListItem mod={mod} jar={jar} modpack={modpack} onChange={onChange} disableActions />;
         })}
       </List>
     </li>
@@ -197,14 +208,25 @@ function JarListItem(props: { jar: TModJar, modpack: TModpack }) {
 type TModListItemProps = {
   modpack: TModpack,
   mod: TModVersion,
+  jar: TModJar,
   disableActions?: boolean,
+  onChange: () => void,
 };
 
 function ModListItem(props: TModListItemProps) {
-  const { mod, modpack } = props;
+  const { mod, modpack, jar, onChange } = props;
 
   // TODO: warn for MC version
   // TODO: warn if dependency is missing
+
+  const removeJar = useCallback(async () => {
+    await removeJarFromModpack({
+      jarId: jar.id,
+      modpackId: modpack.id,
+    });
+
+    onChange();
+  }, [onChange, jar.id, modpack.id]);
 
   const mostCompatibleMcVersion = useMemo(
     () => getMostCompatibleMcVersion(modpack.minecraftVersion, mod.supportedMinecraftVersions),
@@ -270,7 +292,7 @@ function ModListItem(props: TModListItemProps) {
       {!props.disableActions && (
         <div className={css.actions}>
           <button>Change version</button>
-          <button>remove</button>
+          <button onClick={removeJar}>remove</button>
         </div>
       )}
     </ListItem>
@@ -281,35 +303,6 @@ function Tag(props: ComponentProps<'span'> & { type: 'error' | 'warn' }) {
   const { type, ...passDown } = props;
   return <span {...passDown} className={classnames(css.tag, css[type])} />;
 }
-
-type TModpack = {
-  id: string,
-  minecraftVersion: string,
-  modLoader: ModLoader,
-  processingCount: number,
-  name: string,
-  modJars: TModJar[],
-};
-
-type TModJar = {
-  id: string,
-  downloadUrl: string,
-  fileName: string,
-  releaseType: string,
-  mods: TModVersion[],
-};
-
-type TModVersion = {
-  modId: string,
-  modVersion: string,
-  name: string,
-  supportedMinecraftVersions: string[],
-  supportedModLoader: ModLoader,
-  dependencies: Array<{
-    modId: string,
-    versionRange: string,
-  }>
-};
 
 function useData(modpackId: string) {
   return useGraphQl<{ modpack: TModpack | null }, Error>({

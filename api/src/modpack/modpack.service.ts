@@ -85,7 +85,7 @@ export class ModpackService {
           where: {
             modId,
           },
-        }]
+        }],
       }],
     });
 
@@ -146,6 +146,15 @@ export class ModpackService {
           },
         }],
       }],
+    });
+  }
+
+  async removeJarFromModpack(modpack: Modpack, jar: ModJar) {
+    return ModpackMod.destroy({
+      where: {
+        modpackId: modpack.internalId,
+        jarId: jar.internalId,
+      },
     });
   }
 }
