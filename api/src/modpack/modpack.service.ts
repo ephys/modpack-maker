@@ -89,9 +89,23 @@ export class ModpackService {
             row_number() over (
             PARTITION BY "modId"
             ORDER BY 
-              ${validMcVersions.map(mcVersion => {
-      return `v."supportedMinecraftVersions"::text[] @> ARRAY['${mcVersion}'] DESC,\n`;
-    }).join('')}
+              ${validMcVersions.map((mcVersion, index) => {
+                const versions = [];
+                for (let i = 0; i <= index; i++) {
+                  versions.push(validMcVersions[i]);
+                }
+                const versionStr = versions.map(v => `'${v}'`).join(',');
+
+                // We generate something that looks like: (modpack is 1.16.5)
+                //   ORDER BY v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5'] DESC,
+                //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4'] DESC,
+                //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4', '1.16.3'] DESC,
+                // We have to repeat previous version in the overlap, otherwise 
+                //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
+                //  a version that only supports 1.16.5 would be selected.
+                
+                return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
+              }).join('')}
               v."supportedModLoader" = :modLoader DESC,
               j."releaseType" = 'STABLE' DESC,
               j."releaseType" = 'BETA' DESC,
@@ -196,9 +210,15 @@ export class ModpackService {
         },
       }],
       order: Sequelize.literal(`
-        ${validMcVersions.map(mcVersion => {
-        return `mods."supportedMinecraftVersions"::text[] @> ARRAY['${mcVersion}'] DESC,\n`;
-      }).join('')}
+        ${validMcVersions.map((mcVersion, index) => {
+          // See #addCurseProjectToModpack for info about this
+          const versions = [];
+          for (let i = 0; i <= index; i++) {
+            versions.push(validMcVersions[i]);
+          }
+          const versionStr = versions.map(v => `'${v}'`).join(',');
+          return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
+        }).join('')}
         mods."supportedModLoader" = :modLoader DESC,
         "releaseType" = 'STABLE' DESC,
         "releaseType" = 'BETA' DESC,
