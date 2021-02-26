@@ -18,6 +18,7 @@ export type TModpackMod = {
 export type TModJar = {
   id: string,
   downloadUrl: string,
+  curseForgePage: string,
   fileName: string,
   releaseType: string,
   mods: TModVersion[],

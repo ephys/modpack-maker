@@ -16,5 +16,10 @@ export class ModJarResolver {
   async getModpackMods(@Parent() jar: ModJar): Promise<ModVersion[]> {
     return this.modService.getModsInJar(jar);
   }
+
+  @ResolveField('curseForgePage', () => String)
+  async getCurseForgePageUrl(@Parent() jar: ModJar): Promise<string> {
+    return this.modService.getCurseForgeProjectUrl(jar.curseProjectId);
+  }
 }
 

@@ -28,6 +28,6 @@ export default class ModpackMod extends DB.Model<ModpackMod> {
   isLibraryDependency: boolean;
 
   @DB.Column
-  @GraphQl(() => Boolean, { name: 'addedAt' })
+  @GraphQl(() => String, { name: 'addedAt' })
   createdAt: Date;
 }

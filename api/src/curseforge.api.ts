@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import fetch, { RequestInit } from 'node-fetch';
 import { ReleaseType } from './mod/mod-jar.entity';
 
 // https://twitchappapi.docs.apiary.io/#/reference/0/
@@ -53,7 +53,15 @@ export function getCurseForgeModCategories() {
   return fetchCurseForge('/category/section/6');
 }
 
-export type TForgeFile = {
+export type TCurseProject = {
+  id: number,
+  name: string,
+  // authors
+  // attachments
+  websiteUrl: string,
+};
+
+export type TCurseFile = {
   id: number,
   displayName: string,
   fileName: string,
@@ -77,17 +85,27 @@ export type TForgeFile = {
   // hasInstallScript
   // gameVersionDateReleased
   // gameVersionFlavor
-}
+};
 
-export function getCurseForgeModFiles(curseProjectId: number): Promise<TForgeFile[]> {
+export function getCurseForgeModFiles(curseProjectId: number): Promise<TCurseFile[]> {
   return fetchCurseForge(`/addon/${curseProjectId}/files`);
 }
 
-async function fetchCurseForge<T>(path) {
-  const res = await fetch(`https://addons-ecs.forgesvc.net/api/v2${path}`);
+export function getCurseForgeProjects(ids: number[]): Promise<TCurseProject[]> {
+  return fetchCurseForge(`/addon`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(ids),
+  });
+}
+
+async function fetchCurseForge<T>(path, options?: RequestInit) {
+  const res = await fetch(`https://addons-ecs.forgesvc.net/api/v2${path}`, options);
 
   if (!res.ok) {
-    throw new Error(`Could not fetch curseforge ${path}`);
+    throw new Error(`Could not fetch curseforge ${path}: ${res.status} - ${res.statusText} ` + await res.text());
   }
 
   return res.json();

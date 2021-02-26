@@ -1,7 +1,7 @@
 import { Processor, Process, InjectQueue } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import { Logger } from '@nestjs/common';
-import { getCurseForgeModFiles, getCurseReleaseType, TForgeFile } from '../curseforge.api';
+import { getCurseForgeModFiles, getCurseReleaseType, TCurseFile } from '../curseforge.api';
 import { ModVersion } from './mod-version.entity';
 import { Op, Sequelize } from 'sequelize';
 import fetch from 'node-fetch';
@@ -79,7 +79,7 @@ export class CurseforgeFileCrawlerProcessor {
     await this.insertDiscoveredModsQueue.add(curseProjectId);
   }
 
-  private async processFile(fileData: TForgeFile, curseProjectId: number) {
+  private async processFile(fileData: TCurseFile, curseProjectId: number) {
     const fileBuffer = await downloadModFile(fileData.downloadUrl);
 
     const modMetas = await getModMetasFromJar(fileBuffer);

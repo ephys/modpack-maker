@@ -20,6 +20,12 @@ import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
 
 // TODO: warn for duplicate modIds
 // TODO: differentiate optional & required dependencies
+// TODO: check exchangers mod : too many dependencies
+// TODO: check Glimmering Potions extracts their dependencies
+// TODO: check the right dependency version is installed
+// TODO: check absentbydesign, bountifulbaubles, giacomos_map_merging, industrialforegoing, forgivingvoid
+// TODO: add watch list (mods here are not part of the pack but we still check if there is an update available)
+// TODO: sort by add date or by alphabetical order
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -168,7 +174,7 @@ function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange: () =
 
   return (
     <div className={css.actions}>
-      <button>Store Page</button>
+      <a href={jar.jar.curseForgePage} target="_blank">Store Page</a>
       <MoreMenu
         actions={[
           {
@@ -340,6 +346,7 @@ function useData(modpackId: string) {
               downloadUrl
               fileName
               releaseType
+              curseForgePage
               mods {
                 modId
                 modVersion
