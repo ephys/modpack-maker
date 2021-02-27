@@ -7,7 +7,11 @@ import css from './[id].module.scss';
 import { addModToModpack } from '../../api/add-mod-to-modpack';
 import { CircularProgress, List, ListItem } from '@material-ui/core';
 import classnames from 'classnames';
-import { getMostCompatibleMcVersion, parseMinecraftVersion } from '../../../common/minecraft-utils';
+import {
+  getMostCompatibleMcVersion,
+  isMcVersionLikelyCompatibleWith,
+  parseMinecraftVersion,
+} from '../../../common/minecraft-utils';
 import { HelpOutlined } from '@material-ui/icons';
 import { TModpack, TModpackMod, TModVersion } from '../../api/schema-typings';
 import { removeJarFromModpack } from '../../api/remove-jar-from-modpack';
@@ -91,6 +95,38 @@ function ModpackView(props: { id: string }) {
     return '404';
   }
 
+  const lists = useMemo(() => {
+    const output = {
+      mods: [],
+      libraries: [],
+      incompatible: [],
+    };
+
+    for (const jar of modpack.modJars) {
+      if (jar.isLibraryDependency) {
+        output.libraries.push(jar);
+        continue;
+      }
+
+      const mod = jar.jar.mods[0];
+      if (mod.supportedModLoader !== modpack.modLoader) {
+        output.incompatible.push(jar);
+        continue;
+      }
+
+      const mostCompatible = getMostCompatibleMcVersion(modpack.minecraftVersion, mod.supportedMinecraftVersions);
+      if (!isMcVersionLikelyCompatibleWith(modpack.minecraftVersion, mostCompatible)) {
+        output.incompatible.push(jar);
+        continue;
+      }
+
+
+      output.mods.push(jar);
+    }
+
+    return output;
+  }, [modpack]);
+
   return (
     <>
       <DropZone onDrop={onDrop} itemFilter={urlItemFilter} className={css.dropZone}>
@@ -104,7 +140,7 @@ function ModpackView(props: { id: string }) {
 
           <h2>Mod List ({modpack.modJars.length} mods, {modpack.processingCount} processing)</h2>
           <List>
-            {modpack.modJars.filter(mod => !mod.isLibraryDependency).map(mod => {
+            {lists.mods.map(mod => {
               return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
             })}
           </List>
@@ -117,10 +153,21 @@ function ModpackView(props: { id: string }) {
           <h2>Libraries</h2>
           <p>Put in this section the mods that are library dependencies of other mods, we'll tell you if they can be safely removed.</p>
           <List>
-            {modpack.modJars.filter(mod => mod.isLibraryDependency).map(mod => {
+            {lists.libraries.map(mod => {
               return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
             })}
           </List>
+          {lists.incompatible.length > 0 && (
+            <>
+              <h2>Incompatible Mods</h2>
+              <p>These mods are not included in your modpack, but we'll check if a compatible update is published.</p>
+              <List>
+                {lists.incompatible.map(mod => {
+                  return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
+                })}
+              </List>
+            </>
+          )}
         </div>
       </DropZone>
     </>
