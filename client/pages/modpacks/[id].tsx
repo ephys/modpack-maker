@@ -19,6 +19,7 @@ import { MoreMenu } from '../../components/action-menu';
 import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
 import { assertIsString } from '../../../common/typing-utils';
 import { DependencyType } from '../../../common/dependency-type';
+import Head from 'next/head';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -33,6 +34,8 @@ import { DependencyType } from '../../../common/dependency-type';
 // TODO: display warn if there are missing deps of type "recommends"
 // TODO: display warn if there are deps of type "breaks"
 // TODO: display error if there are deps of type "conflicts"
+// TODO: don't include incompatible-mods in "Required by"
+// TODO: don't mark mod dependency as available if the jar in question is in "incompatible" list
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -44,8 +47,21 @@ export default function ModpackRoute() {
 
   assertIsString(id);
 
+  useEffect(() => {
+    document.documentElement.classList.add(css.html);
+
+    return () => {
+      document.documentElement.classList.remove(css.html);
+    };
+  }, []);
+
   return (
-    <ModpackView id={id} />
+    <>
+      <Head>
+        <title>Modpack</title>
+      </Head>
+      <ModpackView id={id} />
+    </>
   );
 }
 
@@ -252,7 +268,7 @@ function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange: () =
           {
             key: 2,
             onClick: switchModType,
-            title: isLibrary ? 'Move to mod list' : 'Move to Automatic Dependencies',
+            title: isLibrary ? 'Move to mod list' : 'Mark as Library',
           },
           {
             key: 3,
@@ -326,8 +342,7 @@ function ModListItem(props: TModListItemProps) {
   }, [mod.modId, modpack.modJars]);
 
   return (
-    <ListItem title={props.title} className={css.modListItem}>
-      <div className={css.modListItemTarget} id={mod.modId} />
+    <ListItem title={props.title} className={css.modListItem} id={mod.modId} >
       <div className={css.modListItemDetails}>
         <p>
           <strong>

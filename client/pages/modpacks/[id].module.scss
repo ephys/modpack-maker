@@ -1,3 +1,7 @@
+.html {
+  scroll-padding-top: 88.85px;
+}
+
 .dropZone {
   flex: 1;
 }
@@ -67,24 +71,6 @@
 
 .modListItem {
   position: relative;
-}
-
-.modListItemTarget {
-  display: block;
-  margin-top: -88.85px;
-  height: 88.85px;
-  visibility: hidden;
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  left: 0;
-
-  &:target {
-    width: 100%;
-    background: red;
-    visibility: visible;
-    opacity: 0.1;
-  }
 }
 
 .modListItem:target {
