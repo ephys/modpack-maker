@@ -36,7 +36,7 @@ type ModJar {
   downloadUrl: String!
   fileName: String!
   id: ID!
-  mods: [ModVersion!]!
+  mods(matchingModpack: ID!): [ModVersion!]!
   releaseType: ReleaseType!
 }
 

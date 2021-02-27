@@ -41,6 +41,7 @@ export class ModpackService {
   }
 
   getModpackByEid(externalId: string) {
+    // TODO: use DataLoader
     return Modpack.findOne({ where: { externalId } });
   }
 

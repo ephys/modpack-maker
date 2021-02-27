@@ -28,7 +28,7 @@ export class Modpack extends DB.Model<Modpack> {
   @GraphQl(() => ModLoader)
   @DB.AllowNull(false)
   @DB.Column(tsEnum(ModLoader))
-  modLoader: string;
+  modLoader: ModLoader;
 
   @GraphQl(() => String)
   @DB.AllowNull(false)

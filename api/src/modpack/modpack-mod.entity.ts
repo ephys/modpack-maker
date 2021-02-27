@@ -1,7 +1,7 @@
 import * as DB from 'sequelize-typescript';
 import { Modpack } from './modpack.entity';
 import { ModJar } from '../mod/mod-jar.entity';
-import { Field as GraphQl, ID, ObjectType as GraphQlObject } from '@nestjs/graphql';
+import { Field as GraphQl, ObjectType as GraphQlObject } from '@nestjs/graphql';
 
 @GraphQlObject()
 @DB.Table

@@ -425,7 +425,7 @@ function useData(modpackId: string) {
               fileName
               releaseType
               curseForgePage
-              mods {
+              mods(matchingModpack: $id) {
                 modId
                 modVersion
                 name

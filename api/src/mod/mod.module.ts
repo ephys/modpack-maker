@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { MOD_VERSION_REPOSITORY } from './mod.constants';
 import { ModVersion } from './mod-version.entity';
@@ -9,9 +9,11 @@ import { CurseforgeSearchCrawlerService } from './curseforge-search-crawler.serv
 import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { ModJarResolver } from './mod-jar.resolver';
 import { ModService } from './mod.service';
+import { ModpackModule } from '../modpack/modpack.module';
 
 @Module({
   imports: [
+    forwardRef(() => ModpackModule),
     DatabaseModule,
     BullModule.registerQueue({
       name: 'fetch-curse-project-files',

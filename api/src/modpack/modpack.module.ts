@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { Modpack } from './modpack.entity';
@@ -11,8 +11,9 @@ import { ModpackModResolver } from './modpack-mod.resolver';
 @Module({
   imports: [
     DatabaseModule,
-    ModModule,
+    forwardRef(() => ModModule),
   ],
+  exports: [ModpackService],
   providers: [
     ModpackService,
     ModpackResolver,

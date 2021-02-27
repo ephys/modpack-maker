@@ -3,12 +3,26 @@ import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
 import * as DataLoader from 'dataloader';
 import { getCurseForgeProjects, TCurseProject } from '../curseforge.api';
+import { ModLoader } from '../../../common/modloaders';
 
 @Injectable()
 class ModService {
 
-  getModsInJar(jar: ModJar): Promise<ModVersion[]> {
-    return jar.$get('mods');
+  async getModsInJar(jar: ModJar, filters?: { modLoader?: ModLoader }): Promise<ModVersion[]> {
+    const modLoader = filters?.modLoader;
+
+    // TODO: use DataLoader
+    const mods: ModVersion[] = await jar.$get('mods');
+
+    if (!modLoader) {
+      return mods;
+    }
+
+    if (mods.find(mod => mod.supportedModLoader === modLoader)) {
+      return mods.filter(mod => mod.supportedModLoader === modLoader);
+    }
+
+    return mods;
   }
 
   getJar(jarId: string): Promise<ModJar | null> {
