@@ -3,13 +3,15 @@ import MenuItem from '@material-ui/core/MenuItem';
 import IconButton from '@material-ui/core/IconButton';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import css from './action-menu.module.scss';
-import { isValidElement, useState } from 'react';
+import { ComponentProps, isValidElement, useState } from 'react';
+import { AnyLink } from './any-link';
 
 export type TAction = {
   key: string | number,
   icon?: React.ReactElement | React.ComponentType,
   title: string,
   onClick?: (e: React.SyntheticEvent<HTMLButtonElement>) => void,
+  href?: string,
 };
 
 type TActionMenuProps = {
@@ -38,7 +40,9 @@ export function ActionMenu(props: TActionMenuProps) {
 
         return (
           <MenuItem
-            component={'button'}
+            className={css.menuItem}
+            component={action.href ? MenuItemLink : MenuItemButton}
+            href={action.href}
             key={action.key || i}
             onClick={e => {
               action.onClick && action.onClick(e);
@@ -51,6 +55,22 @@ export function ActionMenu(props: TActionMenuProps) {
         );
       })}
     </Menu>
+  );
+}
+
+function MenuItemButton(props: ComponentProps<'button'>) {
+  return (
+    <li>
+      <button {...props} />
+    </li>
+  );
+}
+
+function MenuItemLink(props: ComponentProps<typeof AnyLink>) {
+  return (
+    <li>
+      <AnyLink {...props} />
+    </li>
   );
 }
 

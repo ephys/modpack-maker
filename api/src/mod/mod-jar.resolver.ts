@@ -24,7 +24,7 @@ export class ModJarResolver {
   @ResolveField('mods', () => [ModVersion])
   async getModsInJar(
     @Parent() jar: ModJar,
-    @Args('matchingModpack', { type: () => ID }) matchingModpack: string
+    @Args('matchingModpack', { type: () => ID, nullable: true }) matchingModpack: string | null,
   ): Promise<ModVersion[]> {
     const modpack = matchingModpack ? await this.modpackService.getModpackByEid(matchingModpack) : null;
 

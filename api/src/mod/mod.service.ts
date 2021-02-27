@@ -29,7 +29,7 @@ class ModService {
     return ModJar.findOne({
       where: {
         externalId: jarId,
-      }
+      },
     });
   }
 

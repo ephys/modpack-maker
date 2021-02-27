@@ -116,11 +116,19 @@
   align-items: center;
 
   &.error {
-    background: red;
+    background: lightcoral;
   }
 
   &.warn {
     background: yellow;
+  }
+
+  &.positive {
+    background: green;
+  }
+
+  &.info {
+    background: lightblue;
   }
 }
 

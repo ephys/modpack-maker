@@ -260,9 +260,7 @@ function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange: () =
           },
           {
             key: 1,
-            onClick: () => {
-              alert('NYI');
-            },
+            href: jar.jar.downloadUrl,
             title: 'Download',
           },
           {
@@ -391,6 +389,11 @@ function ModListItem(props: TModListItemProps) {
               <HelpOutlined />
             </Tag>
           ))}
+          {mod.updatedVersion && (
+            <Tag type="info">
+              update available: {mod.updatedVersion.fileName}
+            </Tag>
+          )}
         </div>
       </div>
       {!props.disableActions && (
@@ -400,7 +403,7 @@ function ModListItem(props: TModListItemProps) {
   );
 }
 
-function Tag(props: ComponentProps<'div'> & { type: 'error' | 'warn' }) {
+function Tag(props: ComponentProps<'div'> & { type: 'error' | 'warn' | 'info' }) {
   const { type, ...passDown } = props;
   return <div {...passDown} className={classnames(css.tag, css[type])} />;
 }
@@ -431,6 +434,11 @@ function useData(modpackId: string) {
                 name
                 supportedMinecraftVersions
                 supportedModLoader
+                updatedVersion(matchingModpack: $id) {
+                  fileName
+                  id
+                  releaseType
+                }
                 dependencies {
                   modId
                   versionRange

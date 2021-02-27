@@ -104,7 +104,7 @@ export class ModpackService {
                 // We have to repeat previous version in the overlap, otherwise 
                 //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
                 //  a version that only supports 1.16.5 would be selected.
-                
+
                 return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
               }).join('')}
               v."supportedModLoader" = :modLoader DESC,
@@ -169,6 +169,40 @@ export class ModpackService {
     return modpack;
   }
 
+  async getModIdBestMatchForModpack(modpack: Modpack, modId: string): Promise<ModJar> {
+    const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
+
+    return ModJar.findOne({
+      include: [{
+        association: ModJar.associations.mods,
+        required: true,
+        where: {
+          modId,
+        },
+      }],
+      order: Sequelize.literal(`
+        ${validMcVersions.map((mcVersion, index) => {
+        // See #addCurseProjectToModpack for info about this
+        const versions = [];
+        for (let i = 0; i <= index; i++) {
+          versions.push(validMcVersions[i]);
+        }
+        const versionStr = versions.map(v => `'${v}'`).join(',');
+        return `mods."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
+      }).join('')}
+        mods."supportedModLoader" = :modLoader DESC,
+        "releaseType" = 'STABLE' DESC,
+        "releaseType" = 'BETA' DESC,
+        "releaseType" = 'ALPHA' DESC,
+        "releaseDate" DESC
+      `),
+      subQuery: false,
+      replacements: {
+        modLoader: modpack.modLoader,
+      },
+    });
+  }
+
   /**
    * Adds our best matching available mod version to the modpack
    *
@@ -205,38 +239,7 @@ export class ModpackService {
       return modpack;
     }
 
-    const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
-
-    const mod = await ModJar.findOne({
-      attributes: ['internalId'],
-      include: [{
-        association: ModJar.associations.mods,
-        required: true,
-        where: {
-          modId,
-        },
-      }],
-      order: Sequelize.literal(`
-        ${validMcVersions.map((mcVersion, index) => {
-          // See #addCurseProjectToModpack for info about this
-          const versions = [];
-          for (let i = 0; i <= index; i++) {
-            versions.push(validMcVersions[i]);
-          }
-          const versionStr = versions.map(v => `'${v}'`).join(',');
-          return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
-        }).join('')}
-        mods."supportedModLoader" = :modLoader DESC,
-        "releaseType" = 'STABLE' DESC,
-        "releaseType" = 'BETA' DESC,
-        "releaseType" = 'ALPHA' DESC,
-        "releaseDate" DESC
-      `),
-      subQuery: false,
-      replacements: {
-        modLoader: modpack.modLoader,
-      },
-    });
+    const mod = await this.getModIdBestMatchForModpack(modpack, modId);
 
     if (!mod) {
       throw new Error(`Could not find any valid mod for ${modId}`);
