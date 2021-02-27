@@ -22,21 +22,7 @@ export type TModMeta = {
 export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<TModMeta>>> {
   const data = await Zip.loadAsync(modJar);
 
-  const hasLegacyForge = data.files['mcmod.info'];
   const hasNewForge = data.files['META-INF/mods.toml'];
-
-  // safeguard
-  if (hasLegacyForge && hasNewForge) {
-    const haveBeenChecked = ['industrialforegoing'];
-    const manifest = permissivelyParseJson(await data.file('mcmod.info').async('string'));
-
-    // this is a temporary measure
-    // we want to check for which reasons mods might be including both legacy & new forge metadata
-    // current behavior would be to ignore legacy metadata.
-    if (!haveBeenChecked.includes(manifest[0].modid)) {
-      throw new Error('Found a Jar declaring both a legacy forge mod & a new forge mod. modid: ' + manifest[0].modid);
-    }
-  }
 
   const mods: Array<Partial<TModMeta>> = [];
 
@@ -102,7 +88,7 @@ function mergeModMeta(main: Partial<TModMeta>, toAdd: Partial<TModMeta>): Partia
   "environment": "*" / "client" / "server"
  */
 function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
-  const manifest = JSON.parse(fileContents);
+  const manifest = permissivelyParseJson(fileContents);
 
   const dependencyTypes: DependencyType[] = Object.values(DependencyType);
   const dependencies: Array<TModDependency> = [];
@@ -245,7 +231,7 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
 
 function permissivelyParseJson(fileContents) {
   // some users put line-breaks inside their JSON string which is invalid (should have used '\n' instead)
-  return JSON.parse(fileContents.replaceAll('\n', ''));
+  return JSON.parse(fileContents.replaceAll('\n', ' '));
 }
 
 export function getMetaFromLegacyMcModInfo(fileContents): Array<Partial<TModMeta>> {

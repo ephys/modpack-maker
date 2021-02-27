@@ -1,0 +1,15 @@
+[
+  {
+    "dependencies": [
+      {
+        "modId": "fabricloader",
+        "type": "depends",
+        "versionRange": ">=0.4.0"
+      }
+    ],
+    "loader": "FABRIC",
+    "modId": "wandering_collector",
+    "name": "Wandering Collector",
+    "version": "1.0.0+mc1.16.5"
+  }
+]
