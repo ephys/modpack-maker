@@ -82,25 +82,17 @@ function ModpackView(props: { id: string }) {
     return () => clearTimeout(timeout);
   }, [swr]);
 
-  if (!isLoadedSwr(swr)) {
-    return 'loading';
-  }
-
-  if (swr.error) {
-    return 'error';
-  }
-
   const modpack = swr.data?.modpack;
-  if (!modpack) {
-    return '404';
-  }
-
   const lists = useMemo(() => {
     const output = {
       mods: [],
       libraries: [],
       incompatible: [],
     };
+
+    if (!modpack) {
+      return output;
+    }
 
     for (const jar of modpack.modJars) {
       if (jar.isLibraryDependency) {
@@ -126,6 +118,18 @@ function ModpackView(props: { id: string }) {
 
     return output;
   }, [modpack]);
+
+  if (!isLoadedSwr(swr)) {
+    return 'loading';
+  }
+
+  if (swr.error) {
+    return 'error';
+  }
+
+  if (!modpack) {
+    return '404';
+  }
 
   return (
     <>
