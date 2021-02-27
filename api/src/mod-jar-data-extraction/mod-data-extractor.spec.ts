@@ -4,7 +4,6 @@ import { groupBy } from 'lodash';
 import { getModMetasFromJar } from './mod-data-extractor';
 
 describe('getModMetaFromJar', () => {
-
   it('extracts the proper meta from a mod jar', async () => {
     const dir = path.join(__dirname, '__test-mods__');
     const testFiles = await fs.readdir(dir);

@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Potion Descriptions",
+    "modId": "potiondescriptions",
+    "minecraftVersionRange": ">=1.16.3 < 1.17",
+    "loader": "FORGE",
+    "version": "1.16.3-1.5.0",
+    "dependencies": [
+      {
+        "modId": "botania",
+        "type": "suggests"
+      },
+      {
+        "modId": "forge",
+        "type": "depends",
+        "versionRange": ">=34.1.22"
+      },
+      {
+        "modId": "xreliquary",
+        "type": "suggests"
+      }
+    ]
+  }
+]

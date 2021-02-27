@@ -6,6 +6,7 @@ import { mavenVersionRangeToSemver } from './version-range';
 import { TModDependency } from '../mod/mod-version.entity';
 import { assertIsString } from '../../../common/typing-utils';
 import { DependencyType } from '../../../common/dependency-type';
+import { parseJarManifest } from './jar-manifestmf-parser';
 
 export type TModMeta = {
   name: string,
@@ -26,7 +27,15 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<
 
   // safeguard
   if (hasLegacyForge && hasNewForge) {
-    throw new Error('Found a Jar declaring both a legacy forge mod & a new forge mod.');
+    const haveBeenChecked = ['industrialforegoing'];
+    const manifest = permissivelyParseJson(await data.file('mcmod.info').async('string'));
+
+    // this is a temporary measure
+    // we want to check for which reasons mods might be including both legacy & new forge metadata
+    // current behavior would be to ignore legacy metadata.
+    if (!haveBeenChecked.includes(manifest[0].modid)) {
+      throw new Error('Found a Jar declaring both a legacy forge mod & a new forge mod. modid: ' + manifest[0].modid);
+    }
   }
 
   const mods: Array<Partial<TModMeta>> = [];
@@ -35,11 +44,6 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<
   if (data.files['fabric.mod.json']) {
     // fabric can only contain one mod
     mods.push(getMetaFromFabricManifest(await data.file('fabric.mod.json').async('string')));
-  }
-
-  // LEGACY FORGE MOD
-  if (data.files['mcmod.info']) {
-    mods.push(...getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string')));
   }
 
   if (hasNewForge) {
@@ -57,6 +61,9 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<
     }
 
     mods.push(modMeta);
+  } else if (data.files['mcmod.info']) {
+    // LEGACY FORGE MOD
+    mods.push(...getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string')));
   }
 
   return mods;
@@ -131,7 +138,7 @@ function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
         dep.versionRange = version;
       }
 
-      dependencies.push(dep)
+      dependencies.push(dep);
     }
   }
 
@@ -158,74 +165,6 @@ export function getMetaFromJarManifest(fileContents): Partial<TModMeta> {
     version: manifest.main['Implementation-Version'],
     modId: manifest.main['Specification-Title'],
   });
-}
-
-// https://github.com/limulus/jarfile/blob/master/src/Jar.js
-function parseJarManifest(manifest) {
-  var result = { 'main': {}, 'sections': {} };
-
-  var expectingSectionStart = false
-    , skip = 0
-    , currentSection = null;
-
-  manifest = manifest.toString('utf8');
-  var lines = manifest.split(/(?:\r\n|\r|\n)/);
-  lines.forEach(function (line, i) {
-    var entry;
-    // this line may have already been processed, if so skip it
-    if (skip) {
-      skip--;
-      return;
-    }
-
-    // Watch for blank lines, they mean we're starting a new section
-    if (line === '') {
-      expectingSectionStart = true;
-      return;
-    }
-
-    // Extract the name and value from entry line
-    var pair = line.match(/^([a-z0-9_-]+): (.*)$/i);
-    if (!pair) {
-      throwManifestParseError('expected a valid entry', i, line);
-    }
-    var name = pair[1], val = (pair[2] || '');
-
-    // Handle section start
-    if (expectingSectionStart && name !== 'Name') {
-      throwManifestParseError('expected section name', i, line);
-    } else if (expectingSectionStart) {
-      currentSection = val;
-      expectingSectionStart = false;
-      return;
-    }
-
-    // Add entry to the appropriate section
-    if (currentSection) {
-      if (!result['sections'][currentSection]) {
-        result['sections'][currentSection] = {};
-      }
-      entry = result['sections'][currentSection];
-    } else {
-      entry = result['main'];
-    }
-    entry[name] = val;
-    for (var j = i + 1; j < lines.length; j++) {
-      var byteLen = Buffer.byteLength(line, 'utf8');
-      if (byteLen >= 70) {
-        line = lines[j];
-        if (line && line[0] === ' ') {
-          // continuation lines must start with a space
-          entry[name] += line.substr(1);
-          skip++;
-          continue;
-        }
-      }
-      break;
-    }
-  });
-
-  return result;
 }
 
 /*
@@ -270,13 +209,16 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
     const manifestDependencies = manifest.dependencies[modId];
     for (const manifestDep of manifestDependencies) {
       if (manifestDep.modId.toLowerCase() === 'minecraft') {
-        minecraftVersionRange = mavenVersionRangeToSemver(manifestDep.versionRange);
+        if (manifestDep.versionRange) {
+          minecraftVersionRange = mavenVersionRangeToSemver(manifestDep.versionRange);
+        }
+
         continue;
       }
 
       const dep: TModDependency = {
         modId: manifestDep.modId,
-        versionRange: mavenVersionRangeToSemver(manifestDep.versionRange),
+        versionRange: manifestDep.versionRange ? mavenVersionRangeToSemver(manifestDep.versionRange) : undefined,
         type: manifestDep.mandatory ? DependencyType.depends : DependencyType.suggests,
       };
 
@@ -328,10 +270,6 @@ export function getMetaFromLegacyMcModInfo(fileContents): Array<Partial<TModMeta
       minecraftVersionRange: mod.mcversion,
     };
   });
-}
-
-function throwManifestParseError(msg, lineNum, lineContent) {
-  throw new Error(`Failed to parse manifest at line ${lineNum}: ${msg}\n\n${lineContent}`);
 }
 
 function omitFalsy(obj) {

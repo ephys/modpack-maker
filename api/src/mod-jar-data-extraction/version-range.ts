@@ -1,4 +1,8 @@
 export function mavenVersionRangeToSemver(mavenRange: string): string {
+  if (!mavenRange) {
+    throw new Error('Invalid Maven Range received: ' + mavenRange);
+  }
+
   return VersionRange.fromMaven(mavenRange).toNpmSemver();
 }
 

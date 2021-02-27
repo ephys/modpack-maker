@@ -1,0 +1,16 @@
+[
+  {
+    "loader": "FORGE",
+    "minecraftVersionRange": "1.15.2",
+    "modId": "appliedenergistics2",
+    "name": "Applied Energistics 2",
+    "version": "7.0.0-alpha.7",
+    "dependencies": [
+      {
+        "modId": "forge",
+        "type": "depends",
+        "versionRange": ">=31.0.0"
+      }
+    ]
+  }
+]

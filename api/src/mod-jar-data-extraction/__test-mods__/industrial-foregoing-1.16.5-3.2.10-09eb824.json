@@ -1,0 +1,20 @@
+[
+  {
+    "modId": "industrialforegoing",
+    "version": "3.2.10",
+    "name": "Industrial Foregoing",
+    "loader": "FORGE",
+    "dependencies": [
+      {
+        "modId": "forge",
+        "type": "depends",
+        "versionRange": ">=36.0.1"
+      },
+      {
+        "modId": "titanium",
+        "type": "depends",
+        "versionRange": ">=3.2.5"
+      }
+    ]
+  }
+]
