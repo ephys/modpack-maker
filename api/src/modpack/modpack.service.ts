@@ -125,6 +125,12 @@ export class ModpackService {
       },
     });
 
+    // FIXME: adding total darkness adds both 1.2.1 & 1.1.1
+    //  https://www.curseforge.com/minecraft/mc-mods/total-darkness/files
+    //  - one mod supports both fabric & forge
+    //  - the other only forge
+    //  - the fabric id is different from the forge id
+
     // We only add the mods for *one* minecraft version
     // so first, determine which minecraft version would be the best available for this mod
 
@@ -249,6 +255,7 @@ export class ModpackService {
       include: [{
         association: ModpackMod.associations.jar,
       }],
+      order: [['createdAt', 'ASC']],
     });
   }
 

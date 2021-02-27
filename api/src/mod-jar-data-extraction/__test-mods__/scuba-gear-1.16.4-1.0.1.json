@@ -6,6 +6,7 @@
   "loader": "FORGE",
   "dependencies": [{
     "modId": "forge",
+    "type": "depends",
     "versionRange": ">=35.0.0"
   }]
 }]

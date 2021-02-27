@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import { uriTag } from '../utils/url-utils';
 import { useGraphQl } from '../api/graphql';
 import { isLoadedSwr } from '../api/swr';
+import { TModpack } from '../api/schema-typings';
 
 export default function Home() {
   const router = useRouter();
@@ -96,7 +97,7 @@ function ExistingModpackList() {
       <ul>
         {swr.data.modpacks.map(modpack => {
           return (
-            <li>
+            <li key={modpack.id}>
               <a href={`/modpacks/${modpack.id}`}>{modpack.name} {modpack.minecraftVersion} {modpack.modLoader}</a>
             </li>
           );
@@ -107,7 +108,7 @@ function ExistingModpackList() {
 }
 
 function useData() {
-  return useGraphQl({
+  return useGraphQl<{ modpacks: TModpack[] }, Error>({
     // language=GraphQL
     query: `
       query Data {

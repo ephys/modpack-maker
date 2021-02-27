@@ -1,10 +1,15 @@
 import {
   Resolver,
-  ResolveField, Parent,
+  ResolveField, Parent, registerEnumType,
 } from '@nestjs/graphql';
 import { ModVersion } from './mod-version.entity';
 import { ModJar } from './mod-jar.entity';
 import { ModService } from './mod.service';
+import { DependencyType } from '../../../common/dependency-type';
+
+registerEnumType(DependencyType, {
+  name: 'DependencyType',
+});
 
 @Resolver(() => ModJar)
 export class ModJarResolver {

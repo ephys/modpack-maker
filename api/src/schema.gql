@@ -17,9 +17,18 @@ type CreateModpackPayload {
   node: Modpack!
 }
 
+enum DependencyType {
+  breaks
+  conflicts
+  depends
+  recommends
+  suggests
+}
+
 type GqlModDependency {
   modId: String!
-  versionRange: String!
+  type: DependencyType!
+  versionRange: String
 }
 
 type ModJar {

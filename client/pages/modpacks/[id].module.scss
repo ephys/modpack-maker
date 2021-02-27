@@ -14,6 +14,24 @@
 
   h2 {
     font-size: 37.90px;
+    position: sticky;
+    top: 0;
+    background: #2a2d3e;
+    z-index: 1;
+    padding: 16px 0;
+    margin-bottom: 16px;
+
+    &::after {
+      content: '';
+      display: block;
+      width: calc(100% - 32px);
+      height: 100%;
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      pointer-events: none;
+      box-shadow: 0 5px 3px -3px rgba(0,0,0,0.12), 0 2px 2px -2px rgba(0,0,0,0.24);
+    }
   }
 }
 
@@ -21,6 +39,52 @@
 .modVersion {
   font-family: 'Space Mono', monospace;
   display: contents;
+}
+
+.modListItem {
+  position: relative;
+
+  &::after {
+    content: '';
+    display: block;
+    position: absolute;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    background: rgb(0 0 0 / 0.2);
+    border-radius: 4px;
+    opacity: 0;
+    left: 0;
+    top: 0;
+    transition: opacity 0.1s linear;
+    z-index: -1;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+.modListItem {
+  position: relative;
+}
+
+.modListItemTarget {
+  display: block;
+  margin-top: -88.85px;
+  height: 88.85px;
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  &:target {
+    width: 100%;
+    background: red;
+    visibility: visible;
+    opacity: 0.1;
+  }
 }
 
 .modListItem:target {
@@ -72,4 +136,22 @@
   &.warn {
     background: yellow;
   }
+}
+
+.processingRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.jarListItem {
+  background: rgb(0 0 0 / 0.2);
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.jarListHeading {
+  display: flex;
 }

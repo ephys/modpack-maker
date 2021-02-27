@@ -2,5 +2,18 @@
   "name": "Netherite Horse Armor",
   "modId": "netheritehorsearmor",
   "version": "0.3.0",
-  "loader": "FABRIC"
+  "loader": "FABRIC",
+  "minecraftVersionRange": "1.16.x",
+  "dependencies": [{
+    "modId": "fabric",
+    "type": "depends"
+  }, {
+    "modId": "fabricloader",
+    "type": "depends",
+    "versionRange": ">=0.8.9"
+  }, {
+    "modId": "modmenu",
+    "type": "suggests",
+    "versionRange": "1.14.5+build.30"
+  }]
 }]

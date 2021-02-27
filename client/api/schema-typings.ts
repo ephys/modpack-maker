@@ -1,4 +1,5 @@
 import { ModLoader } from '../../common/modloaders';
+import { DependencyType } from '../../common/dependency-type';
 
 export type TModpack = {
   id: string,
@@ -33,5 +34,6 @@ export type TModVersion = {
   dependencies: Array<{
     modId: string,
     versionRange: string,
-  }>
+    type: DependencyType,
+  }>,
 };

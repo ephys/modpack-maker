@@ -2,12 +2,19 @@ import * as DB from 'sequelize-typescript';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
-import { Field, Field as GraphQl, ObjectType, ObjectType as GraphQlObject } from '@nestjs/graphql';
+import {
+  Field,
+  Field as GraphQl,
+  ObjectType,
+  ObjectType as GraphQlObject,
+} from '@nestjs/graphql';
 import { ModJar } from './mod-jar.entity';
+import { DependencyType } from '../../../common/dependency-type';
 
 export type TModDependency = {
   modId: string,
-  versionRange: string,
+  versionRange?: string,
+  type: DependencyType,
 };
 
 @ObjectType()
@@ -15,8 +22,11 @@ export class GqlModDependency {
   @Field()
   modId: string;
 
-  @Field()
-  versionRange: string;
+  @Field({ nullable: true })
+  versionRange?: string;
+
+  @Field(() => DependencyType)
+  type: DependencyType;
 }
 
 @DB.Table

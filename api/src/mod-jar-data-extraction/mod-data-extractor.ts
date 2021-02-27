@@ -4,6 +4,8 @@ import * as Toml from '@iarna/toml';
 import { ModLoader } from '../../../common/modloaders';
 import { mavenVersionRangeToSemver } from './version-range';
 import { TModDependency } from '../mod/mod-version.entity';
+import { assertIsString } from '../../../common/typing-utils';
+import { DependencyType } from '../../../common/dependency-type';
 
 export type TModMeta = {
   name: string,
@@ -19,7 +21,6 @@ export type TModMeta = {
 export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<TModMeta>>> {
   const data = await Zip.loadAsync(modJar);
 
-  const hasFabric = data.files['fabric.mod.json'];
   const hasLegacyForge = data.files['mcmod.info'];
   const hasNewForge = data.files['META-INF/mods.toml'];
 
@@ -28,47 +29,37 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<
     throw new Error('Found a Jar declaring both a legacy forge mod & a new forge mod.');
   }
 
-  // safeguard, but this might be allowed.
-  if (hasFabric && (hasLegacyForge || hasNewForge)) {
-    throw new Error('Found a Jar declaring both forge & fabric.');
-  }
+  const mods: Array<Partial<TModMeta>> = [];
 
   // FABRIC MOD
   if (data.files['fabric.mod.json']) {
     // fabric can only contain one mod
-    return [
-      getMetaFromFabricManifest(await data.file('fabric.mod.json').async('string'))
-    ];
+    mods.push(getMetaFromFabricManifest(await data.file('fabric.mod.json').async('string')));
   }
 
   // LEGACY FORGE MOD
   if (data.files['mcmod.info']) {
-    return getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string'));
+    mods.push(...getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string')));
   }
 
-  let modMeta = {};
+  if (hasNewForge) {
+    let modMeta = {};
 
-  // NEW FORGE MOD
-  if (data.files['META-INF/mods.toml']) {
-    const newMeta = getMetaFromModsToml(await data.file('META-INF/mods.toml').async('string'));
-    mergeModMeta(modMeta, newMeta);
-
-    if (isMetaComplete(modMeta)) {
-      return [modMeta];
+    if (data.files['META-INF/mods.toml']) {
+      const newMeta = getMetaFromModsToml(await data.file('META-INF/mods.toml').async('string'));
+      mergeModMeta(modMeta, newMeta);
     }
-  }
 
-  // NEW FORGE META
-  if (data.files['META-INF/MANIFEST.MF']) {
-    const newMeta = getMetaFromJarManifest(await data.file('META-INF/MANIFEST.MF').async('string'));
-    mergeModMeta(modMeta, newMeta);
-
-    if (isMetaComplete(modMeta)) {
-      return [modMeta];
+    // NEW FORGE META
+    if (!isMetaComplete(modMeta) && data.files['META-INF/MANIFEST.MF']) {
+      const newMeta = getMetaFromJarManifest(await data.file('META-INF/MANIFEST.MF').async('string'));
+      mergeModMeta(modMeta, newMeta);
     }
+
+    mods.push(modMeta);
   }
 
-  return [modMeta];
+  return mods;
 }
 
 function isMetaComplete(t: Partial<TModMeta>): t is TModMeta {
@@ -91,28 +82,68 @@ function mergeModMeta(main: Partial<TModMeta>, toAdd: Partial<TModMeta>): Partia
   return main;
 }
 
+/*
+  // https://fabricmc.net/wiki/documentation:fabric_mod_json
+  Useful fields from fabric.mod.json:
+  "description": "Adds shelves to showcase your items",
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/shelf",
+    "issues": "https://www.curseforge.com/minecraft/mc-mods/shelf/issues"
+  },
+  "license": "CC0-1.0",
+  "icon": "shelf_icon.png",
+  "environment": "*" / "client" / "server"
+ */
 function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
   const manifest = JSON.parse(fileContents);
 
-  // TODO: deps + mc + fabric loader
+  const dependencyTypes: DependencyType[] = Object.values(DependencyType);
+  const dependencies: Array<TModDependency> = [];
+  let minecraftVersionRange;
 
-  /* TODO:
-    "depends": {
-    "fabricloader": "\u003e\u003d0.8.9",
-    "fabric": "*",
-    "minecraft": "1.16.x"
-  },
-  TODO:
-  "suggests": {
-    "modmenu": "1.14.5+build.30"
-  },
-   */
+  const seen = new Set();
+  for (const type of dependencyTypes) {
+    const manifestDeps = manifest[type];
+    if (!manifestDeps) {
+      continue;
+    }
+
+    for (const [modId, version] of Object.entries(manifestDeps)) {
+      if (seen.has(modId)) {
+        throw new Error(`Mod ${manifest.id} declares dependency ${modId} twice`);
+      }
+
+      seen.add(modId);
+
+      if (modId === 'minecraft') {
+        minecraftVersionRange = version;
+        continue;
+      }
+
+      const dep: TModDependency = {
+        modId,
+        type,
+      };
+
+      assertIsString(version);
+
+      if (version !== '*') {
+        dep.versionRange = version;
+      }
+
+      dependencies.push(dep)
+    }
+  }
+
+  dependencies.sort((a, b) => a.modId.localeCompare(b.modId));
 
   return omitFalsy({
     modId: manifest.id,
     version: manifest.version,
     name: manifest.name,
     loader: ModLoader.FABRIC,
+    dependencies,
+    minecraftVersionRange,
   });
 }
 
@@ -197,6 +228,14 @@ function parseJarManifest(manifest) {
   return result;
 }
 
+/*
+Useful fields from toml:
+issueTrackerURL
+license
+mods.x.displayURL
+mods.x.description
+mods.x.logoFile
+ */
 export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
   const manifest = Toml.parse(fileContents);
 
@@ -229,18 +268,23 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
 
   if (modId && manifest.dependencies?.[modId]) {
     const manifestDependencies = manifest.dependencies[modId];
-    for (const dep of manifestDependencies) {
-      if (dep.modId.toLowerCase() === 'minecraft') {
-        minecraftVersionRange = mavenVersionRangeToSemver(dep.versionRange);
+    for (const manifestDep of manifestDependencies) {
+      if (manifestDep.modId.toLowerCase() === 'minecraft') {
+        minecraftVersionRange = mavenVersionRangeToSemver(manifestDep.versionRange);
         continue;
       }
 
-      dependencies.push({
-        modId: dep.modId,
-        versionRange: mavenVersionRangeToSemver(dep.versionRange),
-      });
+      const dep: TModDependency = {
+        modId: manifestDep.modId,
+        versionRange: mavenVersionRangeToSemver(manifestDep.versionRange),
+        type: manifestDep.mandatory ? DependencyType.depends : DependencyType.suggests,
+      };
+
+      dependencies.push(dep);
     }
   }
+
+  dependencies.sort((a, b) => a.modId.localeCompare(b.modId));
 
   const meta: Partial<TModMeta> = omitFalsy({
     version,

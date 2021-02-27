@@ -5,7 +5,6 @@ import DropZone, { getAsStringAsync } from '../../components/dropzone';
 import { ComponentProps, useCallback, useEffect, useMemo } from 'react';
 import css from './[id].module.scss';
 import { addModToModpack } from '../../api/add-mod-to-modpack';
-import { assertIsString } from '../../utils/typing';
 import { CircularProgress, List, ListItem } from '@material-ui/core';
 import classnames from 'classnames';
 import { getMostCompatibleMcVersion, parseMinecraftVersion } from '../../../common/minecraft-utils';
@@ -14,18 +13,22 @@ import { TModpack, TModpackMod, TModVersion } from '../../api/schema-typings';
 import { removeJarFromModpack } from '../../api/remove-jar-from-modpack';
 import { MoreMenu } from '../../components/action-menu';
 import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
+import { assertIsString } from '../../../common/typing-utils';
+import { DependencyType } from '../../../common/dependency-type';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
 
+// TODO: confirm when removing mod + add undo snack
 // TODO: warn for duplicate modIds
-// TODO: differentiate optional & required dependencies
-// TODO: check exchangers mod : too many dependencies
 // TODO: check Glimmering Potions extracts their dependencies
 // TODO: check the right dependency version is installed
 // TODO: check absentbydesign, bountifulbaubles, giacomos_map_merging, industrialforegoing, forgivingvoid
 // TODO: add watch list (mods here are not part of the pack but we still check if there is an update available)
 // TODO: sort by add date or by alphabetical order
+// TODO: display warn if there are missing deps of type "recommends"
+// TODO: display warn if there are deps of type "breaks"
+// TODO: display error if there are deps of type "conflicts"
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -93,24 +96,24 @@ function ModpackView(props: { id: string }) {
       <DropZone onDrop={onDrop} itemFilter={urlItemFilter} className={css.dropZone}>
         <div className={css.container}>
           <h1>{modpack.name} Modpack</h1>
-          <p>{modpack.minecraftVersion}</p>
+          <p>Minecraft {modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
           <button>Download All Mods</button>
           <button>Add Mod</button>
           <button>Edit modpack details</button>
 
           <h2>Mod List ({modpack.modJars.length} mods, {modpack.processingCount} processing)</h2>
-          {modpack.processingCount > 0 && (
-            <>
-              <CircularProgress />
-              <p>We're processing the mods you added, please stand by.</p>
-            </>
-          )}
           <List>
             {modpack.modJars.filter(mod => !mod.isLibraryDependency).map(mod => {
               return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
             })}
           </List>
+          {modpack.processingCount > 0 && (
+            <div className={css.processingRow}>
+              <CircularProgress />
+              <p>We're processing the mods you added, please stand by.</p>
+            </div>
+          )}
           <h2>Libraries</h2>
           <p>Put in this section the mods that are library dependencies of other mods, we'll tell you if they can be safely removed.</p>
           <List>
@@ -134,10 +137,14 @@ function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onCh
   }
 
   return (
-    <li style={{ background: 'rgb(0 0 0 / 0.2)', padding: '16px', borderRadius: '8px' }}>
-      <h3>{jar.fileName}</h3>
-      <p>This file contains more than one mod</p>
-      <JarListItem installedMod={installedMod} modpack={modpack} onChange={onChange} />
+    <li className={css.jarListItem}>
+      <div className={css.jarListHeading}>
+        <div>
+          <h3>{jar.fileName}</h3>
+          <p>This file contains more than one mod</p>
+        </div>
+        <JarActions jar={installedMod} modpack={modpack} onChange={onChange} />
+      </div>
       <List>
         {jar.mods.map(mod => {
           return <ModListItem mod={mod} installedMod={installedMod} modpack={modpack} onChange={onChange} disableActions />;
@@ -235,9 +242,13 @@ function ModListItem(props: TModListItemProps) {
   const missingDependencies = useMemo(() => {
     const missing = [];
     for (const dependency of mod.dependencies) {
+      if (dependency.type !== DependencyType.depends) {
+        continue;
+      }
+
       const modId = dependency.modId;
 
-      if (modId === 'forge') {
+      if (modId === 'forge' || modId === 'fabric' || modId === 'fabricloader') {
         continue;
       }
 
@@ -264,7 +275,8 @@ function ModListItem(props: TModListItemProps) {
   }, [mod.modId, modpack.modJars]);
 
   return (
-    <ListItem title={props.title} id={mod.modId} className={css.modListItem}>
+    <ListItem title={props.title} className={css.modListItem}>
+      <div className={css.modListItemTarget} id={mod.modId} />
       <div className={css.modListItemDetails}>
         <p>
           <strong>
@@ -356,6 +368,7 @@ function useData(modpackId: string) {
                 dependencies {
                   modId
                   versionRange
+                  type
                 }
               }
             }

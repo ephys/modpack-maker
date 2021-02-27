@@ -1,0 +1,44 @@
+[
+  {
+    "modId": "shelf",
+    "name": "Shelf",
+    "version": "1.2",
+    "loader": "FABRIC",
+    "minecraftVersionRange": ">=1.16.4",
+    "dependencies": [
+      {
+        "modId": "architectury",
+        "type": "depends",
+        "versionRange": ">=1.1.55"
+      },
+      {
+        "modId": "fabric",
+        "type": "depends"
+      },
+      {
+        "modId": "fabricloader",
+        "type": "depends",
+        "versionRange": ">=0.7.4"
+      }
+    ]
+  },
+  {
+    "modId": "shelf",
+    "name": "Shelf",
+    "version": "1.2",
+    "loader": "FORGE",
+    "minecraftVersionRange": ">=1.16.2",
+    "dependencies": [
+      {
+        "modId": "architectury",
+        "type": "depends",
+        "versionRange": ">=1.1.55"
+      },
+      {
+        "modId": "forge",
+        "type": "depends",
+        "versionRange": ">=35"
+      }
+    ]
+  }
+]

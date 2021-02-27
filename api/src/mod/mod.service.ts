@@ -21,7 +21,6 @@ class ModService {
 
   #getCurseForgeProjectDataLoader = new DataLoader<number, TCurseProject>(async (curseProjectIds: number[]) => {
     const projects = await getCurseForgeProjects(curseProjectIds);
-    console.log(projects);
     return curseProjectIds.map(id => {
       return projects.find(project => project.id === id);
     });

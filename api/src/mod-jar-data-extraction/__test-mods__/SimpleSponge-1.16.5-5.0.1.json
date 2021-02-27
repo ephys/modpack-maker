@@ -1,0 +1,26 @@
+[
+  {
+    "modId": "simplesponge",
+    "name": "Simple Sponge",
+    "version": "5.0.1",
+    "minecraftVersionRange": ">=1.16 <1.17",
+    "loader": "FORGE",
+    "dependencies": [
+      {
+        "modId": "forge",
+        "versionRange": ">=35",
+        "type": "depends"
+      },
+      {
+        "modId": "gunpowderlib",
+        "versionRange": ">=1.16.4-1.2",
+        "type": "depends"
+      },
+      {
+        "modId": "openblocks",
+        "versionRange": ">=1.0",
+        "type": "suggests"
+      }
+    ]
+  }
+]

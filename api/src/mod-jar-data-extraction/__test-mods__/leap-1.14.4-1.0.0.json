@@ -6,6 +6,7 @@
   "minecraftVersionRange": "1.14.4",
   "dependencies": [{
     "modId": "forge",
+    "type": "depends",
     "versionRange": ">=28.2.0"
   }]
 }]
