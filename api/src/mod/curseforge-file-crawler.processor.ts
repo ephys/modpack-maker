@@ -13,10 +13,11 @@ import { ModJar } from './mod-jar.entity';
 import { InjectSequelize } from '../database/database.providers';
 import { generateId } from '../utils/generic-utils';
 import { CurseforgeProject } from './curseforge-project.entity';
+import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
 
 // TODO: every 15 minutes, if queue is empty, fill it with every mod that is in a modpack & whose versionListUpToDate is false
 
-@Processor('fetch-curse-project-files')
+@Processor(FETCH_CURSE_FILES_QUEUE)
 export class CurseforgeFileCrawlerProcessor {
   private readonly logger = new Logger(CurseforgeFileCrawlerProcessor.name);
 
@@ -26,7 +27,9 @@ export class CurseforgeFileCrawlerProcessor {
   ) {
   }
 
-  @Process()
+  @Process({
+    concurrency: 10,
+  })
   async fetchCurseProjectFiles(job: Job<number>) {
     const curseProjectId = job.data;
     console.log('Processing CurseForge mod ' + curseProjectId);
@@ -76,10 +79,60 @@ export class CurseforgeFileCrawlerProcessor {
       }
     }
 
-    await this.insertDiscoveredModsQueue.add(curseProjectId);
+    await Promise.all([
+      CurseforgeProject.update({
+        versionListUpToDate: true,
+      }, {
+        where: {
+          forgeId: curseProjectId,
+        },
+      }),
+      this.insertDiscoveredModsQueue.add(curseProjectId),
+    ]);
   }
 
-  private async processFile(fileData: TCurseFile, curseProjectId: number) {
+  private async processFile(fileData: TCurseFile, curseProjectId: number): Promise<void> {
+    // mods that I could not fix myself
+    const blackList = [
+      // chimes (https://www.curseforge.com/minecraft/mc-mods/chimes/files)
+      // Up to Chimes-1.16.3-0.9.6.jar has a syntax error in mods.toml
+      3113012, 3133542, 3106377, 3189454, 3122566, 3195111,
+
+      // Architectury API (Forge)
+      // https://www.curseforge.com/minecraft/mc-mods/architectury-forge/files
+      // These files are missing a version
+      3112385, 3115335, 3112376, 3114260, 3114302, 3112341, 3118765, 3118805,
+
+      // Charm
+      // These are for snapshots, can safely ignore them
+      3110770,
+
+      // NoExpensive
+      // Snapshot mod
+      2972766,
+
+      // Dude! Where's my Horse?
+      // https://www.curseforge.com/minecraft/mc-mods/dude-wheres-my-horse/files/2913880
+      // Version Missing
+      2913880,
+
+      // True Darkness
+      // Snapshot
+      2899752, 2958683, 2970433,
+
+      // https://www.curseforge.com/minecraft/mc-mods/waystones
+      // Has mods.toml but is actually a 1.12.2 mod
+      2859214,
+
+      // Industrial foregoing
+      // No version
+      2713265,
+    ];
+
+    if (blackList.includes(fileData.id)) {
+      return;
+    }
+
     const fileBuffer = await downloadModFile(fileData.downloadUrl);
 
     const modMetas = await getModMetasFromJar(fileBuffer);

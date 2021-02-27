@@ -2,14 +2,45 @@ import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { CurseforgeProject } from './curseforge-project.entity';
-import { ModVersion } from './mod-version.entity';
 import { ModJar } from './mod-jar.entity';
+import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
+import { Op, Sequelize } from 'sequelize';
 
 const curseForgeProjectUrl = /^https?:\/\/www.curseforge.com\/minecraft\/mc-mods\/([^\/]+)(\/.+)?$/;
 
 @Injectable()
 class ModDiscoveryService {
-  constructor(@InjectQueue('fetch-curse-project-files') private modDiscoveryQueue: Queue) {}
+  constructor(@InjectQueue(FETCH_CURSE_FILES_QUEUE) private modDiscoveryQueue: Queue) {}
+
+  async retryFailedFiles() {
+    const projects = await CurseforgeProject.findAll({
+      where: Sequelize.where(
+        Sequelize.fn('array_length', Sequelize.col('failedFileIds'), 1),
+        { [Op.gt]: 0 },
+      ),
+    });
+
+    const failedProjectsIds = projects.map(project => project.forgeId);
+
+    await CurseforgeProject.update({
+      failedFileIds: [],
+      versionListUpToDate: false,
+    }, {
+      where: {
+        forgeId: { [Op.in]: failedProjectsIds },
+      },
+    });
+
+    return this.updateCurseProjectFiles(failedProjectsIds);
+  }
+
+  async updateCurseProjectFiles(projectId: number | number[]) {
+    if (Array.isArray(projectId)) {
+      await this.modDiscoveryQueue.addBulk(projectId.map(id => ({ data: id })));
+    } else {
+      await this.modDiscoveryQueue.add(projectId);
+    }
+  }
 
   async discoverUrls(urls: string[]): Promise<{
     pendingCurseProjectIds: number[],

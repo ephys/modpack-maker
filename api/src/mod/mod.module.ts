@@ -1,6 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
-import { MOD_VERSION_REPOSITORY } from './mod.constants';
+import { FETCH_CURSE_FILES_QUEUE, MOD_VERSION_REPOSITORY } from './mod.constants';
 import { ModVersion } from './mod-version.entity';
 import { ModDiscoveryService } from './mod-discovery.service';
 import { BullModule } from '@nestjs/bull';
@@ -9,6 +9,7 @@ import { CurseforgeSearchCrawlerService } from './curseforge-search-crawler.serv
 import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { ModJarResolver } from './mod-jar.resolver';
 import { ModService } from './mod.service';
+import { CurseforgeFileCrawlerController } from './curseforge-file-crawler.controller';
 import { ModpackModule } from '../modpack/modpack.module';
 
 @Module({
@@ -16,7 +17,7 @@ import { ModpackModule } from '../modpack/modpack.module';
     forwardRef(() => ModpackModule),
     DatabaseModule,
     BullModule.registerQueue({
-      name: 'fetch-curse-project-files',
+      name: FETCH_CURSE_FILES_QUEUE,
     }),
     BullModule.registerQueue({
       name: INSERT_DISCOVERED_MODS_QUEUE,
@@ -25,6 +26,9 @@ import { ModpackModule } from '../modpack/modpack.module';
   exports: [
     ModDiscoveryService,
     ModService,
+  ],
+  controllers: [
+    CurseforgeFileCrawlerController,
   ],
   providers: [
     CurseforgeFileCrawlerProcessor,
