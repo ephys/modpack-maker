@@ -62,8 +62,10 @@ export default function DropZone(props: Props) {
       {props.children}
       {isDropping && (
         <div className={css.dropActive}>
-          <UploadIcon fontSize="inherit" />
-          <p>Drop Here</p>
+          <div className={css.dropActiveContent}>
+            <UploadIcon fontSize="inherit" />
+            <p>Drop Here</p>
+          </div>
         </div>
       )}
     </div>
