@@ -20,6 +20,7 @@ import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
 import { assertIsString } from '../../../common/typing-utils';
 import { DependencyType } from '../../../common/dependency-type';
 import Head from 'next/head';
+import { AnyLink } from '../../components/any-link';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -27,15 +28,13 @@ import Head from 'next/head';
 // TODO: confirm when removing mod + add undo snack
 // TODO: warn for duplicate modIds
 // TODO: check Glimmering Potions extracts their dependencies
-// TODO: check the right dependency version is installed
-// TODO: check absentbydesign, bountifulbaubles, giacomos_map_merging, industrialforegoing, forgivingvoid
-// TODO: add watch list (mods here are not part of the pack but we still check if there is an update available)
-// TODO: sort by add date or by alphabetical order
+// TODO: option to sort by add date or by alphabetical order
 // TODO: display warn if there are missing deps of type "recommends"
 // TODO: display warn if there are deps of type "breaks"
 // TODO: display error if there are deps of type "conflicts"
 // TODO: don't include incompatible-mods in "Required by"
 // TODO: don't mark mod dependency as available if the jar in question is in "incompatible" list
+// TODO: only download mods that are compatible with pack
 
 export default function ModpackRoute() {
   const router = useRouter();
@@ -154,7 +153,7 @@ function ModpackView(props: { id: string }) {
           <h1>{modpack.name} Modpack</h1>
           <p>Minecraft {modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
-          <button>Download All Mods</button>
+          <AnyLink href={modpack.downloadUrl}>Download Modpack</AnyLink>
           <button>Add Mod</button>
           <button>Edit modpack details</button>
 
@@ -419,6 +418,7 @@ function useData(modpackId: string) {
           modLoader
           processingCount
           name
+          downloadUrl
           modJars {
             addedAt
             isLibraryDependency

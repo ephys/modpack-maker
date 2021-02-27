@@ -9,8 +9,9 @@ import { CurseforgeSearchCrawlerService } from './curseforge-search-crawler.serv
 import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { ModJarResolver } from './mod-jar.resolver';
 import { ModService } from './mod.service';
-import { CurseforgeFileCrawlerController } from './curseforge-file-crawler.controller';
+import { ModController } from './mod.controller';
 import { ModpackModule } from '../modpack/modpack.module';
+import { ModResolver } from './mod.resolver';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { ModpackModule } from '../modpack/modpack.module';
     ModService,
   ],
   controllers: [
-    CurseforgeFileCrawlerController,
+    ModController,
   ],
   providers: [
     CurseforgeFileCrawlerProcessor,
@@ -36,6 +37,7 @@ import { ModpackModule } from '../modpack/modpack.module';
     ModJarResolver,
     ModService,
     CurseforgeSearchCrawlerService,
+    ModResolver,
     {
       provide: MOD_VERSION_REPOSITORY,
       useValue: ModVersion,

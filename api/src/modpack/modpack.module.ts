@@ -7,6 +7,7 @@ import { ModpackResolver } from './modpack.resolver';
 import { ModModule } from '../mod/mod.module';
 import { InsertDiscoveredModsProcessor } from './insert-discovered-mods.processor';
 import { ModpackModResolver } from './modpack-mod.resolver';
+import { ModpackController } from './modpack.controller';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ModpackModResolver } from './modpack-mod.resolver';
     forwardRef(() => ModModule),
   ],
   exports: [ModpackService],
+  controllers: [ModpackController],
   providers: [
     ModpackService,
     ModpackResolver,

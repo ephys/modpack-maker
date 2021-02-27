@@ -1,7 +1,4 @@
-import {
-  Resolver,
-  ResolveField, Parent, registerEnumType, Args, ID,
-} from '@nestjs/graphql';
+import { Args, ID, Parent, registerEnumType, ResolveField, Resolver } from '@nestjs/graphql';
 import { ModVersion } from './mod-version.entity';
 import { ModJar } from './mod-jar.entity';
 import { ModService } from './mod.service';
@@ -37,5 +34,11 @@ export class ModJarResolver {
   async getCurseForgePageUrl(@Parent() jar: ModJar): Promise<string> {
     return this.modService.getCurseForgeProjectUrl(jar.curseProjectId);
   }
-}
 
+  @ResolveField('downloadUrl', () => String)
+  async getJarDownloadUrl(@Parent() jar: ModJar): Promise<string> {
+    // TODO uriTag
+    // TODO: configurable domain
+    return `http://localhost:8080/jars/${jar.externalId}/download`;
+  }
+}

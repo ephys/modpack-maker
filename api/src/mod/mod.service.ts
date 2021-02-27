@@ -4,6 +4,12 @@ import { ModVersion } from './mod-version.entity';
 import * as DataLoader from 'dataloader';
 import { getCurseForgeProjects, TCurseProject } from '../curseforge.api';
 import { ModLoader } from '../../../common/modloaders';
+import fetch, { Response } from 'node-fetch';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as fsCb from 'fs';
+
+const jarCacheDir = path.join(__dirname, '..', '.jar-files');
 
 @Injectable()
 class ModService {
@@ -42,6 +48,76 @@ class ModService {
 
   async getCurseForgeProjectUrl(curseProjectId: number): Promise<string> {
     return (await this.#getCurseForgeProjectDataLoader.load(curseProjectId)).websiteUrl;
+  }
+
+  async downloadJarToFileStream(jar: ModJar): Promise<NodeJS.ReadableStream> {
+    let cachedFilePath = await this.getCachedJarPath(jar);
+    if (!cachedFilePath) {
+      const fileRes = await fetch(jar.downloadUrl);
+      // Currently, we download & pipe to disk, then read file & pipe to REST response
+      // I wanted to return the stream sooner (as soon as download from curse is ready) but it comes with headache
+      // that only benefits initial download
+      // if someone else wants to take a stab at it, PR welcome.
+      cachedFilePath = await this.cacheJar(jar, fileRes);
+    }
+
+    return fsCb.createReadStream(cachedFilePath);
+  }
+
+  /**
+   * @param {ModJar} jar
+   * @returns {Promise<string>} the file path to the cached version
+   */
+  async downloadJarToFsPath(jar: ModJar): Promise<string> {
+    const filePath = await this.getCachedJarPath(jar);
+    if (filePath != null) {
+      return filePath;
+    }
+
+    const fileRes = await fetch(jar.downloadUrl);
+
+    return this.cacheJar(jar, fileRes);
+  }
+
+  private async getCachedJarPath(jar: ModJar): Promise<string | null> {
+    const cachedFilePath = path.join(jarCacheDir, jar.externalId + '.jar');
+
+    const cacheExists = await fileExists(cachedFilePath);
+
+    if (cacheExists) {
+      return cachedFilePath;
+    }
+
+    return null;
+  }
+
+  private async cacheJar(jar: ModJar, fileRes: Response): Promise<string> {
+    await fs.mkdir(jarCacheDir, { recursive: true });
+    const cachedFilePath = path.join(jarCacheDir, jar.externalId + '.jar');
+
+    await new Promise<void>((resolve, reject) => {
+      fileRes.body.pipe(fsCb.createWriteStream(cachedFilePath + '.part'))
+        .on('finish', () => {
+          resolve();
+        })
+        .on('error', reject);
+    });
+
+    await fs.rename(cachedFilePath + '.part', cachedFilePath);
+
+    return cachedFilePath;
+  }
+}
+
+async function fileExists(file) {
+  try {
+    return (await fs.stat(file)).isFile();
+  } catch (e) {
+    if (e.code === 'ENOENT') {
+      return false;
+    }
+
+    throw e;
   }
 }
 

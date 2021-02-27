@@ -12,6 +12,16 @@ import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/mine
 import { ModJar } from '../mod/mod-jar.entity';
 import { InjectSequelize } from '../database/database.providers';
 import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '../../../common/minecraft-utils';
+import { ModService } from '../mod/mod.service';
+import * as childProcess from 'child_process';
+import * as fsCb from 'fs';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as assert from 'assert';
+import * as rimrafCb from 'rimraf';
+import * as nodeUtils from 'util';
+
+const rimraf = nodeUtils.promisify(rimrafCb);
 
 type TCreateModpackInput = {
   name: string,
@@ -24,6 +34,7 @@ export class ModpackService {
   constructor(
     @Inject(MODPACK_REPOSITORY) private modpackRepository: typeof Modpack,
     private modDiscoveryService: ModDiscoveryService,
+    private modService: ModService,
     @InjectSequelize private sequelize: Sequelize,
   ) {
   }
@@ -91,22 +102,22 @@ export class ModpackService {
             PARTITION BY "modId"
             ORDER BY 
               ${validMcVersions.map((mcVersion, index) => {
-                const versions = [];
-                for (let i = 0; i <= index; i++) {
-                  versions.push(validMcVersions[i]);
-                }
-                const versionStr = versions.map(v => `'${v}'`).join(',');
+      const versions = [];
+      for (let i = 0; i <= index; i++) {
+        versions.push(validMcVersions[i]);
+      }
+      const versionStr = versions.map(v => `'${v}'`).join(',');
 
-                // We generate something that looks like: (modpack is 1.16.5)
-                //   ORDER BY v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5'] DESC,
-                //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4'] DESC,
-                //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4', '1.16.3'] DESC,
-                // We have to repeat previous version in the overlap, otherwise 
-                //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
-                //  a version that only supports 1.16.5 would be selected.
+      // We generate something that looks like: (modpack is 1.16.5)
+      //   ORDER BY v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5'] DESC,
+      //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4'] DESC,
+      //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4', '1.16.3'] DESC,
+      // We have to repeat previous version in the overlap, otherwise 
+      //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
+      //  a version that only supports 1.16.5 would be selected.
 
-                return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
-              }).join('')}
+      return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
+    }).join('')}
               v."supportedModLoader" = :modLoader DESC,
               j."releaseType" = 'STABLE' DESC,
               j."releaseType" = 'BETA' DESC,
@@ -263,21 +274,21 @@ export class ModpackService {
     });
   }
 
-  // getModpackJars(modpack: Modpack): Promise<ModJar[]> {
-  //   return ModJar.findAll({
-  //     include: [{
-  //       association: ModJar.associations.inModpacks,
-  //       required: true,
-  //       include: [{
-  //         association: ModpackMod.associations.modpack,
-  //         required: true,
-  //         where: {
-  //           internalId: modpack.internalId,
-  //         },
-  //       }],
-  //     }],
-  //   });
-  // }
+  getModpackJars(modpack: Modpack): Promise<ModJar[]> {
+    return ModJar.findAll({
+      include: [{
+        association: ModJar.associations.inModpacks,
+        required: true,
+        include: [{
+          association: ModpackMod.associations.modpack,
+          required: true,
+          where: {
+            internalId: modpack.internalId,
+          },
+        }],
+      }],
+    });
+  }
 
   async removeJarFromModpack(modpack: Modpack, jar: ModJar) {
     return ModpackMod.destroy({
@@ -307,6 +318,68 @@ export class ModpackService {
 
     return modpackMod;
   }
+
+  async downloadModpackToFileStream(modpack: Modpack): Promise<NodeJS.ReadableStream> {
+    const dbJars = await this.getModpackJars(modpack);
+
+    // TODO use tmp package
+    const outputZipFile = path.resolve('tmp-zip.zip');
+
+    // TODO use tmp package
+    const tmpModpackDir = path.resolve('.tmp-zip-dir');
+    const modsDir = path.join(tmpModpackDir, 'mods');
+
+    await fs.mkdir(modsDir, { recursive: true });
+
+    const fsFiles = await Promise.all(dbJars.map(async dbJar => {
+      const fsFile = await this.modService.downloadJarToFsPath(dbJar);
+
+      const fsSafeFileName = slugifyJarForFs(dbJar.fileName);
+      assert(fsSafeFileName.length > 0, `fsSafeFileName is empty for input ${dbJar.fileName}`);
+
+      // TODO: rename if file exists
+      const outFile = path.join(modsDir, fsSafeFileName);
+
+      await fs.symlink(fsFile, outFile);
+    }));
+
+    const modsDirRel = path.relative(tmpModpackDir, modsDir);
+
+    await new Promise<void>((resolve, reject) => {
+      const command = `cd ${tmpModpackDir} && zip ${path.relative(tmpModpackDir, outputZipFile)} -r ${modsDirRel}`;
+      childProcess.exec(command, (error, stdout, stderr) => {
+        console.log(stdout);
+        console.error(stderr);
+
+        if (error) {
+          return void reject(error);
+        }
+
+        resolve();
+      });
+    });
+
+    await rimraf(tmpModpackDir);
+
+    return fsCb.createReadStream(outputZipFile);
+  }
+}
+
+function slugifyJarForFs(input: string) {
+  input = input.toLowerCase();
+
+  const extname = path.extname(input);
+  if (extname === '.jar') {
+    input = input.substring(0, input.length - extname.length);
+  }
+
+  // whitelist alphanumeric
+  return (input.replace(/[^a-z0-9_-]/g, '-')
+    // remove consecutive -
+    .replace(/-+/g, '-')
+    // remove start & end -
+    .replace(/^-*/, '')
+    .replace(/-*$/, '')) + '.jar';
 }
 
 export function getPreferredMinecraftVersions(mainVersionStr: string, existingMcVersions: string[]) {

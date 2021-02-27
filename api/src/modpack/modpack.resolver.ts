@@ -136,5 +136,12 @@ export class ModpackResolver {
   async getModpackMods(@Parent() modpack: Modpack): Promise<ModpackMod[]> {
     return this.modpackService.getModpackInstalledJars(modpack);
   }
+
+  @ResolveField('downloadUrl', () => String)
+  async getJarDownloadUrl(@Parent() jar: ModJar): Promise<string> {
+    // TODO uriTag
+    // TODO: configurable domain
+    return `http://localhost:8080/modpacks/${jar.externalId}/download`;
+  }
 }
 

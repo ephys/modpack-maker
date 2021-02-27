@@ -201,7 +201,7 @@ export class CurseforgeFileCrawlerProcessor {
     const modJar = ModJar.build({
       externalId: generateId(),
       curseProjectId,
-      fileName: fileData.displayName,
+      fileName: fileData.fileName,
       curseFileId: fileData.id,
       downloadUrl: fileData.downloadUrl,
       releaseType: getCurseReleaseType(fileData.releaseType),
