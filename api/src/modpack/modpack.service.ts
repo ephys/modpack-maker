@@ -277,6 +277,9 @@ export class ModpackService {
   getModpackJars(modpack: Modpack): Promise<ModJar[]> {
     return ModJar.findAll({
       include: [{
+        association: ModJar.associations.mods,
+        required: true,
+      }, {
         association: ModJar.associations.inModpacks,
         required: true,
         include: [{
@@ -320,7 +323,27 @@ export class ModpackService {
   }
 
   async downloadModpackToFileStream(modpack: Modpack): Promise<NodeJS.ReadableStream> {
-    const dbJars = await this.getModpackJars(modpack);
+    const dbJars = (await this.getModpackJars(modpack)).filter(jar => {
+      assert(jar.mods != null && jar.mods.length > 0, 'downloadModpackToFileStream: expected jar to eagerly include mods');
+
+      let containsCompatibleMod = false;
+      for (const mod of jar.mods) {
+        // mod.supportedModLoader
+        if (mod.supportedModLoader !== modpack.modLoader) {
+          continue;
+        }
+
+        const mostCompatible = getMostCompatibleMcVersion(modpack.minecraftVersion, mod.supportedMinecraftVersions);
+        if (!isMcVersionLikelyCompatibleWith(modpack.minecraftVersion, mostCompatible)) {
+          continue;
+        }
+
+        containsCompatibleMod = true;
+        break;
+      }
+
+      return containsCompatibleMod;
+    });
 
     // TODO use tmp package
     const outputZipFile = path.resolve('tmp-zip.zip');

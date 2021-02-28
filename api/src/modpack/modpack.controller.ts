@@ -19,6 +19,7 @@ export class ModpackController {
       return;
     }
 
+    // TODO: cancel request on req.on('close') using AbortController
     const stream = await this.modpackService.downloadModpackToFileStream(modpack);
 
     if (!stream) {
