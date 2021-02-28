@@ -145,7 +145,6 @@ export class ModpackResolver {
 
   @Mutation(() => CreateModpackPayload)
   async replaceModpackJar(@Args('input') input: ReplaceModpackJarInput): Promise<CreateModpackPayload> {
-    console.log(input);
     const [modpack, oldJar, newJar] = await Promise.all([
       this.modpackService.getModpackByEid(input.modpackId),
       this.modService.getJar(input.oldJarId),

@@ -408,6 +408,7 @@ export class ModpackService {
           jarId: newJar.internalId,
           modpackId: modpack.internalId,
           createdAt: oldInstalledJar.createdAt,
+          isLibraryDependency: oldInstalledJar.isLibraryDependency,
         }, { transaction }),
         oldInstalledJar.destroy({ transaction }),
       ]);
