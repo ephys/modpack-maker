@@ -4,8 +4,11 @@ import { CurseforgeProject } from './curseforge-project.entity';
 import { getCurseForgeModCategories, iterateForgeModList } from '../curseforge.api';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { Sequelize } from 'sequelize-typescript';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import { lastItem } from '../utils/generic-utils';
+import { InjectQueue } from '@nestjs/bull';
+import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
+import { Queue } from 'bull';
 
 const PAGE_SIZE = 200;
 
@@ -13,7 +16,10 @@ const PAGE_SIZE = 200;
 export class CurseforgeSearchCrawlerService {
   private readonly logger = new Logger(CurseforgeSearchCrawlerService.name);
 
-  constructor(@Inject(SEQUELIZE_PROVIDER) private readonly sequelize: Sequelize) {
+  constructor(
+    @Inject(SEQUELIZE_PROVIDER) private readonly sequelize: Sequelize,
+    @InjectQueue(FETCH_CURSE_FILES_QUEUE) private modDiscoveryQueue: Queue,
+  ) {
     this.handleCron();
   }
 
@@ -103,6 +109,8 @@ export class CurseforgeSearchCrawlerService {
       //   updateOnDuplicate: ['forgeId', 'slug', 'lastForgeEditAt', 'versionListUpToDate'],
       // });
     }
+
+    await this.checkModsHaveUpdates();
   }
 
   private async doInitialCurseFetch() {
@@ -119,11 +127,6 @@ export class CurseforgeSearchCrawlerService {
     const allItems = new Map();
 
     for (const category of categories) {
-      // this is a subcategory (category 6 = minecraft-mods)
-      if (category.parentGameCategoryId !== 6) {
-        continue;
-      }
-
       this.logger.log(`fetching category ${category.name}`);
 
       let itemCount = 0;
@@ -155,6 +158,33 @@ export class CurseforgeSearchCrawlerService {
       fields: ['forgeId', 'slug', 'lastForgeEditAt', 'versionListUpToDate'],
       updateOnDuplicate: ['slug', 'lastForgeEditAt', 'versionListUpToDate'],
     });
+  }
+
+  private async checkModsHaveUpdates() {
+    const itemsInUpdateQueue = await this.modDiscoveryQueue.count()
+
+    // we'll try again next CRON
+    if (itemsInUpdateQueue > 0) {
+      return;
+    }
+
+    this.logger.log('Checking if Curse Projects that are used in modpacks have updates');
+
+    // select all curseProjectId that are used in modpacks
+    //  and that have changes detected by handleCron, but not yet processed
+    const projects = await this.sequelize.query<{ curseProjectId: number }>(`
+      SELECT DISTINCT j."curseProjectId" FROM "ModJars" j
+        INNER JOIN "ModpackMods" mm on j."internalId" = mm."jarId"
+      WHERE "curseProjectId" IN (SELECT cfp."forgeId" FROM "CurseforgeProjects" cfp WHERE cfp."versionListUpToDate" = FALSE)
+    `, {
+      type: QueryTypes.SELECT,
+    });
+
+    console.log(projects);
+
+    await this.modDiscoveryQueue.addBulk(projects.map(project => {
+      return { data: project.curseProjectId };
+    }));
   }
 }
 
