@@ -36,6 +36,17 @@ import { replaceModpackJar } from '../../api/replace-modpack-jar';
 // TODO: don't include incompatible-mods in "Required by"
 // TODO: don't mark mod dependency as available if the jar in question is in "incompatible" list
 // TODO: only download mods that are compatible with pack
+// TODO: ability to disable mods (but keep them in the list)
+// TODO: ability to create versions of the modpack. Once a version is ready, user can click "create new version"
+//  and can go back to previous version.
+//  also display what changed since previous version using colored bullets
+// TODO: display sticky info bar at top:
+//  - modpack name
+//  - how many mods
+//  - how many libs
+//  - how many processing
+//  - how many incompatible mods
+//  Clicking them jumps to section
 
 export default function ModpackRoute() {
   const router = useRouter();
