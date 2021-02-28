@@ -21,6 +21,7 @@ import { assertIsString } from '../../../common/typing-utils';
 import { DependencyType } from '../../../common/dependency-type';
 import Head from 'next/head';
 import { AnyLink } from '../../components/any-link';
+import { replaceModpackJar } from '../../api/replace-modpack-jar';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -338,6 +339,18 @@ function ModListItem(props: TModListItemProps) {
     return Array.from(ids).sort();
   }, [mod.modId, modpack.modJars]);
 
+  const installUpdatedVersion = useCallback(async () => {
+    await replaceModpackJar({
+      modpackId: modpack.id,
+      newJarId: mod.updatedVersion.id,
+      oldJarId: installedMod.jar.id,
+    });
+
+    // TODO error handling
+
+    onChange();
+  }, [mod, installedMod.jar, modpack.id, onChange]);
+
   return (
     <ListItem title={props.title} className={css.modListItem} id={mod.modId} >
       <div className={css.modListItemDetails}>
@@ -391,6 +404,7 @@ function ModListItem(props: TModListItemProps) {
           {mod.updatedVersion && (
             <Tag type="info">
               update available: {mod.updatedVersion.fileName}
+              <button type="button" onClick={installUpdatedVersion}>install</button>
             </Tag>
           )}
         </div>

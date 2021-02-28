@@ -57,6 +57,18 @@ class CreateModpackInput {
 }
 
 @InputType()
+class ReplaceModpackJarInput {
+  @Field(() => ID)
+  modpackId: string;
+
+  @Field(() => ID)
+  oldJarId: string;
+
+  @Field(() => ID)
+  newJarId: string;
+}
+
+@InputType()
 class AddModpackModInput {
   @Field(() => ID)
   modpackId: string;
@@ -127,6 +139,22 @@ export class ModpackResolver {
     // TODO: error if jar = null
 
     await this.modpackService.removeJarFromModpack(modpack, jar);
+
+    return new CreateModpackPayload().withNode(modpack);
+  }
+
+  @Mutation(() => CreateModpackPayload)
+  async replaceModpackJar(@Args('input') input: ReplaceModpackJarInput): Promise<CreateModpackPayload> {
+    console.log(input);
+    const [modpack, oldJar, newJar] = await Promise.all([
+      this.modpackService.getModpackByEid(input.modpackId),
+      this.modService.getJar(input.oldJarId),
+      this.modService.getJar(input.newJarId),
+    ]);
+
+    // TODO: entity missing errors
+
+    await this.modpackService.replaceModpackJar(modpack, oldJar, newJar);
 
     return new CreateModpackPayload().withNode(modpack);
   }

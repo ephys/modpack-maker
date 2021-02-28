@@ -75,6 +75,7 @@ type Mutation {
   addModToModpack(input: AddModpackModInput!): CreateModpackPayload!
   createModpack(input: CreateModpackInput!): CreateModpackPayload!
   removeJarFromModpack(input: RemoveJarFromModpackInput!): CreateModpackPayload!
+  replaceModpackJar(input: ReplaceModpackJarInput!): CreateModpackPayload!
   setModpackJarIsLibrary(input: SetModpackJarIsLibraryInput!): SetModpackJarIsLibraryPayload!
 }
 
@@ -92,6 +93,12 @@ enum ReleaseType {
 input RemoveJarFromModpackInput {
   jarId: ID!
   modpackId: ID!
+}
+
+input ReplaceModpackJarInput {
+  modpackId: ID!
+  newJarId: ID!
+  oldJarId: ID!
 }
 
 input SetModpackJarIsLibraryInput {

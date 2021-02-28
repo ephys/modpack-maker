@@ -363,6 +363,33 @@ export class ModpackService {
 
     return fsCb.createReadStream(outputZipFile);
   }
+
+  async replaceModpackJar(modpack: Modpack, oldJar: ModJar, newJar: ModJar): Promise<void> {
+    return this.sequelize.transaction(async transaction => {
+      const oldInstalledJar: ModpackMod = await ModpackMod.findOne({
+        where: {
+          jarId: oldJar.internalId,
+          modpackId: modpack.internalId,
+        },
+        transaction,
+      });
+
+      if (!oldInstalledJar) {
+        // TODO: throw ServiceError
+        throw new Error('Old jar missing');
+      }
+
+      await Promise.all([
+        // @ts-expect-error
+        ModpackMod.create({
+          jarId: newJar.internalId,
+          modpackId: modpack.internalId,
+          createdAt: oldInstalledJar.createdAt,
+        }, { transaction }),
+        oldInstalledJar.destroy({ transaction }),
+      ]);
+    });
+  }
 }
 
 function slugifyJarForFs(input: string) {
