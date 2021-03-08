@@ -417,15 +417,13 @@ export class ModpackService {
 }
 
 function slugifyJarForFs(input: string) {
-  input = input.toLowerCase();
-
   const extname = path.extname(input);
   if (extname === '.jar') {
     input = input.substring(0, input.length - extname.length);
   }
 
   // whitelist alphanumeric
-  return (input.replace(/[^a-z0-9_-]/g, '-')
+  return (input.replace(/[^a-zA-Z0-9_\-.]/g, '-')
     // remove consecutive -
     .replace(/-+/g, '-')
     // remove start & end -
