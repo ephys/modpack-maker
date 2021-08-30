@@ -1,6 +1,6 @@
-import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import * as semver from 'semver';
 import { parseMinecraftVersion } from '../../../common/minecraft-utils';
+import * as minecraftVersion from '../../../common/minecraft-versions.json';
 
 export { parseMinecraftVersion };
 
@@ -24,7 +24,7 @@ export function minecraftVersionComparator(order: 'DESC' | 'ASC') {
 }
 
 export function getMinecraftVersionsInRange(range: string): string[] {
-  const valid = [];
+  const valid: string[] = [];
 
   for (const version of minecraftVersion) {
     if (semver.satisfies(semver.coerce(version), range)) {

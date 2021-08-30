@@ -1,9 +1,10 @@
-import { Args, Field, ID, InputType, Mutation, ObjectType, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { ModJar } from '../mod/mod-jar.entity';
-import ModpackMod from './modpack-mod.entity';
+import { Args, Field, ID, InputType, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IsBoolean, MinLength } from 'class-validator';
-import { ModpackService } from './modpack.service';
+import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
+import { Payload } from '../utils/graphql-payload';
+import ModpackMod from './modpack-mod.entity';
+import { ModpackService } from './modpack.service';
 
 @InputType()
 class SetModpackJarIsLibraryInput {
@@ -20,23 +21,19 @@ class SetModpackJarIsLibraryInput {
   isLibrary: boolean;
 }
 
-@ObjectType()
-class SetModpackJarIsLibraryPayload {
-  @Field()
-  node: ModpackMod;
-
-  withNode(node: ModpackMod): this {
-    this.node = node;
-
-    return this;
-  }
+enum SetModpackJarIsLibraryErrorCode {
+  MODPACK_NOT_FOUND = 'MODPACK_NOT_FOUND',
+  JAR_NOT_FOUND = 'JAR_NOT_FOUND',
+  JAR_NOT_IN_MODPACK = 'JAR_NOT_IN_MODPACK',
 }
+
+const SetModpackJarIsLibraryPayload = Payload('SetModpackJarIsLibrary', ModpackMod, SetModpackJarIsLibraryErrorCode);
 
 @Resolver(() => ModpackMod)
 class ModpackModResolver {
   constructor(
-    private modpackService: ModpackService,
-    private modService: ModService,
+    private readonly modpackService: ModpackService,
+    private readonly modService: ModService,
   ) {
   }
 
@@ -53,11 +50,18 @@ class ModpackModResolver {
       this.modpackService.getModpackByEid(input.modpackId),
     ]);
 
-    // TODO: return error if jar / modpack is null
+    if (modpack == null) {
+      return new SetModpackJarIsLibraryPayload().withError(SetModpackJarIsLibraryErrorCode.MODPACK_NOT_FOUND, `modpack ${input.modpackId} not found`);
+    }
+
+    if (jar == null) {
+      return new SetModpackJarIsLibraryPayload().withError(SetModpackJarIsLibraryErrorCode.JAR_NOT_FOUND, `Jar ${input.jarId} not found`);
+    }
 
     const modpackMod = await this.modpackService.setModpackJarIsLibrary(modpack, jar, input.isLibrary);
-
-    // TODO: return error if modpackMod is null
+    if (modpackMod == null) {
+      return new SetModpackJarIsLibraryPayload().withError(SetModpackJarIsLibraryErrorCode.JAR_NOT_IN_MODPACK, `Jar ${input.jarId} is not in the modpack ${input.modpackId}`);
+    }
 
     return new SetModpackJarIsLibraryPayload().withNode(modpackMod);
   }

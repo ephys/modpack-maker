@@ -1,13 +1,13 @@
 export function mavenVersionRangeToSemver(mavenRange: string): string {
   if (!mavenRange) {
-    throw new Error('Invalid Maven Range received: ' + mavenRange);
+    throw new Error(`Invalid Maven Range received: ${mavenRange}`);
   }
 
   return VersionRange.fromMaven(mavenRange).toNpmSemver();
 }
 
 export class VersionRange {
-  #sets: Array<VersionRangeSet> = [];
+  #sets: VersionRangeSet[] = [];
 
   static fromMaven(range: string): VersionRange {
     const ranges = splitMavenRange(range);
@@ -31,7 +31,7 @@ export function splitMavenRange(range: string): string[] {
 
   let i = 0;
 
-  const parts = [];
+  const parts: string[] = [];
 
   const maxIterations = 10;
   let iterations = 0;
@@ -80,7 +80,7 @@ export class VersionRangeSet {
 
     const set = new VersionRangeSet();
 
-    const isRange = range.charAt(0) === '[' || range.charAt(0) === '(';
+    const isRange = range.startsWith('[') || range.startsWith('(');
     if (!isRange) {
       // TODO: ensure start/end is a-zA-Z0-9 . - _ only
       set.start = range;
@@ -88,14 +88,14 @@ export class VersionRangeSet {
       set.startInclusive = true;
       set.endInclusive = true;
     } else {
-      set.startInclusive = range.charAt(0) === '[';
-      set.endInclusive = range.charAt(range.length - 1) === ']';
+      set.startInclusive = range.startsWith('[');
+      set.endInclusive = range.endsWith(']');
 
-      if (range.charAt(0) === '[' || range.charAt(0) === '(') {
+      if (range.startsWith('[') || range.startsWith('(')) {
         range = range.substr(1);
       }
 
-      if (range.charAt(range.length - 1) === ']' || range.charAt(range.length - 1) === ')') {
+      if (range.endsWith(']') || range.endsWith(')')) {
         range = range.substr(0, range.length - 1);
       }
 

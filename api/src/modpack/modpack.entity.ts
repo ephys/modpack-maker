@@ -1,5 +1,5 @@
-import * as DB from 'sequelize-typescript';
 import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '@nestjs/graphql';
+import * as DB from 'sequelize-typescript';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
@@ -17,12 +17,12 @@ export class Modpack extends DB.Model<Modpack> {
   @GraphQl(() => ID, { name: 'id' })
   @DB.AllowNull(false)
   @DB.Unique
-  @DB.Column
+  @DB.Column(DB.DataType.TEXT)
   externalId: string;
 
   @GraphQl(() => String)
   @DB.AllowNull(false)
-  @DB.Column
+  @DB.Column(DB.DataType.TEXT)
   name: string;
 
   @GraphQl(() => ModLoader)

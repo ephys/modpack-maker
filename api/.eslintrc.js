@@ -1,25 +1,17 @@
+// eslint-disable-next-line import/no-commonjs
 module.exports = {
-  parser: '@typescript-eslint/parser',
-  parserOptions: {
-    project: 'tsconfig.json',
-    sourceType: 'module',
-  },
-  plugins: ['@typescript-eslint/eslint-plugin'],
   extends: [
-    'plugin:@typescript-eslint/recommended',
-    'prettier/@typescript-eslint',
-    'plugin:prettier/recommended',
+    '@foobarhq/eslint-config',
+    '@foobarhq/eslint-config/jest',
+    '@foobarhq/eslint-config-typescript',
   ],
-  root: true,
+  rules: {
+    'babel/new-cap': 'off',
+    'no-use-before-define': 'off',
+    '@typescript-eslint/consistent-type-imports': 'off',
+  },
   env: {
     node: true,
-    jest: true,
-  },
-  ignorePatterns: ['.eslintrc.js'],
-  rules: {
-    '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/explicit-function-return-type': 'off',
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
-    '@typescript-eslint/no-explicit-any': 'off',
   },
 };
+

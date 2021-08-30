@@ -32,7 +32,7 @@ export class ModJarResolver {
 
   @ResolveField('curseForgePage', () => String)
   async getCurseForgePageUrl(@Parent() jar: ModJar): Promise<string> {
-    return this.modService.getCurseForgeProjectUrl(jar.curseProjectId);
+    return this.modService.getCurseForgeProjectUrl(jar.projectId);
   }
 
   @ResolveField('downloadUrl', () => String)

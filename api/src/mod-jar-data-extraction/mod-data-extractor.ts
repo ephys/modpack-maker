@@ -1,12 +1,12 @@
 import 'core-js/features/string/replace-all';
-import * as Zip from 'jszip';
 import * as Toml from '@iarna/toml';
-import { ModLoader } from '../../../common/modloaders';
-import { mavenVersionRangeToSemver } from './version-range';
-import { TModDependency } from '../mod/mod-version.entity';
-import { assertIsString } from '../../../common/typing-utils';
+import * as Zip from 'jszip';
 import { DependencyType } from '../../../common/dependency-type';
+import { ModLoader } from '../../../common/modloaders';
+import { assertIsString } from '../../../common/typing-utils';
+import type { TModDependency } from '../mod/mod-version.entity';
 import { parseJarManifest } from './jar-manifestmf-parser';
+import { mavenVersionRangeToSemver } from './version-range';
 
 export type TModMeta = {
   name: string,
@@ -14,12 +14,12 @@ export type TModMeta = {
   version: string,
   loader: ModLoader,
   minecraftVersionRange: string | null,
-  dependencies: Array<TModDependency>,
+  dependencies: TModDependency[],
 };
 
 // FIXME: bow infinity fix uses "bifmod.info" :/
 
-export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<TModMeta>>> {
+export async function getModMetasFromJar(modJar: Buffer): Promise<TModMeta[]> {
   const data = await Zip.loadAsync(modJar);
 
   const hasNewForge = data.files['META-INF/mods.toml'];
@@ -29,34 +29,50 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<Array<Partial<
   // FABRIC MOD
   if (data.files['fabric.mod.json']) {
     // fabric can only contain one mod
-    mods.push(getMetaFromFabricManifest(await data.file('fabric.mod.json').async('string')));
+    mods.push(getMetaFromFabricManifest(await data.file('fabric.mod.json')!.async('string')));
   }
 
   if (hasNewForge) {
-    let modMeta = {};
+    const modMeta = {};
 
     if (data.files['META-INF/mods.toml']) {
-      const newMeta = getMetaFromModsToml(await data.file('META-INF/mods.toml').async('string'));
-      mergeModMeta(modMeta, newMeta);
+      const newMeta = getMetaFromModsToml(await data.file('META-INF/mods.toml')!.async('string'));
+      if (newMeta) {
+        mergeModMeta(modMeta, newMeta);
+      }
     }
 
     // NEW FORGE META
     if (!isMetaComplete(modMeta) && data.files['META-INF/MANIFEST.MF']) {
-      const newMeta = getMetaFromJarManifest(await data.file('META-INF/MANIFEST.MF').async('string'));
-      mergeModMeta(modMeta, newMeta);
+      const newMeta = getMetaFromJarManifest(await data.file('META-INF/MANIFEST.MF')!.async('string'));
+      if (newMeta) {
+        mergeModMeta(modMeta, newMeta);
+      }
     }
 
     mods.push(modMeta);
   } else if (data.files['mcmod.info']) {
     // LEGACY FORGE MOD
-    mods.push(...getMetaFromLegacyMcModInfo(await data.file('mcmod.info').async('string')));
+    mods.push(...getMetaFromLegacyMcModInfo(await data.file('mcmod.info')!.async('string')));
   }
 
-  return mods;
+  const completeMods: TModMeta[] = [];
+  for (const mod of mods) {
+    if (!isMetaComplete(mod)) {
+      console.error('found incomplete mod data');
+      console.error(mod);
+      continue;
+    }
+
+    completeMods.push(mod);
+
+  }
+
+  return completeMods;
 }
 
 function isMetaComplete(t: Partial<TModMeta>): t is TModMeta {
-  return t.loader != null && t.name != null && t.version != null;
+  return t.loader != null && t.name != null && t.version != null && t.modId != null;
 }
 
 function mergeModMeta(main: Partial<TModMeta>, toAdd: Partial<TModMeta>): Partial<TModMeta> {
@@ -91,7 +107,7 @@ function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
   const manifest = permissivelyParseJson(fileContents);
 
   const dependencyTypes: DependencyType[] = Object.values(DependencyType);
-  const dependencies: Array<TModDependency> = [];
+  const dependencies: TModDependency[] = [];
   let minecraftVersionRange;
 
   const seen = new Set();
@@ -140,7 +156,7 @@ function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
   });
 }
 
-export function getMetaFromJarManifest(fileContents): Partial<TModMeta> {
+export function getMetaFromJarManifest(fileContents: string): Partial<TModMeta> | null {
   const manifest = parseJarManifest(fileContents);
 
   if (!manifest || !manifest.main) {
@@ -161,7 +177,7 @@ mods.x.displayURL
 mods.x.description
 mods.x.logoFile
  */
-export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
+export function getMetaFromModsToml(fileContents): Partial<TModMeta> | null {
   const manifest = Toml.parse(fileContents);
 
   if (!manifest || !Array.isArray(manifest.mods)) {
@@ -175,7 +191,7 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
 
   const firstMod = manifest.mods[0];
 
-  // @ts-ignore
+  // @ts-expect-error
   let version = firstMod.version;
 
   // starting with ${ means there was some attempt at substituting a var but it failed
@@ -185,7 +201,7 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
     version = null;
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   const modId = firstMod.modId;
 
   const dependencies: TModDependency[] = [];
@@ -216,11 +232,10 @@ export function getMetaFromModsToml(fileContents): Partial<TModMeta> {
 
   const meta: Partial<TModMeta> = omitFalsy({
     version,
-    // @ts-ignore
+    // @ts-expect-error
     name: firstMod.displayName || null,
     modId: modId || null,
     // only forge uses TOML
-    // @ts-ignore
     loader: manifest.modLoader === 'javafml' ? ModLoader.FORGE : null,
     dependencies,
     minecraftVersionRange,

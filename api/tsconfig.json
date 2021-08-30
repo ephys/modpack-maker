@@ -1,16 +1,23 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "declaration": true,
-    "removeComments": true,
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
+    "declaration": false,
+    "module": "commonjs",
+    "noImplicitAny": false,
     "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
+    "target": "ES2020",
+    "sourceMap": false,
+    "lib": ["es2021", "dom", "dom.iterable"],
     "resolveJsonModule": true,
-    "target": "es2017",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true
-  }
+    "moduleResolution": "node",
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

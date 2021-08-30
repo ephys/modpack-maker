@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import { ModJar } from './mod-jar.entity';
-import { ModVersion } from './mod-version.entity';
-import * as DataLoader from 'dataloader';
-import { getCurseForgeProjects, TCurseProject } from '../curseforge.api';
-import { ModLoader } from '../../../common/modloaders';
-import fetch, { Response } from 'node-fetch';
-import * as path from 'path';
-import * as fs from 'fs/promises';
 import * as fsCb from 'fs';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { Injectable } from '@nestjs/common';
+import * as DataLoader from 'dataloader';
+import type { Response } from 'node-fetch';
+import fetch from 'node-fetch';
+import type { ModLoader } from '../../../common/modloaders';
+import type { TCurseProject } from '../curseforge.api';
+import { getCurseForgeProjects } from '../curseforge.api';
+import { ModJar } from './mod-jar.entity';
+import type { ModVersion } from './mod-version.entity';
 
 const jarCacheDir = path.join(__dirname, '..', '.jar-files');
 
@@ -31,7 +33,7 @@ class ModService {
     return mods;
   }
 
-  getJar(jarId: string): Promise<ModJar | null> {
+  async getJar(jarId: string): Promise<ModJar | null> {
     return ModJar.findOne({
       where: {
         externalId: jarId,
@@ -39,15 +41,16 @@ class ModService {
     });
   }
 
-  #getCurseForgeProjectDataLoader = new DataLoader<number, TCurseProject>(async (curseProjectIds: number[]) => {
+  #getCurseForgeProjectDataLoader = new DataLoader<number, TCurseProject | null>(async (curseProjectIds: number[]) => {
     const projects = await getCurseForgeProjects(curseProjectIds);
+
     return curseProjectIds.map(id => {
-      return projects.find(project => project.id === id);
+      return projects.find(project => project.id === id) ?? null;
     });
   });
 
   async getCurseForgeProjectUrl(curseProjectId: number): Promise<string> {
-    return (await this.#getCurseForgeProjectDataLoader.load(curseProjectId)).websiteUrl;
+    return (await this.#getCurseForgeProjectDataLoader.load(curseProjectId))?.websiteUrl ?? '';
   }
 
   async downloadJarToFileStream(jar: ModJar): Promise<NodeJS.ReadableStream> {
@@ -80,7 +83,7 @@ class ModService {
   }
 
   private async getCachedJarPath(jar: ModJar): Promise<string | null> {
-    const cachedFilePath = path.join(jarCacheDir, jar.externalId + '.jar');
+    const cachedFilePath = path.join(jarCacheDir, `${jar.externalId}.jar`);
 
     const cacheExists = await fileExists(cachedFilePath);
 
@@ -93,17 +96,17 @@ class ModService {
 
   private async cacheJar(jar: ModJar, fileRes: Response): Promise<string> {
     await fs.mkdir(jarCacheDir, { recursive: true });
-    const cachedFilePath = path.join(jarCacheDir, jar.externalId + '.jar');
+    const cachedFilePath = path.join(jarCacheDir, `${jar.externalId}.jar`);
 
     await new Promise<void>((resolve, reject) => {
-      fileRes.body.pipe(fsCb.createWriteStream(cachedFilePath + '.part'))
+      fileRes.body.pipe(fsCb.createWriteStream(`${cachedFilePath}.part`))
         .on('finish', () => {
           resolve();
         })
         .on('error', reject);
     });
 
-    await fs.rename(cachedFilePath + '.part', cachedFilePath);
+    await fs.rename(`${cachedFilePath}.part`, cachedFilePath);
 
     return cachedFilePath;
   }

@@ -1,25 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { Modpack } from './modpack.entity';
-import { MODPACK_REPOSITORY } from './modpack.constants';
-import { generateId } from '../utils/generic-utils';
-import { ModLoader } from '../../../common/modloaders';
-import { ModDiscoveryService } from '../mod/mod-discovery.service';
-import { uniq } from 'lodash';
-import { QueryTypes, Sequelize } from 'sequelize';
-import ModpackMod from './modpack-mod.entity';
-import * as minecraftVersions from '../../../common/minecraft-versions.json';
-import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/minecraft-utils';
-import { ModJar } from '../mod/mod-jar.entity';
-import { InjectSequelize } from '../database/database.providers';
-import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '../../../common/minecraft-utils';
-import { ModService } from '../mod/mod.service';
+import * as assert from 'assert';
 import * as childProcess from 'child_process';
 import * as fsCb from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as assert from 'assert';
-import * as rimrafCb from 'rimraf';
 import * as nodeUtils from 'util';
+import { Inject, Injectable } from '@nestjs/common';
+import uniq from 'lodash/uniq';
+import * as rimrafCb from 'rimraf';
+import { QueryTypes, Sequelize } from 'sequelize';
+import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '../../../common/minecraft-utils';
+import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import type { ModLoader } from '../../../common/modloaders';
+import { InjectSequelize } from '../database/database.providers';
+import { ModDiscoveryService } from '../mod/mod-discovery.service';
+import { ModJar } from '../mod/mod-jar.entity';
+import { ModService } from '../mod/mod.service';
+import { generateId } from '../utils/generic-utils';
+import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/minecraft-utils';
+import ModpackMod from './modpack-mod.entity';
+import { MODPACK_REPOSITORY } from './modpack.constants';
+import { Modpack } from './modpack.entity';
 
 const rimraf = nodeUtils.promisify(rimrafCb);
 
@@ -32,10 +32,10 @@ type TCreateModpackInput = {
 @Injectable()
 export class ModpackService {
   constructor(
-    @Inject(MODPACK_REPOSITORY) private modpackRepository: typeof Modpack,
-    private modDiscoveryService: ModDiscoveryService,
-    private modService: ModService,
-    @InjectSequelize private sequelize: Sequelize,
+    @Inject(MODPACK_REPOSITORY) private readonly modpackRepository: typeof Modpack,
+    private readonly modDiscoveryService: ModDiscoveryService,
+    private readonly modService: ModService,
+    @InjectSequelize private readonly sequelize: Sequelize,
   ) {
   }
 
@@ -44,14 +44,14 @@ export class ModpackService {
   }
 
   async createModpack(input: TCreateModpackInput): Promise<Modpack> {
-    // @ts-ignore
+    // @ts-expect-error
     return Modpack.create({
       ...input,
       externalId: generateId(),
     });
   }
 
-  getModpackByEid(externalId: string) {
+  async getModpackByEid(externalId: string) {
     // TODO: use DataLoader
     return Modpack.findOne({ where: { externalId } });
   }
@@ -62,14 +62,14 @@ export class ModpackService {
     const {
       availableCurseProjectIds,
       pendingCurseProjectIds,
-      unknownUrls,
+      // unknownUrls,
     } = await this.modDiscoveryService.discoverUrls(byUrl);
 
     if (pendingCurseProjectIds.length > 0) {
       modpack.pendingCurseForgeProjectIds = uniq([...modpack.pendingCurseForgeProjectIds, ...pendingCurseProjectIds]);
     }
 
-    await Promise.all(availableCurseProjectIds.map(projectId => {
+    await Promise.all(availableCurseProjectIds.map(async projectId => {
       return this.addCurseProjectToModpack(modpack, projectId);
     }));
 
@@ -101,23 +101,24 @@ export class ModpackService {
             row_number() over (
             PARTITION BY "modId"
             ORDER BY 
-              ${validMcVersions.map((mcVersion, index) => {
-      const versions = [];
-      for (let i = 0; i <= index; i++) {
-        versions.push(validMcVersions[i]);
-      }
-      const versionStr = versions.map(v => `'${v}'`).join(',');
+              ${validMcVersions.map((_mcVersion, index) => {
+    const versions: string[] = [];
+    for (let i = 0; i <= index; i++) {
+      versions.push(validMcVersions[i]);
+    }
 
-      // We generate something that looks like: (modpack is 1.16.5)
-      //   ORDER BY v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5'] DESC,
-      //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4'] DESC,
-      //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4', '1.16.3'] DESC,
-      // We have to repeat previous version in the overlap, otherwise 
-      //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
-      //  a version that only supports 1.16.5 would be selected.
+    const versionStr = versions.map(v => `'${v}'`).join(',');
 
-      return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
-    }).join('')}
+    // We generate something that looks like: (modpack is 1.16.5)
+    //   ORDER BY v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5'] DESC,
+    //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4'] DESC,
+    //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4', '1.16.3'] DESC,
+    // We have to repeat previous version in the overlap, otherwise
+    //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
+    //  a version that only supports 1.16.5 would be selected.
+
+    return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
+  }).join('')}
               v."supportedModLoader" = :modLoader DESC,
               j."releaseType" = 'STABLE' DESC,
               j."releaseType" = 'BETA' DESC,
@@ -126,7 +127,7 @@ export class ModpackService {
             )
         FROM "ModJars" j
           LEFT JOIN "ModVersions" v on j."internalId" = v."jarId"
-        WHERE "curseProjectId" = :curseProjectId
+        WHERE "projectId" = :curseProjectId
       ) sub1
       WHERE sub1.row_number = 1
     `, {
@@ -167,7 +168,7 @@ export class ModpackService {
       }
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     await ModpackMod.bulkCreate(Array.from(jarIds).map(jarId => {
       return {
         modpackId: modpack.internalId,
@@ -180,7 +181,7 @@ export class ModpackService {
     return modpack;
   }
 
-  async getModIdBestMatchForModpack(modpack: Modpack, modId: string): Promise<ModJar> {
+  async getModIdBestMatchForModpack(modpack: Modpack, modId: string): Promise<ModJar | null> {
     const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);
 
     return ModJar.findOne({
@@ -192,15 +193,17 @@ export class ModpackService {
         },
       }],
       order: Sequelize.literal(`
-        ${validMcVersions.map((mcVersion, index) => {
-        // See #addCurseProjectToModpack for info about this
-        const versions = [];
-        for (let i = 0; i <= index; i++) {
-          versions.push(validMcVersions[i]);
-        }
-        const versionStr = versions.map(v => `'${v}'`).join(',');
-        return `mods."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
-      }).join('')}
+        ${validMcVersions.map((_mcVersion, index) => {
+    // See #addCurseProjectToModpack for info about this
+    const versions: string[] = [];
+    for (let i = 0; i <= index; i++) {
+      versions.push(validMcVersions[i]);
+    }
+
+    const versionStr = versions.map(v => `'${v}'`).join(',');
+
+    return `mods."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
+  }).join('')}
         mods."supportedModLoader" = :modLoader DESC,
         "releaseType" = 'STABLE' DESC,
         "releaseType" = 'BETA' DESC,
@@ -256,7 +259,7 @@ export class ModpackService {
       throw new Error(`Could not find any valid mod for ${modId}`);
     }
 
-    // @ts-ignore
+    // @ts-expect-error
     await ModpackMod.create({
       modpackId: modpack.internalId,
       jarId: mod.internalId,
@@ -265,7 +268,7 @@ export class ModpackService {
     return modpack;
   }
 
-  getModpackInstalledJars(modpack: Modpack): Promise<ModpackMod[]> {
+  async getModpackInstalledJars(modpack: Modpack): Promise<ModpackMod[]> {
     return modpack.$get('installedMods', {
       include: [{
         association: ModpackMod.associations.jar,
@@ -274,7 +277,7 @@ export class ModpackService {
     });
   }
 
-  getModpackJars(modpack: Modpack): Promise<ModJar[]> {
+  async getModpackJars(modpack: Modpack): Promise<ModJar[]> {
     return ModJar.findAll({
       include: [{
         association: ModJar.associations.mods,
@@ -303,7 +306,7 @@ export class ModpackService {
   }
 
   async setModpackJarIsLibrary(modpack: ModJar | Modpack, jar: ModJar | Modpack, isLibrary: boolean) {
-    const modpackMod: ModpackMod = await ModpackMod.findOne({
+    const modpackMod: ModpackMod | null = await ModpackMod.findOne({
       where: {
         modpackId: modpack.internalId,
         jarId: jar.internalId,
@@ -354,7 +357,9 @@ export class ModpackService {
 
     await fs.mkdir(modsDir, { recursive: true });
 
-    const fsFiles = await Promise.all(dbJars.map(async dbJar => {
+    // TODO: delete fsFiles
+    // const fsFiles =
+    await Promise.all(dbJars.map(async dbJar => {
       const fsFile = await this.modService.downloadJarToFsPath(dbJar);
 
       const fsSafeFileName = slugifyJarForFs(dbJar.fileName);
@@ -389,7 +394,7 @@ export class ModpackService {
 
   async replaceModpackJar(modpack: Modpack, oldJar: ModJar, newJar: ModJar): Promise<void> {
     return this.sequelize.transaction(async transaction => {
-      const oldInstalledJar: ModpackMod = await ModpackMod.findOne({
+      const oldInstalledJar: ModpackMod | null = await ModpackMod.findOne({
         where: {
           jarId: oldJar.internalId,
           modpackId: modpack.internalId,
@@ -423,12 +428,12 @@ function slugifyJarForFs(input: string) {
   }
 
   // whitelist alphanumeric
-  return (input.replace(/[^a-zA-Z0-9_\-.]/g, '-')
+  return `${input.replace(/[^a-zA-Z0-9_\-.]/g, '-')
     // remove consecutive -
     .replace(/-+/g, '-')
     // remove start & end -
     .replace(/^-*/, '')
-    .replace(/-*$/, '')) + '.jar';
+    .replace(/-*$/, '')}.jar`;
 }
 
 export function getPreferredMinecraftVersions(mainVersionStr: string, existingMcVersions: string[]) {

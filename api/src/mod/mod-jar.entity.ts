@@ -1,8 +1,9 @@
-import * as DB from 'sequelize-typescript';
-import { tsEnum } from '../utils/sequelize-utils';
-import ModpackMod from '../modpack/modpack-mod.entity';
-import { ModVersion } from './mod-version.entity';
 import { Field as GraphQl, ID, ObjectType as GraphQlObject } from '@nestjs/graphql';
+import * as DB from 'sequelize-typescript';
+import ModpackMod from '../modpack/modpack-mod.entity';
+import { tsEnum } from '../utils/sequelize-utils';
+import { ModVersion } from './mod-version.entity';
+import { Project } from './project.entity';
 
 export enum ReleaseType {
   STABLE = 'STABLE',
@@ -28,7 +29,7 @@ export class ModJar extends DB.Model<ModJar> {
   @GraphQl(() => ID, { name: 'id' })
   @DB.AllowNull(false)
   @DB.Unique
-  @DB.Column
+  @DB.Column(DB.DataType.TEXT)
   externalId: string;
 
   @DB.AllowNull(false)
@@ -48,13 +49,19 @@ export class ModJar extends DB.Model<ModJar> {
   @DB.AllowNull(false)
   @DB.Unique
   @DB.Column(DB.DataType.INTEGER)
+
   /**
    * For files retrieved from curseforge: The curseforge project ID
    * Used for finding mods by curseforge project ID
    *
    * @type {number}
    */
-  curseProjectId: number;
+  // @DB.BelongsTo(() => Project, { as: 'project' })
+  // project: Project;
+
+  @DB.ForeignKey(() => Project)
+  @DB.Column(DB.DataType.INTEGER)
+  projectId: number;
 
   @DB.AllowNull(false)
   @DB.Unique

@@ -1,28 +1,33 @@
-import { Processor, Process, InjectQueue } from '@nestjs/bull';
-import { Job, Queue } from 'bull';
+import assert from 'assert';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { getCurseForgeModFiles, getCurseReleaseType, TCurseFile } from '../curseforge.api';
-import { ModVersion } from './mod-version.entity';
-import { Op, Sequelize } from 'sequelize';
+import type { Job, Queue } from 'bull';
 import fetch from 'node-fetch';
-import { getModMetasFromJar } from '../mod-jar-data-extraction/mod-data-extractor';
+import type { Sequelize } from 'sequelize';
+import { Op } from 'sequelize';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
-import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
-import { ModJar } from './mod-jar.entity';
+import { getCurseForgeModFiles, getCurseReleaseType } from '../curseforge.api';
+import type { TCurseFile } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
+import { getModMetasFromJar } from '../mod-jar-data-extraction/mod-data-extractor';
+import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { generateId } from '../utils/generic-utils';
-import { CurseforgeProject } from './curseforge-project.entity';
+import { ModJar } from './mod-jar.entity';
+import { ModVersion } from './mod-version.entity';
 import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
+import { Project, ProjectSource } from './project.entity';
 
 // TODO: every 15 minutes, if queue is empty, fill it with every mod that is in a modpack & whose versionListUpToDate is false
+
+type QueueItem = [ProjectSource, number | string];
 
 @Processor(FETCH_CURSE_FILES_QUEUE)
 export class CurseforgeFileCrawlerProcessor {
   private readonly logger = new Logger(CurseforgeFileCrawlerProcessor.name);
 
   constructor(
-    @InjectQueue(INSERT_DISCOVERED_MODS_QUEUE) private insertDiscoveredModsQueue: Queue,
+    @InjectQueue(INSERT_DISCOVERED_MODS_QUEUE) private readonly insertDiscoveredModsQueue: Queue,
     @InjectSequelize private readonly sequelize: Sequelize,
   ) {
   }
@@ -30,17 +35,17 @@ export class CurseforgeFileCrawlerProcessor {
   @Process({
     concurrency: 10,
   })
-  async fetchCurseProjectFiles(job: Job<number>) {
-    const curseProjectId = job.data;
-    console.log('Processing CurseForge mod ' + curseProjectId);
+  async fetchCurseProjectFiles(job: Job<QueueItem>) {
+    const projectSourceType = job.data[0];
+    const sourceProjectId = job.data[1];
+    this.logger.log(`Processing ${projectSourceType} mod ${sourceProjectId}`);
 
-    const files = await getCurseForgeModFiles(curseProjectId);
-
-    const fileIds = [];
-
-    for (const file of files) {
-      fileIds.push(file.id);
+    if (projectSourceType !== ProjectSource.CURSEFORGE || typeof sourceProjectId !== 'number') {
+      throw new Error(`unsupported source for now "${projectSourceType}:${sourceProjectId}"`);
     }
+
+    const files = await getCurseForgeModFiles(sourceProjectId);
+    const fileIds = files.map(file => file.id);
 
     const existingFiles = await ModJar.findAll({
       attributes: ['curseFileId'],
@@ -56,17 +61,24 @@ export class CurseforgeFileCrawlerProcessor {
         continue;
       }
 
-      console.log('Processing file', file.id, `(${file.displayName})`);
+      this.logger.log('Processing file', file.id, `(${file.displayName})`);
 
       try {
-        await this.processFile(file, curseProjectId);
+        // eslint-disable-next-line no-await-in-loop
+        await this.processFile(file, sourceProjectId);
       } catch (e) {
-        console.error('Processing Curse file ' + file.id + ' failed:');
-        console.error(e.message);
+        this.logger.error(`Processing Curse file ${file.id} (${file.displayName}) failed:`);
+        this.logger.error(e.message);
 
-        const cfProject = await CurseforgeProject.findOne({
-          where: { forgeId: curseProjectId },
+        // eslint-disable-next-line no-await-in-loop
+        const cfProject = await Project.findOne({
+          where: {
+            sourceType: projectSourceType,
+            sourceId: sourceProjectId,
+          },
         });
+
+        assert(cfProject != null);
 
         if (!cfProject.failedFileIds.includes(file.id)) {
           cfProject.failedFileIds = [
@@ -74,20 +86,22 @@ export class CurseforgeFileCrawlerProcessor {
             file.id,
           ];
 
+          // eslint-disable-next-line no-await-in-loop
           await cfProject.save();
         }
       }
     }
 
     await Promise.all([
-      CurseforgeProject.update({
+      Project.update({
         versionListUpToDate: true,
       }, {
         where: {
-          forgeId: curseProjectId,
+          sourceType: projectSourceType,
+          sourceId: sourceProjectId,
         },
       }),
-      this.insertDiscoveredModsQueue.add(curseProjectId),
+      this.insertDiscoveredModsQueue.add(sourceProjectId),
     ]);
   }
 
@@ -153,7 +167,7 @@ export class CurseforgeFileCrawlerProcessor {
         continue;
       }
 
-      throw new Error('[CurseForge File ' + fileData.id + '] Unknown Platform: ' + platform);
+      throw new Error(`[CurseForge File ${fileData.id}] Unknown Platform: ${platform}`);
     }
 
     // modJar.bundledMods
@@ -174,10 +188,9 @@ export class CurseforgeFileCrawlerProcessor {
 
       // forbid uploading the default project mod name.
       if (meta.modId === 'examplemod') {
-        throw new Error('Mod file ' + fileData.id + ' is declaring a mod named examplemod');
+        throw new Error(`Mod file ${fileData.id} is declaring a mod named examplemod`);
       }
 
-      // @ts-expect-error
       const version = ModVersion.build({
         modId: meta.modId,
         displayName: meta.name,
@@ -192,7 +205,6 @@ export class CurseforgeFileCrawlerProcessor {
       mods.push(version);
     }
 
-
     if (mods.length <= 0) {
       return;
     }
@@ -200,7 +212,7 @@ export class CurseforgeFileCrawlerProcessor {
     // @ts-expect-error
     const modJar = ModJar.build({
       externalId: generateId(),
-      curseProjectId,
+      projectId: curseProjectId,
       fileName: fileData.fileName,
       curseFileId: fileData.id,
       downloadUrl: fileData.downloadUrl,
@@ -210,7 +222,7 @@ export class CurseforgeFileCrawlerProcessor {
 
     await this.sequelize.transaction(async transaction => {
       await modJar.save({ transaction });
-      await Promise.all(mods.map(mod => {
+      await Promise.all(mods.map(async mod => {
         mod.jarId = modJar.internalId;
 
         return mod.save({ transaction });

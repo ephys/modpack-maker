@@ -1,4 +1,5 @@
-import fetch, { RequestInit } from 'node-fetch';
+import type { RequestInit } from 'node-fetch';
+import fetch from 'node-fetch';
 import { ReleaseType } from './mod/mod-jar.entity';
 
 // https://twitchappapi.docs.apiary.io/#/reference/0/
@@ -12,11 +13,12 @@ type TSearchModsParams = {
 const MINECRAFT_GAME_ID = 432;
 const MINECRAFT_MODS_SECTION_ID = 6;
 
-export async function* iterateForgeModList(params: Omit<TSearchModsParams, 'page'>) {
+export async function *iterateForgeModList(params: Omit<TSearchModsParams, 'page'>) {
   let page = 0;
   let results;
 
   do {
+    // eslint-disable-next-line no-await-in-loop
     results = await searchCurseForgeModList({
       ...params,
       page,
@@ -30,7 +32,7 @@ export async function* iterateForgeModList(params: Omit<TSearchModsParams, 'page
   } while (results.length === params.pageSize);
 }
 
-export function searchCurseForgeModList(params: TSearchModsParams) {
+export async function searchCurseForgeModList(params: TSearchModsParams) {
 
   const search = new URLSearchParams({
     gameId: String(MINECRAFT_GAME_ID),
@@ -45,11 +47,17 @@ export function searchCurseForgeModList(params: TSearchModsParams) {
     search.set('categoryID', String(params.categoryId));
   }
 
-  const uri = `/addon/search?` + search.toString();
+  const uri = `/addon/search?${search.toString()}`;
+
   return fetchCurseForge(uri);
 }
 
-export function getCurseForgeModCategories() {
+export type TCurseforgeCategory = {
+  id: number,
+  name: string,
+};
+
+export async function getCurseForgeModCategories(): Promise<TCurseforgeCategory[]> {
   return fetchCurseForge('/category/section/6');
 }
 
@@ -87,11 +95,11 @@ export type TCurseFile = {
   // gameVersionFlavor
 };
 
-export function getCurseForgeModFiles(curseProjectId: number): Promise<TCurseFile[]> {
+export async function getCurseForgeModFiles(curseProjectId: number): Promise<TCurseFile[]> {
   return fetchCurseForge(`/addon/${curseProjectId}/files`);
 }
 
-export function getCurseForgeProjects(ids: number[]): Promise<TCurseProject[]> {
+export async function getCurseForgeProjects(ids: number[]): Promise<TCurseProject[]> {
   return fetchCurseForge(`/addon`, {
     method: 'POST',
     headers: {
@@ -101,14 +109,14 @@ export function getCurseForgeProjects(ids: number[]): Promise<TCurseProject[]> {
   });
 }
 
-async function fetchCurseForge<T>(path, options?: RequestInit) {
+async function fetchCurseForge<T>(path, options?: RequestInit): Promise<T> {
   const res = await fetch(`https://addons-ecs.forgesvc.net/api/v2${path}`, options);
 
   if (!res.ok) {
-    throw new Error(`Could not fetch curseforge ${path}: ${res.status} - ${res.statusText} ` + await res.text());
+    throw new Error(`Could not fetch curseforge ${path}: ${res.status} - ${res.statusText} ${await res.text()}`);
   }
 
-  return res.json();
+  return res.json() as unknown as T;
 }
 
 export function getCurseReleaseType(releaseTypeId: number): ReleaseType {
@@ -116,6 +124,6 @@ export function getCurseReleaseType(releaseTypeId: number): ReleaseType {
     case 1: return ReleaseType.STABLE;
     case 2: return ReleaseType.BETA;
     case 3: return ReleaseType.ALPHA;
-    default: throw new Error('Unknown Curse release type ID ' + releaseTypeId);
+    default: throw new Error(`Unknown Curse release type ID ${releaseTypeId}`);
   }
 }

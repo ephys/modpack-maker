@@ -1,16 +1,14 @@
 import { Process, Processor } from '@nestjs/bull';
-import { Job } from 'bull';
+import type { Job } from 'bull';
+import { Op } from 'sequelize';
 import { INSERT_DISCOVERED_MODS_QUEUE } from './modpack.constants';
-import { ModpackService } from './modpack.service';
 import { Modpack } from './modpack.entity';
-import { Op, Sequelize } from 'sequelize';
-import { InjectSequelize } from '../database/database.providers';
+import { ModpackService } from './modpack.service';
 
 @Processor(INSERT_DISCOVERED_MODS_QUEUE)
 export class InsertDiscoveredModsProcessor {
   constructor(
     private readonly modpackService: ModpackService,
-    @InjectSequelize private readonly sequelize: Sequelize,
   ) {
   }
 
@@ -25,7 +23,7 @@ export class InsertDiscoveredModsProcessor {
         },
       });
 
-      const promises = [];
+      const promises: Array<Promise<any>> = [];
       for (const modpack of modpacks) {
         promises.push(
           this.modpackService.addCurseProjectToModpack(modpack, curseProjectId),

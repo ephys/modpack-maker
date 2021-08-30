@@ -1,33 +1,33 @@
-import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
-import { CurseforgeProject } from './curseforge-project.entity';
+import { Injectable } from '@nestjs/common';
+import type { Queue } from 'bull';
+import { Op, Sequelize } from 'sequelize';
 import { ModJar } from './mod-jar.entity';
 import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
-import { Op, Sequelize } from 'sequelize';
+import { Project } from './project.entity';
 
-const curseForgeProjectUrl = /^https?:\/\/www.curseforge.com\/minecraft\/mc-mods\/([^\/]+)(\/.+)?$/;
+const curseForgeProjectUrl = /^https?:\/\/www.curseforge.com\/minecraft\/mc-mods\/([^/]+)(\/.+)?$/;
 
 @Injectable()
 class ModDiscoveryService {
-  constructor(@InjectQueue(FETCH_CURSE_FILES_QUEUE) private modDiscoveryQueue: Queue) {}
+  constructor(@InjectQueue(FETCH_CURSE_FILES_QUEUE) private readonly modDiscoveryQueue: Queue) {}
 
   async retryFailedFiles() {
-    const projects = await CurseforgeProject.findAll({
+    const projects = await Project.findAll({
       where: Sequelize.where(
         Sequelize.fn('array_length', Sequelize.col('failedFileIds'), 1),
         { [Op.gt]: 0 },
       ),
     });
 
-    const failedProjectsIds = projects.map(project => project.forgeId);
+    const failedProjectsIds = projects.map(project => Number(project.sourceId));
 
-    await CurseforgeProject.update({
+    await Project.update({
       failedFileIds: [],
       versionListUpToDate: false,
     }, {
       where: {
-        forgeId: { [Op.in]: failedProjectsIds },
+        sourceId: { [Op.in]: failedProjectsIds },
       },
     });
 
@@ -47,7 +47,7 @@ class ModDiscoveryService {
     availableCurseProjectIds: number[],
     unknownUrls: string[],
   }> {
-    const unknownUrls = [];
+    const unknownUrls: string[] = [];
 
     const unprocessedCurseIds = new Set<number>();
     const processedCurseIds = new Set<number>();
@@ -60,8 +60,9 @@ class ModDiscoveryService {
       }
 
       // TODO: use DataLoader
-      const project = await CurseforgeProject.findOne({
-        where: { slug },
+      // eslint-disable-next-line no-await-in-loop
+      const project = await Project.findOne({
+        where: { sourceSlug: slug },
       });
 
       // this project has not been found by CurseforgeSearchCrawlerService
@@ -71,18 +72,19 @@ class ModDiscoveryService {
       }
 
       // TODO: use DataLoader
+      // check if we already have jars for this project
+      // eslint-disable-next-line no-await-in-loop
       const existingJar = await ModJar.findOne({
-        attributes: ['curseProjectId'],
+        attributes: ['projectId'],
         where: {
-          curseProjectId: project.forgeId,
+          projectId: project.internalId,
         },
       });
 
       if (existingJar) {
-        processedCurseIds.add(existingJar.curseProjectId);
+        processedCurseIds.add(existingJar.projectId);
       } else {
-        const forgeId = project.forgeId;
-        unprocessedCurseIds.add(forgeId);
+        unprocessedCurseIds.add(project.internalId);
       }
     }
 

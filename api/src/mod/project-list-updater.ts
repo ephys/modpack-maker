@@ -1,40 +1,54 @@
+import { InjectQueue } from '@nestjs/bull';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { CurseforgeProject } from './curseforge-project.entity';
+import type { Queue } from 'bull';
+import { Op, QueryTypes } from 'sequelize';
+import { Sequelize } from 'sequelize-typescript';
 import { getCurseForgeModCategories, iterateForgeModList } from '../curseforge.api';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
-import { Sequelize } from 'sequelize-typescript';
-import { Op, QueryTypes } from 'sequelize';
 import { lastItem } from '../utils/generic-utils';
-import { InjectQueue } from '@nestjs/bull';
 import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
-import { Queue } from 'bull';
+import { Project, ProjectSource } from './project.entity';
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 50;
 
 @Injectable()
-export class CurseforgeSearchCrawlerService {
-  private readonly logger = new Logger(CurseforgeSearchCrawlerService.name);
+export class ProjectListUpdater {
+  private readonly logger = new Logger(ProjectListUpdater.name);
 
   constructor(
     @Inject(SEQUELIZE_PROVIDER) private readonly sequelize: Sequelize,
-    @InjectQueue(FETCH_CURSE_FILES_QUEUE) private modDiscoveryQueue: Queue,
+    @InjectQueue(FETCH_CURSE_FILES_QUEUE) private readonly modDiscoveryQueue: Queue,
   ) {
-    this.handleCron();
+    void this.handleCron();
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
-    const lastUpdateStr: string = await CurseforgeProject.max('lastForgeEditAt');
+    const lastUpdateStr: string = await Project.max('lastSourceEditAt', {
+      where: {
+        sourceType: ProjectSource.CURSEFORGE,
+      },
+    });
+
     if (!lastUpdateStr) {
-      return this.doInitialCurseFetch();
+      await this.doInitialCurseFetch();
+
+      return;
     }
 
     this.logger.log('Updating Forge Database');
 
     const lastUpdateAt = new Date(lastUpdateStr);
 
-    const items = new Map();
+    type Item = {
+      sourceId: string,
+      sourceSlug: string,
+      lastSourceEditAt: Date,
+      versionListUpToDate: boolean,
+    };
+
+    const items = new Map<number, Item>();
 
     // items from API are sorted by LAST EDIT DESC
     // LAST EDIT means "last time a file was uploaded to this project"
@@ -52,9 +66,9 @@ export class CurseforgeSearchCrawlerService {
       }
 
       items.set(item.id, {
-        forgeId: item.id,
-        slug: item.slug,
-        lastForgeEditAt: itemLastUpdate,
+        sourceId: String(item.id),
+        sourceSlug: item.slug,
+        lastSourceEditAt: new Date(itemLastUpdate),
         versionListUpToDate: false,
       });
     }
@@ -65,39 +79,77 @@ export class CurseforgeSearchCrawlerService {
       const itemsArray = Array.from(items.values());
 
       await this.sequelize.transaction(async transaction => {
-        const existingProjects = await CurseforgeProject.findAll({
-          attributes: ['forgeId'],
-          where: {
-            forgeId: { [Op.in]: itemsArray.map(item => item.forgeId) },
-          },
+        const existingProjects = await Project.findAll({
+          attributes: ['sourceId', 'sourceSlug', 'sourceType'],
+          where: Sequelize.and(
+            { sourceType: ProjectSource.CURSEFORGE },
+            // @ts-expect-error
+            Sequelize.or({
+              sourceId: { [Op.in]: itemsArray.map(item => item.sourceId) },
+            }, {
+              sourceSlug: { [Op.in]: itemsArray.map(item => item.sourceSlug) },
+            }),
+          ),
           transaction,
         });
 
-        const newItems = [];
-        const updatableItems = [];
+        const newItems: Item[] = [];
+        const updatableItems: Item[] = [];
+        const conflictingSlugs: string[] = [];
 
-        const existingProjectIds = new Set(existingProjects.map(project => project.forgeId));
+        const existingProjectIds = new Set(existingProjects.map(project => project.sourceId));
+        const slugToExistingProject = new Map<string, Project>();
+        for (const project of existingProjects) {
+          if (project.sourceSlug == null) {
+            continue;
+          }
+
+          slugToExistingProject.set(project.sourceSlug, project);
+        }
+
         for (const fetchedProject of itemsArray) {
-          if (existingProjectIds.has(fetchedProject.forgeId)) {
+          const existingProjectBySlug = slugToExistingProject.get(fetchedProject.sourceSlug);
+          if (existingProjectBySlug?.sourceSlug != null && existingProjectBySlug.sourceId !== fetchedProject.sourceId) {
+            conflictingSlugs.push(existingProjectBySlug.sourceSlug);
+          }
+
+          if (existingProjectIds.has(fetchedProject.sourceId)) {
             updatableItems.push(fetchedProject);
           } else {
             newItems.push(fetchedProject);
           }
         }
 
+        await Project.update({ sourceSlug: null }, {
+          transaction,
+          where: {
+            sourceSlug: { [Op.in]: conflictingSlugs },
+            sourceType: ProjectSource.CURSEFORGE,
+          },
+        });
+
         await Promise.all([
-          CurseforgeProject.bulkCreate(newItems, {
-            fields: ['forgeId', 'slug', 'lastForgeEditAt', 'versionListUpToDate'],
-            transaction,
-          }),
-          Promise.all(
-            updatableItems.map(item => {
-              return CurseforgeProject.update(item, {
-                where: { forgeId: item.forgeId },
-                transaction,
-              });
+          Project.bulkCreate(
+            newItems.map(item => {
+              return {
+                ...item,
+                sourceType: ProjectSource.CURSEFORGE,
+              };
             }),
+            {
+              fields: ['sourceId', 'sourceSlug', 'lastSourceEditAt', 'versionListUpToDate'],
+              transaction,
+            },
           ),
+          Promise.all(updatableItems.map(async item => {
+            return Project.update(item, {
+              where: {
+                sourceId: item.sourceId,
+                sourceType: ProjectSource.CURSEFORGE,
+              },
+              transaction,
+            });
+          })),
         ]);
       });
 
@@ -131,6 +183,7 @@ export class CurseforgeSearchCrawlerService {
 
       let itemCount = 0;
 
+      // eslint-disable-next-line no-await-in-loop
       for await (const item of iterateForgeModList({ pageSize: PAGE_SIZE, categoryId: category.id })) {
         const lastUpload = getLastEditDate(item);
 
@@ -154,14 +207,14 @@ export class CurseforgeSearchCrawlerService {
 
     this.logger.log(`Retrieved a total of ${allItems.size} mods from curseforge`);
 
-    await CurseforgeProject.bulkCreate(Array.from(allItems.values()), {
-      fields: ['forgeId', 'slug', 'lastForgeEditAt', 'versionListUpToDate'],
-      updateOnDuplicate: ['slug', 'lastForgeEditAt', 'versionListUpToDate'],
+    await Project.bulkCreate(Array.from(allItems.values()), {
+      fields: ['sourceId', 'sourceSlug', 'lastSourceEditAt', 'versionListUpToDate'],
+      updateOnDuplicate: ['sourceSlug', 'lastSourceEditAt', 'versionListUpToDate'],
     });
   }
 
   private async checkModsHaveUpdates() {
-    const itemsInUpdateQueue = await this.modDiscoveryQueue.count()
+    const itemsInUpdateQueue = await this.modDiscoveryQueue.count();
 
     // we'll try again next CRON
     if (itemsInUpdateQueue > 0) {
@@ -173,24 +226,23 @@ export class CurseforgeSearchCrawlerService {
     // select all curseProjectId that are used in modpacks
     //  and that have changes detected by handleCron, but not yet processed
     const projects = await this.sequelize.query<{ curseProjectId: number }>(`
-      SELECT DISTINCT j."curseProjectId" FROM "ModJars" j
+      SELECT DISTINCT j."projectId" FROM "ModJars" j
         INNER JOIN "ModpackMods" mm on j."internalId" = mm."jarId"
-      WHERE "curseProjectId" IN (SELECT cfp."forgeId" FROM "CurseforgeProjects" cfp WHERE cfp."versionListUpToDate" = FALSE)
+      WHERE "projectId" IN (SELECT cfp."internalId" FROM "Projects" cfp WHERE cfp."versionListUpToDate" = FALSE)
     `, {
       type: QueryTypes.SELECT,
     });
 
-    console.log(projects);
-
     await this.modDiscoveryQueue.addBulk(projects.map(project => {
-      return { data: project.curseProjectId };
+      return { data: [ProjectSource.CURSEFORGE, project.curseProjectId] };
     }));
   }
 }
 
 function getLastEditDate(curseProject): string | null {
   const mostRecentFile = lastItem(curseProject.latestFiles);
+
   // FIXME Typings
-  // @ts-ignore
+  // @ts-expect-error
   return mostRecentFile?.fileDate;
 }

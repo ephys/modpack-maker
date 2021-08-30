@@ -1,15 +1,15 @@
-import * as DB from 'sequelize-typescript';
-import * as minecraftVersion from '../../../common/minecraft-versions.json';
-import { ModLoader } from '../../../common/modloaders';
-import { tsEnum } from '../utils/sequelize-utils';
 import {
   Field,
   Field as GraphQl,
   ObjectType,
   ObjectType as GraphQlObject,
 } from '@nestjs/graphql';
-import { ModJar } from './mod-jar.entity';
+import * as DB from 'sequelize-typescript';
 import { DependencyType } from '../../../common/dependency-type';
+import * as minecraftVersion from '../../../common/minecraft-versions.json';
+import { ModLoader } from '../../../common/modloaders';
+import { tsEnum } from '../utils/sequelize-utils';
+import { ModJar } from './mod-jar.entity';
 
 export type TModDependency = {
   modId: string,
@@ -29,12 +29,25 @@ export class GqlModDependency {
   type: DependencyType;
 }
 
+type TModVersionCreationAttributes = Partial<{
+  internalId: number,
+  modId: string,
+  displayName: string,
+  modVersion: string,
+  supportedMinecraftVersions: string[],
+  supportedMinecraftVersionRange: string,
+  supportedModLoader: ModLoader,
+  dependencies: TModDependency[],
+  jarId: number,
+}>;
+
 @DB.Table
 @GraphQlObject()
-export class ModVersion extends DB.Model<ModVersion> {
+export class ModVersion extends DB.Model<ModVersion, TModVersionCreationAttributes> {
 
   @DB.BeforeValidate
   static validate(instance: ModVersion) {
+    // @ts-expect-error
     if (instance.supportedMinecraftVersions.includes(null)) {
       throw new Error(`Mod ${instance.displayName} (${instance.modVersion}) has null in supportedMinecraftVersions`);
     }
@@ -103,6 +116,6 @@ export class ModVersion extends DB.Model<ModVersion> {
   jar: ModJar;
 
   @DB.ForeignKey(() => ModJar)
-  @DB.Column
+  @DB.Column(DB.DataType.INTEGER)
   jarId: number;
 }

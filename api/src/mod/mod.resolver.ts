@@ -1,14 +1,12 @@
 import { Args, ID, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { ModpackService } from '../modpack/modpack.service';
 import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
-import { ModService } from './mod.service';
-import { ModpackService } from '../modpack/modpack.service';
 
 @Resolver(() => ModVersion)
 export class ModResolver {
   constructor(
-    private modService: ModService,
-    private modpackService: ModpackService,
+    private readonly modpackService: ModpackService,
   ) {}
 
   @ResolveField('updatedVersion', () => ModJar, { nullable: true })
@@ -16,12 +14,21 @@ export class ModResolver {
     @Parent() mod: ModVersion,
     @Args('matchingModpack', { type: () => ID }) matchingModpack: string,
   ): Promise<ModJar | null> {
-    const currentJarPromise: Promise<ModJar> = mod.$get('jar');
+    const currentJarPromise: Promise<ModJar | null> = mod.$get('jar');
 
     const modpack = await this.modpackService.getModpackByEid(matchingModpack);
-    const update = await this.modpackService.getModIdBestMatchForModpack(modpack,  mod.modId);
+    if (modpack == null) {
+      return null;
+    }
 
-    if ((await currentJarPromise).internalId === update.internalId) {
+    const update = await this.modpackService.getModIdBestMatchForModpack(modpack, mod.modId);
+    const currentJar = await currentJarPromise;
+
+    if (update == null || currentJar == null) {
+      return null;
+    }
+
+    if (currentJar.internalId === update.internalId) {
       return null;
     }
 

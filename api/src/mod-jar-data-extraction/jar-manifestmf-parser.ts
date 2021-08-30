@@ -2,16 +2,16 @@
 // Based on https://github.com/limulus/jarfile/blob/master/src/Jar.js
 // But fixed
 //
-export function parseJarManifest(manifest) {
-  var result = { 'main': {}, 'sections': {} };
+export function parseJarManifest(manifest: string | Buffer) {
+  const result = { main: {}, sections: {} };
 
-  var expectingSectionStart = false
-    , skip = 0
-    , currentSection = null;
+  let expectingSectionStart = false;
+  let skip = 0;
+  let currentSection: string | null = null;
 
   manifest = manifest.toString('utf8');
   const wrappedLines = manifest.split(/(?:\r\n|\r|\n)/);
-  const lines = [];
+  const lines: string[] = [];
 
   // Lines in MANIFEST.MF can be split. A line starting with a space
   //  means that it is the continuation of the previous line.
@@ -25,33 +25,37 @@ export function parseJarManifest(manifest) {
   //
   // Name: data/appliedenergistics2/recipes/network/crafting/patterns_blank.json
   for (const line of wrappedLines) {
-    if (line.charAt(0) === ' ') {
+    if (line.startsWith(' ')) {
       lines[lines.length - 1] += line;
     } else {
       lines.push(line);
     }
   }
 
-  lines.forEach(function (line, i) {
-    var entry;
+  lines.forEach((line, i) => {
+    let entry: { [key: string]: string };
     // this line may have already been processed, if so skip it
     if (skip) {
       skip--;
+
       return;
     }
 
     // Watch for blank lines, they mean we're starting a new section
     if (line === '') {
       expectingSectionStart = true;
+
       return;
     }
 
     // Extract the name and value from entry line
-    var pair = line.match(/^([a-z0-9_-]+): (.*)$/i);
+    const pair = line.match(/^([a-z0-9_-]+): (.*)$/i);
     if (!pair) {
       throwManifestParseError('expected a valid entry', i, line);
     }
-    var name = pair[1], val = (pair[2] || '');
+
+    const name = pair[1];
+    const val = (pair[2] || '');
 
     // Handle section start
     if (expectingSectionStart && name !== 'Name') {
@@ -59,30 +63,34 @@ export function parseJarManifest(manifest) {
     } else if (expectingSectionStart) {
       currentSection = val;
       expectingSectionStart = false;
+
       return;
     }
 
     // Add entry to the appropriate section
     if (currentSection) {
-      if (!result['sections'][currentSection]) {
-        result['sections'][currentSection] = {};
+      if (!result.sections[currentSection]) {
+        result.sections[currentSection] = {};
       }
-      entry = result['sections'][currentSection];
+
+      entry = result.sections[currentSection];
     } else {
-      entry = result['main'];
+      entry = result.main;
     }
+
     entry[name] = val;
-    for (var j = i + 1; j < lines.length; j++) {
-      var byteLen = Buffer.byteLength(line, 'utf8');
+    for (let j = i + 1; j < lines.length; j++) {
+      const byteLen = Buffer.byteLength(line, 'utf8');
       if (byteLen >= 70) {
         line = lines[j];
-        if (line && line[0] === ' ') {
+        if (line && line.startsWith(' ')) {
           // continuation lines must start with a space
           entry[name] += line.substr(1);
           skip++;
           continue;
         }
       }
+
       break;
     }
   });
@@ -90,6 +98,6 @@ export function parseJarManifest(manifest) {
   return result;
 }
 
-function throwManifestParseError(msg, lineNum, lineContent) {
+function throwManifestParseError(msg, lineNum, lineContent): never {
   throw new Error(`Failed to parse manifest at line ${lineNum}: ${msg}\n\n${lineContent}`);
 }
