@@ -38,10 +38,25 @@ export class CurseforgeFileCrawlerProcessor {
   async fetchCurseProjectFiles(job: Job<QueueItem>) {
     const projectSourceType = job.data[0];
     const sourceProjectId = job.data[1];
+
+    if (projectSourceType == null) {
+      this.logger.error(`Queue ${FETCH_CURSE_FILES_QUEUE} received null projectSourceType`);
+
+      return;
+    }
+
+    if (sourceProjectId == null) {
+      this.logger.error(`Queue ${FETCH_CURSE_FILES_QUEUE} received null sourceProjectId`);
+
+      return;
+    }
+
     this.logger.log(`Processing ${projectSourceType} mod ${sourceProjectId}`);
 
-    if (projectSourceType !== ProjectSource.CURSEFORGE || typeof sourceProjectId !== 'number') {
-      throw new Error(`unsupported source for now "${projectSourceType}:${sourceProjectId}"`);
+    if (projectSourceType !== ProjectSource.CURSEFORGE) {
+      this.logger.error(`unsupported source for now "${projectSourceType}:${sourceProjectId}"`);
+
+      return;
     }
 
     const files = await getCurseForgeModFiles(sourceProjectId);
@@ -61,13 +76,13 @@ export class CurseforgeFileCrawlerProcessor {
         continue;
       }
 
-      this.logger.log('Processing file', file.id, `(${file.displayName})`);
+      this.logger.log(`Processing CURSEFORGE file ${file.id} (${file.displayName})`);
 
       try {
         // eslint-disable-next-line no-await-in-loop
         await this.processFile(file, sourceProjectId);
       } catch (e) {
-        this.logger.error(`Processing Curse file ${file.id} (${file.displayName}) failed:`);
+        this.logger.error(`Processing CURSEFORGE file ${file.id} (${file.displayName}) failed:`);
         this.logger.error(e.message);
 
         // eslint-disable-next-line no-await-in-loop
@@ -105,7 +120,7 @@ export class CurseforgeFileCrawlerProcessor {
     ]);
   }
 
-  private async processFile(fileData: TCurseFile, curseProjectId: number): Promise<void> {
+  private async processFile(fileData: TCurseFile, curseProjectId: number | string): Promise<void> {
     // mods that I could not fix myself
     const blackList = [
       // chimes (https://www.curseforge.com/minecraft/mc-mods/chimes/files)

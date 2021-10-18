@@ -29,7 +29,7 @@ class Project extends DB.Model<Project, TProjectCreationAttributes> {
   @DB.Column(DB.DataType.TEXT)
   sourceId: string;
 
-  @DB.AllowNull(false)
+  @DB.AllowNull(true)
   @DB.Unique('source-id')
   @DB.Unique('source-slug')
   @DB.Column(DB.DataType.ENUM(...Object.values(ProjectSource)))

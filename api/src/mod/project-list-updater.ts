@@ -137,7 +137,7 @@ export class ProjectListUpdater {
               };
             }),
             {
-              fields: ['sourceId', 'sourceSlug', 'lastSourceEditAt', 'versionListUpToDate'],
+              fields: ['sourceId', 'sourceSlug', 'sourceType', 'lastSourceEditAt', 'versionListUpToDate'],
               transaction,
             },
           ),
@@ -223,18 +223,21 @@ export class ProjectListUpdater {
 
     this.logger.log('Checking if Curse Projects that are used in modpacks have updates');
 
-    // select all curseProjectId that are used in modpacks
+    // !TODO: crawl everything
+
+    // select all sourceId that are used in modpacks
     //  and that have changes detected by handleCron, but not yet processed
-    const projects = await this.sequelize.query<{ curseProjectId: number }>(`
-      SELECT DISTINCT j."projectId" FROM "ModJars" j
-        INNER JOIN "ModpackMods" mm on j."internalId" = mm."jarId"
-      WHERE "projectId" IN (SELECT cfp."internalId" FROM "Projects" cfp WHERE cfp."versionListUpToDate" = FALSE)
+    // language=PostgreSQL
+    const projects = await this.sequelize.query<{ sourceId: string, sourceType: ProjectSource }>(`
+      SELECT DISTINCT p."sourceType", p."sourceId" FROM "Projects" p
+        INNER JOIN "ModJars" mj ON p."internalId" = mj."projectId"
+        INNER JOIN "ModpackMods" mm on mj."internalId" = mm."jarId"
     `, {
       type: QueryTypes.SELECT,
     });
 
     await this.modDiscoveryQueue.addBulk(projects.map(project => {
-      return { data: [ProjectSource.CURSEFORGE, project.curseProjectId] };
+      return { data: [project.sourceType /* forge */, project.sourceId/* project 1234 */] };
     }));
   }
 }

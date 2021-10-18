@@ -95,7 +95,7 @@ export type TCurseFile = {
   // gameVersionFlavor
 };
 
-export async function getCurseForgeModFiles(curseProjectId: number): Promise<TCurseFile[]> {
+export async function getCurseForgeModFiles(curseProjectId: number | string): Promise<TCurseFile[]> {
   return fetchCurseForge(`/addon/${curseProjectId}/files`);
 }
 
