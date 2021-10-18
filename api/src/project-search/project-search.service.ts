@@ -1,5 +1,6 @@
 import * as Lucene from 'lucene';
 import 'core-js/es/string/replace-all';
+import type { AST, Node, LeftOnlyAST, NodeRangedTerm } from 'lucene';
 import { Op, Sequelize, WhereOptions } from 'sequelize';
 import { Literal } from 'sequelize/types/lib/utils';
 import { ModJar } from '../mod/mod-jar.entity';
@@ -9,11 +10,18 @@ import type { IPagination } from '../utils/graphql-connection-utils';
 class ProjectSearchService {
 
   async searchProjects(
-    query: String | null,
+    query: string | null,
     _pagination: IPagination,
   ) {
     const projects = await Project.findAll({
-      where: internalProcessSearchProjectsLucene(query),
+      where: !query ? undefined : internalProcessSearchProjectsLucene(query, {
+        ranges: ['minecraftVersion', 'modLoader', 'modId', 'displayName'],
+        fieldMap: {
+          minecraftVersion: '$jars.mods.supportedMinecraftVersions$',
+          modLoader: '$jars.mods.supportedModLoader$',
+          modId: '$jars.mods.modId$',
+        },
+      }),
       include: [{
         association: Project.associations.jars,
         required: true,
@@ -33,47 +41,133 @@ class ProjectSearchService {
   }
 }
 
-export function internalProcessSearchProjectsLucene(query): WhereOptions {
-  const lucene = Lucene.parse(query);
+type TLuceneToSqlConfig = {
+  fieldMap: { [luceneField: string]: string },
+  ranges: string[],
+};
+
+export function internalProcessSearchProjectsLucene(query: string, _config?: TLuceneToSqlConfig): WhereOptions {
+  const lucene: AST = Lucene.parse(query);
 
   return processLuceneNode(lucene);
 }
 
-function processLuceneNode(node): WhereOptions {
-  if (node.field) {
+function isNode(val: any): val is Node {
+  return 'field' in val;
+}
+
+function isLeftOnlyAst(val: any): val is LeftOnlyAST {
+  return 'left' in val && !('op' in val) && !('right' in val);
+}
+
+function isNodeRangedTerm(val: any): val is NodeRangedTerm {
+  return isNode(val) && 'inclusive' in val;
+}
+
+function processLuceneNode(node: AST | Node): WhereOptions {
+  if (isNode(node)) {
     return processLuceneLeaf(node);
   }
 
-  const op = node.operator;
-  if (!op) {
+  if (isLeftOnlyAst(node)) {
+    if (node.start) {
+      throw new Error('Do not know how to handle node.start');
+    }
+
     return processLuceneNode(node.left);
   }
 
-  console.log(node);
+  const op = node.operator;
 
-  throw new Error('NYI');
+  switch (op) {
+    case 'AND':
+    case '<implicit>':
+      return {
+        [Op.and]: [
+          processLuceneNode(node.left),
+          processLuceneNode(node.right),
+        ],
+      };
 
-  // ModVersion.findAll()
-  // modId
-  // displayName
-  // supportedMinecraftVersions
-  // supportedModLoader
+    case 'OR':
+      return {
+        [Op.or]: [
+          processLuceneNode(node.left),
+          processLuceneNode(node.right),
+        ],
+      };
 
-  /*
-  - **modId** - returns only projects that have at least one jar containing this modId
-- **modName** - returns only projects that have at least one jar containing one mod that matches modName
-- **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion
-- **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader
-   */
+    case 'NOT': // <implicit> NOT
+    case 'AND NOT':
+      return {
+        [Op.and]: [
+          processLuceneNode(node.left),
+          { [Op.not]: processLuceneNode(node.right) },
+        ],
+      };
+
+    case 'OR NOT':
+      return {
+        [Op.or]: [
+          processLuceneNode(node.left),
+          { [Op.not]: processLuceneNode(node.right) },
+        ],
+      };
+
+    default:
+      throw new Error(`unknown operator ${op}`);
+  }
 }
 
-function processLuceneLeaf(leaf): WhereOptions {
-  // console.log(leaf);
+function processLuceneLeaf(leaf: Node): WhereOptions {
+  if (isNodeRangedTerm(leaf)) {
+    return {
+      [leaf.field]: luceneRangedToSql(leaf),
+    };
+  }
 
   return {
     [leaf.field]: {
       [Op.iLike]: luceneTermToSqlLike(leaf.term),
     },
+  };
+}
+
+function luceneRangedToSql(leaf: NodeRangedTerm): WhereOptions {
+  const min = leaf.term_min;
+  const max = leaf.term_max;
+
+  let gtOp;
+  let ltOp;
+
+  switch (leaf.inclusive) {
+    case 'both':
+      gtOp = Op.gte;
+      ltOp = Op.lte;
+      break;
+
+    case 'left':
+      gtOp = Op.gte;
+      ltOp = Op.lt;
+      break;
+
+    case 'right':
+      gtOp = Op.gt;
+      ltOp = Op.lte;
+      break;
+
+    case 'none':
+      gtOp = Op.gt;
+      ltOp = Op.lt;
+      break;
+
+    default:
+      throw new Error(`unknown inclusiveness ${leaf.inclusive}`);
+  }
+
+  return {
+    [gtOp]: min,
+    [ltOp]: max,
   };
 }
 

@@ -52,7 +52,7 @@ Example 2: \`Magic Feather\` (interpreted as \`projectName:"*Magic Feather*"\`).
 `,
   })
   async searchProjects(
-    @Args('query', { nullable: true, type: () => String }) query: String | null,
+    @Args('query', { nullable: true, type: () => String }) query: string | null,
     @First() first: number | null,
     @After() after: string | null,
   ) {
