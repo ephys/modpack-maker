@@ -47,6 +47,9 @@ Example 2: \`Magic Feather\` (interpreted as \`projectName:"*Magic Feather*"\`).
 
     return sequelizeCursorToConnection(
       async () => this.projectSearchService.searchProjects(query, pagination),
+      {
+        totalCount: async () => this.projectSearchService.countProjects(query),
+      },
     );
   }
 }

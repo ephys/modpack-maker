@@ -8,6 +8,7 @@ import { Op, QueryTypes, Sequelize } from 'sequelize';
 import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '../../../common/minecraft-utils';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
+import { ModJar } from '../mod/mod-jar.entity';
 import { Project } from '../mod/project.entity';
 import { EMPTY_ARRAY, lastItem } from '../utils/generic-utils';
 import type { IPagination } from '../utils/graphql-connection-utils';
@@ -61,6 +62,23 @@ class ProjectSearchService {
     private readonly sequelize: Sequelize,
   ) {}
 
+  async countProjects(userQuery: string | null): Promise<number> {
+    userQuery = userQuery ? userQuery.trim() : userQuery;
+
+    return Project.count({
+      distinct: true,
+      where: userQuery ? internalProcessSearchProjectsLucene(userQuery, ProjectSearchLuceneConfig) : undefined,
+      include: [{
+        association: Project.associations.jars,
+        required: true,
+        include: [{
+          association: ModJar.associations.mods,
+          required: true,
+        }],
+      }],
+    });
+  }
+
   async searchProjects(
     userQuery: string | null,
     strPagination: IPagination,
@@ -95,7 +113,6 @@ class ProjectSearchService {
           ORDER BY ${buildOrder(query.order, 'Project', Project)}
           LIMIT ${query.limit};
         `, {
-          logging: console.log,
           type: QueryTypes.SELECT,
           mapToModel: true,
           model: Project,
