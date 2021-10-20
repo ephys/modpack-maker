@@ -15,7 +15,7 @@ import { EMPTY_ARRAY, lastItem } from '../utils/generic-utils';
 import type { IPagination } from '../utils/graphql-connection-utils';
 import { normalizeRelayPagination } from '../utils/graphql-connection-utils';
 import { getMinecraftVersionsInRange } from '../utils/minecraft-utils';
-import { buildOrder, buildWhereComponent, contains, iLike, overlap } from '../utils/sequelize-utils';
+import { andWhere, buildOrder, buildWhereComponent, contains, iLike, overlap } from '../utils/sequelize-utils';
 
 export enum ProjectSearchSortOrderDirection {
   DESC = 'DESC',
@@ -117,28 +117,30 @@ class ProjectSearchService {
       model: Project,
       order: [[orderKey, orderDir]],
       ...pagination,
-      where: !userQuery ? undefined : internalProcessSearchProjectsLucene(userQuery, ProjectSearchLuceneConfig),
       findAll: async query => {
+        // convert Lucene query to SQL query
+        const userQueryWhere = !userQuery
+          ? undefined
+          : internalProcessSearchProjectsLucene(userQuery, ProjectSearchLuceneConfig);
+
+        // Stateless Cursor Pagination WHERE query
+        const paginationWhere = query.where;
+
         return this.sequelize.query(`
-          SELECT "Project"."internalId",
-            MIN(jars."releaseDate") as "firstFileUploadedAt",
-            MAX(jars."releaseDate") as "lastFileUploadedAt",
-            "Project"."sourceId",
-            "Project"."sourceType",
-            "Project"."sourceSlug",
-            "Project"."name",
-            "Project"."lastSourceEditAt",
-            "Project"."versionListUpToDate",
-            "Project"."failedFiles",
-            "Project"."createdAt",
-            "Project"."updatedAt"
-          FROM "Projects" AS "Project"
-            INNER JOIN "ModJars" AS "jars" ON "Project"."internalId" = "jars"."projectId"
-            INNER JOIN "ModVersions" AS "jars->mods" ON "jars"."internalId" = "jars->mods"."jarId"
-          WHERE "Project"."sourceSlug" IS NOT NULL
-            AND ${buildWhereComponent(query.where, Project, 'Project')}
-          GROUP BY "Project"."internalId"
-          ORDER BY ${buildOrder(query.order, 'Project', Project)}
+          SELECT p1.*
+          FROM (
+            SELECT p2.*,
+              MIN(jars."releaseDate") as "firstFileUploadedAt",
+              MAX(jars."releaseDate") as "lastFileUploadedAt"
+            FROM "Projects" p2
+              INNER JOIN "ModJars" AS "jars" ON p2."internalId" = "jars"."projectId"
+              INNER JOIN "ModVersions" AS "jars->mods" ON "jars"."internalId" = "jars->mods"."jarId"
+            WHERE p2."sourceSlug" IS NOT NULL
+              ${userQueryWhere ? andWhere(userQueryWhere, Project, 'p2') : ''}
+            GROUP BY p2."internalId"
+          ) p1
+          WHERE ${buildWhereComponent(paginationWhere, Project, 'p1')}
+          ORDER BY ${buildOrder(query.order, 'p1', Project)}
           LIMIT ${query.limit};
         `, {
           type: QueryTypes.SELECT,
