@@ -7,6 +7,7 @@ import { internalProcessSearchProjectsLucene } from './project-search.service';
 const LuceneConfig = {
   ranges: ['minecraftVersion'],
   fields: ['minecraftVersion', 'modId', 'displayName'],
+  implicitField: 'displayName',
 };
 
 describe('internalProcessSearchProjectsLucene', () => {
@@ -244,6 +245,18 @@ describe('internalProcessSearchProjectsLucene', () => {
               iLike(Sequelize.literal(`E'a'`)),
             ),
           ),
+        ),
+      ),
+    );
+  });
+
+  it('supports field:([x TO y] OR z)', () => {
+    expect(internalProcessSearchProjectsLucene(`minecraftVersion:([x TO y] OR z)`, LuceneConfig)).toEqual(
+      Sequelize.where(
+        Sequelize.cast(Sequelize.col('minecraftVersion'), 'text'),
+        or(
+          { [Op.gte]: 'x', [Op.lte]: 'y' },
+          iLike(Sequelize.literal(`E'z'`)),
         ),
       ),
     );

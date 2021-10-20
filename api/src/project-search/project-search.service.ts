@@ -109,7 +109,7 @@ function isNodeTerm(val: any): val is NodeTerm {
 
 function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig): WhereOptions {
   if (isNode(node)) {
-    return processLuceneNode(node, config);
+    return processNamedLuceneNode(node, config);
   }
 
   if (isLeftOnlyAst(node)) {
@@ -162,7 +162,7 @@ function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig): WhereOp
   }
 }
 
-function processLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOptions {
+function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOptions {
 
   if (node.field === '<implicit>') {
     node.field = config.implicitField;
@@ -173,55 +173,80 @@ function processLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOptions
 
   const sqlField = config?.fieldMap?.[node.field] ?? node.field;
 
-  if (isNodeRangedTerm(node)) {
-    const ranges: readonly string[] = config?.ranges ?? EMPTY_ARRAY;
-
-    if (!ranges.includes(node.field)) {
-      // !TODO expose to client
-      throw new Error(`Field ${JSON.stringify(node.field)} is not a range. Valid ranges: ${JSON.stringify(ranges)}`);
-    }
-
-    return {
-      [sqlField]: luceneRangedToSql(node),
-    };
-  }
-
-  return processLuceneTerm(node, config);
+  return Sequelize.where(
+    Sequelize.cast(Sequelize.col(sqlField), 'text'),
+    processLuceneNodePart(node, node.field, config),
+  );
 }
 
-interface ParenthesizedNodeTerm extends NodeTerm {
+interface OperatorNodeTerm extends NodeTerm {
   operator: 'AND' | 'OR';
   right: NodeTerm;
   left: NodeTerm;
 }
 
-function isOperatorNodeTerm(val: any): val is ParenthesizedNodeTerm {
+function isOperatorNodeTerm(val: any): val is OperatorNodeTerm {
   return 'operator' in val && val.operator != null;
 }
 
-function processLuceneTerm(node: NodeTerm, config: TLuceneToSqlConfig): WhereOptions {
-  const fields: readonly string[] = config?.fields ?? EMPTY_ARRAY;
-  if (!fields.includes(node.field)) {
-    // !TODO expose to client
-    throw new Error(`Field ${JSON.stringify(node.field)} is not recognised. Valid fields: ${JSON.stringify(fields)}`);
+type TNodePartWhere = OrOperator<any> | AndOperator<any> | WhereOperators;
+
+function processLuceneNodePart(
+  node: Node,
+  fieldName: string,
+  config: TLuceneToSqlConfig,
+): TNodePartWhere {
+  if (isOperatorNodeTerm(node)) {
+    switch (node.operator) {
+      case 'AND':
+        return {
+          [Op.and]: [
+            processLuceneNodePart(node.left, fieldName, config),
+            processLuceneNodePart(node.right, fieldName, config),
+          ],
+        };
+
+      case 'OR':
+        return {
+          [Op.or]: [
+            processLuceneNodePart(node.left, fieldName, config),
+            processLuceneNodePart(node.right, fieldName, config),
+          ],
+        };
+
+      default:
+        throw new Error(`Unknown leaf operator ${node.operator} `);
+    }
   }
 
-  const sqlField = config?.fieldMap?.[node.field] ?? node.field;
+  if (isNodeRangedTerm(node)) {
+    const ranges: readonly string[] = config?.ranges ?? EMPTY_ARRAY;
 
-  return Sequelize.where(
-    Sequelize.cast(Sequelize.col(sqlField), 'text'),
-    luceneTermToSqlLike(node),
-  );
+    if (!ranges.includes(fieldName)) {
+      // !TODO expose to client
+      throw new Error(`Field ${JSON.stringify(fieldName)} is not a range. Valid ranges: ${JSON.stringify(ranges)}`);
+    }
+
+    return luceneRangedTermToSql(node);
+  }
+
+  const fields: readonly string[] = config?.fields ?? EMPTY_ARRAY;
+  if (!fields.includes(fieldName)) {
+    // !TODO expose to client
+    throw new Error(`Field ${JSON.stringify(fieldName)} is not recognised. Valid fields: ${JSON.stringify(fields)}`);
+  }
+
+  return luceneTermToSqlLike(node);
 }
 
-function luceneRangedToSql(leaf: NodeRangedTerm): WhereOptions {
-  const min = leaf.term_min;
-  const max = leaf.term_max;
+function luceneRangedTermToSql(node: NodeRangedTerm): TNodePartWhere {
+  const min = node.term_min;
+  const max = node.term_max;
 
   let gtOp;
   let ltOp;
 
-  switch (leaf.inclusive) {
+  switch (node.inclusive) {
     case 'both':
       gtOp = Op.gte;
       ltOp = Op.lte;
@@ -243,7 +268,7 @@ function luceneRangedToSql(leaf: NodeRangedTerm): WhereOptions {
       break;
 
     default:
-      throw new Error(`unknown inclusiveness ${leaf.inclusive}`);
+      throw new Error(`unknown inclusiveness ${node.inclusive}`);
   }
 
   return {
@@ -256,30 +281,7 @@ function luceneRangedToSql(leaf: NodeRangedTerm): WhereOptions {
  * Converts lucene term syntax into something compatible with SQL "LIKE"
  * Only supports ? & * wildcards
  */
-function luceneTermToSqlLike(node: NodeTerm): OrOperator<any> | AndOperator<any> | WhereOperators {
-  if (isOperatorNodeTerm(node)) {
-    switch (node.operator) {
-      case 'AND':
-        return {
-          [Op.and]: [
-            luceneTermToSqlLike(node.left),
-            luceneTermToSqlLike(node.right),
-          ],
-        };
-
-      case 'OR':
-        return {
-          [Op.or]: [
-            luceneTermToSqlLike(node.left),
-            luceneTermToSqlLike(node.right),
-          ],
-        };
-
-      default:
-        throw new Error(`Unknow leaf operator ${node.operator}`);
-    }
-  }
-
+function luceneTermToSqlLike(node: NodeTerm): TNodePartWhere {
   let term = node.term;
 
   // unescape lucene characters (except ? & *)
