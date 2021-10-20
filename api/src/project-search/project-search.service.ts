@@ -100,12 +100,12 @@ class ProjectSearchService {
   }
 
   async searchProjects(
-    userQuery: string | null,
+    luceneQuery: string | null,
     strPagination: IPagination,
     order: ProjectSearchSortOrder,
     orderDir: ProjectSearchSortOrderDirection,
   ): Promise<FindByCursorResult<Project>> {
-    userQuery = userQuery ? userQuery.trim() : userQuery;
+    luceneQuery = luceneQuery ? luceneQuery.trim() : luceneQuery;
     const pagination = normalizeRelayPagination(strPagination);
 
     const orderKey = order === ProjectSearchSortOrder.ProjectName ? 'name'
@@ -119,9 +119,9 @@ class ProjectSearchService {
       ...pagination,
       findAll: async query => {
         // convert Lucene query to SQL query
-        const userQueryWhere = !userQuery
+        const luceneQueryWhere = !luceneQuery
           ? undefined
-          : internalProcessSearchProjectsLucene(userQuery, ProjectSearchLuceneConfig);
+          : internalProcessSearchProjectsLucene(luceneQuery, ProjectSearchLuceneConfig);
 
         // Stateless Cursor Pagination WHERE query
         const paginationWhere = query.where;
@@ -136,7 +136,7 @@ class ProjectSearchService {
               INNER JOIN "ModJars" AS "jars" ON p2."internalId" = "jars"."projectId"
               INNER JOIN "ModVersions" AS "jars->mods" ON "jars"."internalId" = "jars->mods"."jarId"
             WHERE p2."sourceSlug" IS NOT NULL
-              ${userQueryWhere ? andWhere(userQueryWhere, Project, 'p2') : ''}
+              ${luceneQueryWhere ? andWhere(luceneQueryWhere, Project, 'p2') : ''}
             GROUP BY p2."internalId"
           ) p1
           WHERE ${buildWhereComponent(paginationWhere, Project, 'p1')}
