@@ -1,6 +1,6 @@
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { ProjectConnection } from '../mod/project.resolver';
-import { After, First, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
+import { PaginationArgs, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
 import { ProjectSearchService } from './project-search.service';
 
 @Resolver()
@@ -41,13 +41,12 @@ Example 2: \`Magic Feather\` (interpreted as \`projectName:"*Magic Feather*"\`).
 `,
   })
   async searchProjects(
+    @Args() pagination: PaginationArgs,
     @Args('query', { nullable: true, type: () => String }) query: string | null,
-    @First() first: number | null,
-    @After() after: string | null,
   ) {
 
     return sequelizeCursorToConnection(
-      async () => this.projectSearchService.searchProjects(query, { first, after }),
+      async () => this.projectSearchService.searchProjects(query, pagination),
     );
   }
 }

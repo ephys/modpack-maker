@@ -1,8 +1,8 @@
 import { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import type { Type } from '@nestjs/common';
-import { Field, ObjectType, Int, Args } from '@nestjs/graphql';
+import { Field, ObjectType, Int, ArgsType } from '@nestjs/graphql';
 import { MaybePromise } from '../../../common/typing-utils';
-import { lastItem } from './generic-utils';
+import { clamp, lastItem } from './generic-utils';
 
 interface IEdgeType<T> {
   cursor: string;
@@ -38,10 +38,21 @@ type IPagination = {
   after?: string | null,
 };
 
-export function normalizeRelayPagination(pagination: IPagination, defaultReturnCount: number = 20): IPagination {
+export type ICursorPagination = {
+  first: number | null,
+  last: number | null,
+  before: object | null,
+  after: object | null,
+};
+
+export function normalizeRelayPagination(pagination: IPagination, maxReturnCount: number = 20): ICursorPagination {
+  const first = pagination.first ?? (pagination.last == null ? maxReturnCount : null);
+
   return {
-    ...pagination,
-    first: pagination.first ?? (pagination.last == null ? defaultReturnCount : null),
+    before: pagination.before ? defaultDecodeCursor(pagination.before) : null,
+    after: pagination.after ? defaultDecodeCursor(pagination.after) : null,
+    last: pagination.last ? clamp(1, pagination.last, maxReturnCount) : null,
+    first: first ? clamp(1, first, maxReturnCount) : null,
   };
 }
 
@@ -73,20 +84,19 @@ function Connection<T>(classRef: Type<T>): Type<IConnectionType<T>> {
   return PaginatedType as Type<IConnectionType<T>>;
 }
 
-function First() {
-  return Args('first', { nullable: true, type: () => Int });
-}
+@ArgsType()
+class PaginationArgs implements IPagination {
+  @Field(() => Int, { nullable: true })
+  first: number | null;
 
-function Last() {
-  return Args('last', { nullable: true, type: () => Int });
-}
+  @Field(() => Int, { nullable: true })
+  last: number | null;
 
-function Before() {
-  return Args('before', { nullable: true, type: () => String });
-}
+  @Field(() => String, { nullable: true })
+  after: string | null;
 
-function After() {
-  return Args('after', { nullable: true, type: () => String });
+  @Field(() => String, { nullable: true })
+  before: string | null;
 }
 
 type TOpts<T> = {
@@ -108,6 +118,18 @@ function defaultGetCursor<T>(node: T, result: FindByCursorResult<T>): string {
   }
 
   return Buffer.from(JSON.stringify(out)).toString('base64');
+}
+
+export function defaultDecodeCursor(cursor: string | null): object | null {
+  if (cursor == null) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(cursor, 'base64').toString('utf-8'));
+  } catch (e) {
+    return null;
+  }
 }
 
 export function sequelizeCursorToConnection<T>(
@@ -183,4 +205,4 @@ export const EMPTY_CONNECTION: IConnectionType<any> = Object.freeze({
   totalCount: 0,
 });
 
-export { Connection, IConnectionType, IEdgeType, PageInfo, First, Last, Before, After, IPagination };
+export { Connection, IConnectionType, IEdgeType, PageInfo, IPagination, PaginationArgs };

@@ -20,17 +20,16 @@ class ProjectSearchService {
 
   async searchProjects(
     userQuery: string | null,
-    pagination: IPagination,
+    strPagination: IPagination,
   ): Promise<FindByCursorResult<Project>> {
     userQuery = userQuery ? userQuery.trim() : userQuery;
-    pagination = normalizeRelayPagination(pagination);
+    const pagination = normalizeRelayPagination(strPagination);
 
     return sequelizeFindByCursor({
       // @ts-expect-error
       model: Project,
       order: [['name', 'ASC']],
-      first: pagination.first,
-      last: pagination.last,
+      ...pagination,
       where: !userQuery ? undefined : internalProcessSearchProjectsLucene(userQuery, {
         ranges: ['minecraftVersion', 'modLoader', 'modId', 'displayName'],
         fieldMap: {
