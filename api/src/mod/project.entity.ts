@@ -7,6 +7,8 @@ export enum ProjectSource {
   CURSEFORGE = 'CURSEFORGE',
 }
 
+type TFileErrors = { [key: string]: string };
+
 type TProjectCreationAttributes = {
   internalId?: number,
   sourceId: string,
@@ -14,7 +16,7 @@ type TProjectCreationAttributes = {
   sourceSlug: string,
   lastSourceEditAt: Date,
   versionListUpToDate?: boolean,
-  failedFileIds?: number[],
+  failedFiles?: TFileErrors,
 };
 
 @DB.Table
@@ -60,9 +62,9 @@ class Project extends DB.Model<Project, TProjectCreationAttributes> {
   // last crawled
 
   @DB.AllowNull(false)
-  @DB.Default([])
-  @DB.Column(DB.DataType.ARRAY(DB.DataType.INTEGER))
-  failedFileIds: number[];
+  @DB.Default({})
+  @DB.Column(DB.DataType.JSON)
+  failedFiles: TFileErrors;
 
   @DB.HasMany(() => ModJar, { foreignKey: 'projectId' })
   jars: ModJar[];

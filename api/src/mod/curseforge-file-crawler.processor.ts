@@ -1,4 +1,4 @@
-import assert from 'assert';
+import * as assert from 'assert';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import type { Job, Queue } from 'bull';
@@ -59,31 +59,25 @@ export class CurseforgeFileCrawlerProcessor {
       return;
     }
 
-    const files = await getCurseForgeModFiles(sourceProjectId);
-    const fileIds = files.map(file => file.id);
+    try {
+      const files = await getCurseForgeModFiles(sourceProjectId);
+      const fileIds = files.map(file => file.id);
 
-    const existingFiles = await ModJar.findAll({
-      attributes: ['curseFileId'],
-      where: { curseFileId: { [Op.in]: fileIds } },
-    });
+      const existingFiles = await ModJar.findAll({
+        attributes: ['curseFileId'],
+        where: { curseFileId: { [Op.in]: fileIds } },
+      });
 
-    const existingFilesIds = new Set(existingFiles.map(item => item.curseFileId));
+      const existingFilesIds = new Set(existingFiles.map(item => item.curseFileId));
 
-    for (const file of files) {
-      // file has already been processed
-      // TODO: cache mod file metadata so we can update the forge meta without having to parse the Jar again
-      if (existingFilesIds.has(file.id)) {
-        continue;
-      }
+      for (const file of files) {
+        // file has already been processed
+        // TODO: cache mod file metadata so we can update the forge meta without having to parse the Jar again
+        if (existingFilesIds.has(file.id)) {
+          continue;
+        }
 
-      this.logger.log(`Processing CURSEFORGE file ${file.id} (${file.displayName})`);
-
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await this.processFile(file, sourceProjectId);
-      } catch (e) {
-        this.logger.error(`Processing CURSEFORGE file ${file.id} (${file.displayName}) failed:`);
-        this.logger.error(e.message);
+        this.logger.log(`Processing CURSEFORGE file ${file.id} (${file.displayName})`);
 
         // eslint-disable-next-line no-await-in-loop
         const cfProject = await Project.findOne({
@@ -95,32 +89,51 @@ export class CurseforgeFileCrawlerProcessor {
 
         assert(cfProject != null);
 
-        if (!cfProject.failedFileIds.includes(file.id)) {
-          cfProject.failedFileIds = [
-            ...cfProject.failedFileIds,
-            file.id,
-          ];
-
+        try {
           // eslint-disable-next-line no-await-in-loop
-          await cfProject.save();
+          await this.processFile(file, cfProject);
+        } catch (e) {
+          this.logger.error(`Processing CURSEFORGE file ${file.id} (${file.displayName}) failed:`);
+          this.logger.error(e.message);
+
+          const error = e.message;
+          if (cfProject.failedFiles[file.id] !== error) {
+            cfProject.failedFiles = {
+              ...cfProject.failedFiles,
+              [file.id]: error,
+            };
+
+            // eslint-disable-next-line no-await-in-loop
+            await cfProject.save();
+          }
         }
       }
-    }
 
-    await Promise.all([
-      Project.update({
-        versionListUpToDate: true,
-      }, {
-        where: {
-          sourceType: projectSourceType,
-          sourceId: sourceProjectId,
-        },
-      }),
-      this.insertDiscoveredModsQueue.add(sourceProjectId),
-    ]);
+      await Promise.all([
+        Project.update({
+          versionListUpToDate: true,
+        }, {
+          where: {
+            sourceType: projectSourceType,
+            sourceId: sourceProjectId,
+          },
+        }),
+        this.insertDiscoveredModsQueue.add(sourceProjectId),
+      ]);
+    } catch (e) {
+      this.logger.error(`Error while processing ${job.data}`);
+      this.logger.error(e);
+
+      throw e;
+    }
   }
 
-  private async processFile(fileData: TCurseFile, curseProjectId: number | string): Promise<void> {
+  private async processFile(fileData: TCurseFile, project: Project): Promise<void> {
+    // someone needs to clear this error before we try again
+    if (project.failedFiles[fileData.id] != null) {
+      return;
+    }
+
     // mods that I could not fix myself
     const blackList = [
       // chimes (https://www.curseforge.com/minecraft/mc-mods/chimes/files)
@@ -224,10 +237,9 @@ export class CurseforgeFileCrawlerProcessor {
       return;
     }
 
-    // @ts-expect-error
     const modJar = ModJar.build({
       externalId: generateId(),
-      projectId: curseProjectId,
+      projectId: project.internalId,
       fileName: fileData.fileName,
       curseFileId: fileData.id,
       downloadUrl: fileData.downloadUrl,

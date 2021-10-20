@@ -4,7 +4,7 @@ import type { Queue } from 'bull';
 import { Op, Sequelize } from 'sequelize';
 import { ModJar } from './mod-jar.entity';
 import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
-import { Project } from './project.entity';
+import { Project, ProjectSource } from './project.entity';
 
 const curseForgeProjectUrl = /^https?:\/\/www.curseforge.com\/minecraft\/mc-mods\/([^/]+)(\/.+)?$/;
 
@@ -14,32 +14,25 @@ class ModDiscoveryService {
 
   async retryFailedFiles() {
     const projects = await Project.findAll({
-      where: Sequelize.where(
-        Sequelize.fn('array_length', Sequelize.col('failedFileIds'), 1),
-        { [Op.gt]: 0 },
-      ),
+      where: Sequelize.literal(`"failedFiles"::text <> '{}'`),
     });
 
-    const failedProjectsIds = projects.map(project => Number(project.sourceId));
-
     await Project.update({
-      failedFileIds: [],
+      failedFiles: {},
       versionListUpToDate: false,
     }, {
       where: {
-        sourceId: { [Op.in]: failedProjectsIds },
+        sourceId: { [Op.in]: projects.map(project => project.internalId) },
       },
     });
 
-    return this.updateCurseProjectFiles(failedProjectsIds);
+    return this.updateCurseProjectFiles(projects.map(project => {
+      return [project.sourceType, project.sourceId];
+    }));
   }
 
-  async updateCurseProjectFiles(projectId: number | number[]) {
-    if (Array.isArray(projectId)) {
-      await this.modDiscoveryQueue.addBulk(projectId.map(id => ({ data: id })));
-    } else {
-      await this.modDiscoveryQueue.add(projectId);
-    }
+  async updateCurseProjectFiles(projectIds: Array<[sourceType: ProjectSource, sourceId: string]>) {
+    await this.modDiscoveryQueue.addBulk(projectIds.map(id => ({ data: id })));
   }
 
   async discoverUrls(urls: string[]): Promise<{
