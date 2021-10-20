@@ -3,6 +3,7 @@ import { FindByCursorResult, sequelizeFindByCursor } from '@ephys/sequelize-curs
 import { Inject } from '@nestjs/common';
 import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm } from 'lucene';
 import * as Lucene from 'lucene';
+import { NodeField } from 'lucene';
 import type { AndOperator, OrOperator, WhereOperators, WhereOptions } from 'sequelize';
 import { Op, QueryTypes, Sequelize } from 'sequelize';
 import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '../../../common/minecraft-utils';
@@ -229,14 +230,23 @@ function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOp
   );
 }
 
-interface OperatorNodeTerm extends NodeTerm {
+interface OperatorNodeField extends NodeField {
   operator: 'AND' | 'OR';
-  right: NodeTerm;
-  left: NodeTerm;
+  right: Node;
+  left: Node;
 }
 
-function isOperatorNodeTerm(val: any): val is OperatorNodeTerm {
+interface ParenthesizedNodeField extends NodeField {
+  parenthesized: true;
+  left: Node;
+}
+
+function isOperatorNode(val: any): val is OperatorNodeField {
   return 'operator' in val && val.operator != null;
+}
+
+function isParenthesizedNode(val: any): val is ParenthesizedNodeField {
+  return 'parenthesized' in val && val.parenthesized === true;
 }
 
 function processLuceneNodePart(
@@ -244,7 +254,7 @@ function processLuceneNodePart(
   fieldName: string,
   config: TLuceneToSqlConfig,
 ): TNodePartWhere {
-  if (isOperatorNodeTerm(node)) {
+  if (isOperatorNode(node)) {
     switch (node.operator) {
       case 'AND':
         return {
@@ -265,6 +275,10 @@ function processLuceneNodePart(
       default:
         throw new Error(`Unknown leaf operator ${node.operator} `);
     }
+  }
+
+  if (isParenthesizedNode(node)) {
+    return processLuceneNodePart(node.left, fieldName, config);
   }
 
   const callCustomBuilder = config.whereBuilder?.[fieldName];
