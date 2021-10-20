@@ -289,6 +289,10 @@ export function or(...opts) {
   return { [Op.or]: opts };
 }
 
+export function iLike(val) {
+  return { [Op.iLike]: val };
+}
+
 export function not(condition) {
   return { [Op.not]: condition };
 }
