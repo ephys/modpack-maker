@@ -223,15 +223,14 @@ export class ProjectListUpdater {
 
     this.logger.log('Checking if Curse Projects that are used in modpacks have updates');
 
-    // !TODO: crawl everything
-
     // select all sourceId that are used in modpacks
     //  and that have changes detected by handleCron, but not yet processed
     // language=PostgreSQL
     const projects = await this.sequelize.query<{ sourceId: string, sourceType: ProjectSource }>(`
       SELECT DISTINCT p."sourceType", p."sourceId" FROM "Projects" p
-        INNER JOIN "ModJars" mj ON p."internalId" = mj."projectId"
-        INNER JOIN "ModpackMods" mm on mj."internalId" = mm."jarId"
+--         INNER JOIN "ModJars" mj ON p."internalId" = mj."projectId"
+--         INNER JOIN "ModpackMods" mm on mj."internalId" = mm."jarId"
+      WHERE NOT p."versionListUpToDate"
     `, {
       type: QueryTypes.SELECT,
     });
