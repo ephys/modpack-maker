@@ -1,16 +1,17 @@
+import { BullModule } from '@nestjs/bull';
 import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
-import { FETCH_CURSE_FILES_QUEUE, ModVersionRepository } from './mod.constants';
-import { ModDiscoveryService } from './mod-discovery.service';
-import { BullModule } from '@nestjs/bull';
-import { CurseforgeFileCrawlerProcessor } from './curseforge-file-crawler.processor';
-import { ProjectListUpdater } from './project-list-updater';
 import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
-import { ModJarResolver } from './mod-jar.resolver';
-import { ModService } from './mod.service';
-import { ModController } from './mod.controller';
 import { ModpackModule } from '../modpack/modpack.module';
+import { CurseforgeFileCrawlerProcessor } from './curseforge-file-crawler.processor';
+import { ModDiscoveryService } from './mod-discovery.service';
+import { ModJarResolver } from './mod-jar.resolver';
+import { FETCH_CURSE_FILES_QUEUE, ModVersionRepository } from './mod.constants';
+import { ModController } from './mod.controller';
 import { ModResolver } from './mod.resolver';
+import { ModService } from './mod.service';
+import { ProjectListUpdater } from './project-list-updater';
+import { ProjectResolver } from './project.resolver';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ModResolver } from './mod.resolver';
     ProjectListUpdater,
     ModResolver,
     ModVersionRepository,
+    ProjectResolver,
   ],
 })
 export class ModModule {}

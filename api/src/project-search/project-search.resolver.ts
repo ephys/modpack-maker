@@ -1,18 +1,7 @@
-import { Args, Field, ObjectType, Query, Resolver } from '@nestjs/graphql';
-import { After, Connection, First } from '../utils/graphql-connection-utils';
+import { Args, Query, Resolver } from '@nestjs/graphql';
+import { ProjectConnection } from '../mod/project.resolver';
+import { After, First, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
 import { ProjectSearchService } from './project-search.service';
-
-@ObjectType()
-class Project {
-  // id: ID!
-  @Field()
-  homepage: string;
-  // source: ProjectSource!
-  // name: String!
-  // description: String!
-}
-
-const ProjectConnection = Connection(Project);
 
 @Resolver()
 class ProjectSearchResolver {
@@ -56,10 +45,10 @@ Example 2: \`Magic Feather\` (interpreted as \`projectName:"*Magic Feather*"\`).
     @First() first: number | null,
     @After() after: string | null,
   ) {
-    return this.projectSearchService.searchProjects(query, {
-      first,
-      after,
-    });
+
+    return sequelizeCursorToConnection(
+      async () => this.projectSearchService.searchProjects(query, { first, after }),
+    );
   }
 }
 

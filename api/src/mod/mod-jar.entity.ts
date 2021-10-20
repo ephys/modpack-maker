@@ -11,6 +11,16 @@ export enum ReleaseType {
   ALPHA = 'ALPHA',
 }
 
+type TModJarCreationAttributes = {
+  externalId?: string,
+  releaseType: ReleaseType,
+  releaseDate: string,
+  projectId: number,
+  curseFileId: number,
+  downloadUrl: string,
+  fileName: string,
+};
+
 /**
  * A ModJar entity is a representation of a .jar file
  *
@@ -18,7 +28,7 @@ export enum ReleaseType {
  */
 @DB.Table
 @GraphQlObject()
-export class ModJar extends DB.Model<ModJar> {
+export class ModJar extends DB.Model<ModJar, TModJarCreationAttributes> {
 
   @DB.AllowNull(false)
   @DB.PrimaryKey
@@ -46,17 +56,16 @@ export class ModJar extends DB.Model<ModJar> {
   @DB.Column(DB.DataType.DATE)
   releaseDate: string;
 
-  @DB.AllowNull(false)
-  @DB.Unique
-  @DB.Column(DB.DataType.INTEGER)
-
-  /**
-   * For files retrieved from curseforge: The curseforge project ID
-   * Used for finding mods by curseforge project ID
-   *
-   * @type {number}
-   */
+  // @DB.AllowNull(false)
+  // @DB.Unique
+  // @DB.Column(DB.DataType.INTEGER)
   // @DB.BelongsTo(() => Project, { as: 'project' })
+  // /**
+  //  * For files retrieved from curseforge: The curseforge project ID
+  //  * Used for finding mods by curseforge project ID
+  //  *
+  //  * @type {number}
+  //  */
   // project: Project;
 
   @DB.ForeignKey(() => Project)

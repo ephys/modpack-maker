@@ -1,20 +1,23 @@
 import { Args, ID, Parent, registerEnumType, ResolveField, Resolver } from '@nestjs/graphql';
-import { ModVersion } from './mod-version.entity';
-import { ModJar } from './mod-jar.entity';
-import { ModService } from './mod.service';
 import { DependencyType } from '../../../common/dependency-type';
 import { ModpackService } from '../modpack/modpack.service';
+import { Connection } from '../utils/graphql-connection-utils';
+import { ModJar } from './mod-jar.entity';
+import { ModVersion } from './mod-version.entity';
+import { ModService } from './mod.service';
 
 registerEnumType(DependencyType, {
   name: 'DependencyType',
 });
 
+export const ModJarConnection = Connection(ModJar);
+
 @Resolver(() => ModJar)
 export class ModJarResolver {
 
   constructor(
-    private modService: ModService,
-    private modpackService: ModpackService,
+    private readonly modService: ModService,
+    private readonly modpackService: ModpackService,
   ) {}
 
   // TODO: Pagination

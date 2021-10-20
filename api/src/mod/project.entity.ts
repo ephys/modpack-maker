@@ -1,3 +1,4 @@
+import { Field, ObjectType } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
 import { ModJar } from './mod-jar.entity';
 
@@ -17,6 +18,7 @@ type TProjectCreationAttributes = {
 };
 
 @DB.Table
+@ObjectType()
 class Project extends DB.Model<Project, TProjectCreationAttributes> {
   @DB.AllowNull(false)
   @DB.PrimaryKey
@@ -40,6 +42,12 @@ class Project extends DB.Model<Project, TProjectCreationAttributes> {
   @DB.Column(DB.DataType.TEXT)
   /** slug is null if project was deleted */
   sourceSlug: string | null;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.TEXT)
+  @Field()
+  /** Retrieved from source store */
+  name: string;
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.DATE)

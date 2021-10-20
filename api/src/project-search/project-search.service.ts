@@ -1,20 +1,37 @@
-import * as Lucene from 'lucene';
 import 'core-js/es/string/replace-all';
-import type { AST, Node, LeftOnlyAST, NodeRangedTerm } from 'lucene';
-import { Op, Sequelize, WhereOptions } from 'sequelize';
+import { FindByCursorResult, sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
+import { Inject } from '@nestjs/common';
+import type { AST, LeftOnlyAST, Node, NodeRangedTerm } from 'lucene';
+import * as Lucene from 'lucene';
+import { Op, QueryTypes, Sequelize, WhereOptions } from 'sequelize';
 import { Literal } from 'sequelize/types/lib/utils';
-import { ModJar } from '../mod/mod-jar.entity';
+import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { Project } from '../mod/project.entity';
 import type { IPagination } from '../utils/graphql-connection-utils';
+import { normalizeRelayPagination } from '../utils/graphql-connection-utils';
+import { buildOrder, buildWhereComponent } from '../utils/sequelize-utils';
 
 class ProjectSearchService {
 
+  constructor(
+    @Inject(SEQUELIZE_PROVIDER)
+    private readonly sequelize: Sequelize,
+  ) {}
+
   async searchProjects(
-    query: string | null,
-    _pagination: IPagination,
-  ) {
-    const projects = await Project.findAll({
-      where: !query ? undefined : internalProcessSearchProjectsLucene(query, {
+    userQuery: string | null,
+    pagination: IPagination,
+  ): Promise<FindByCursorResult<Project>> {
+    userQuery = userQuery ? userQuery.trim() : userQuery;
+    pagination = normalizeRelayPagination(pagination);
+
+    return sequelizeFindByCursor({
+      // @ts-expect-error
+      model: Project,
+      order: [['name', 'ASC']],
+      first: pagination.first,
+      last: pagination.last,
+      where: !userQuery ? undefined : internalProcessSearchProjectsLucene(userQuery, {
         ranges: ['minecraftVersion', 'modLoader', 'modId', 'displayName'],
         fieldMap: {
           minecraftVersion: '$jars.mods.supportedMinecraftVersions$',
@@ -22,22 +39,33 @@ class ProjectSearchService {
           modId: '$jars.mods.modId$',
         },
       }),
-      include: [{
-        association: Project.associations.jars,
-        required: true,
-        include: [{
-          association: ModJar.associations.mods,
-          required: true,
-        }],
-      }],
+      findAll: async query => {
+        // Model.findAll does nto support DISTINCT ON
+        return this.sequelize.query(`
+          SELECT DISTINCT ON ("Project"."name", "Project"."internalId") "Project"."internalId",
+            "Project"."sourceId",
+            "Project"."sourceType",
+            "Project"."sourceSlug",
+            "Project"."name",
+            "Project"."lastSourceEditAt",
+            "Project"."versionListUpToDate",
+            "Project"."failedFiles",
+            "Project"."createdAt",
+            "Project"."updatedAt"
+          FROM "Projects" AS "Project"
+            INNER JOIN "ModJars" AS "jars" ON "Project"."internalId" = "jars"."projectId"
+            INNER JOIN "ModVersions" AS "jars->mods" ON "jars"."internalId" = "jars->mods"."jarId"
+          WHERE "Project"."sourceSlug" IS NOT NULL
+           AND ${buildWhereComponent(query.where, Project, 'Project')}
+          ORDER BY ${buildOrder(query.order, 'Project', Project)}
+          LIMIT ${query.limit};
+        `, {
+          type: QueryTypes.SELECT,
+          mapToModel: true,
+          model: Project,
+        });
+      },
     });
-
-    console.log(projects.length);
-
-    // sequelizeFindByCursor({
-    //   model: ModVersion,
-    //   where
-    // })
   }
 }
 
@@ -46,10 +74,10 @@ type TLuceneToSqlConfig = {
   ranges: string[],
 };
 
-export function internalProcessSearchProjectsLucene(query: string, _config?: TLuceneToSqlConfig): WhereOptions {
+export function internalProcessSearchProjectsLucene(query: string, config?: TLuceneToSqlConfig): WhereOptions {
   const lucene: AST = Lucene.parse(query);
 
-  return processLuceneNode(lucene);
+  return processLuceneNode(lucene, config);
 }
 
 function isNode(val: any): val is Node {
@@ -64,9 +92,9 @@ function isNodeRangedTerm(val: any): val is NodeRangedTerm {
   return isNode(val) && 'inclusive' in val;
 }
 
-function processLuceneNode(node: AST | Node): WhereOptions {
+function processLuceneNode(node: AST | Node, config?: TLuceneToSqlConfig): WhereOptions {
   if (isNode(node)) {
-    return processLuceneLeaf(node);
+    return processLuceneLeaf(node, config);
   }
 
   if (isLeftOnlyAst(node)) {
@@ -74,7 +102,7 @@ function processLuceneNode(node: AST | Node): WhereOptions {
       throw new Error('Do not know how to handle node.start');
     }
 
-    return processLuceneNode(node.left);
+    return processLuceneNode(node.left, config);
   }
 
   const op = node.operator;
@@ -84,16 +112,16 @@ function processLuceneNode(node: AST | Node): WhereOptions {
     case '<implicit>':
       return {
         [Op.and]: [
-          processLuceneNode(node.left),
-          processLuceneNode(node.right),
+          processLuceneNode(node.left, config),
+          processLuceneNode(node.right, config),
         ],
       };
 
     case 'OR':
       return {
         [Op.or]: [
-          processLuceneNode(node.left),
-          processLuceneNode(node.right),
+          processLuceneNode(node.left, config),
+          processLuceneNode(node.right, config),
         ],
       };
 
@@ -101,16 +129,16 @@ function processLuceneNode(node: AST | Node): WhereOptions {
     case 'AND NOT':
       return {
         [Op.and]: [
-          processLuceneNode(node.left),
-          { [Op.not]: processLuceneNode(node.right) },
+          processLuceneNode(node.left, config),
+          { [Op.not]: processLuceneNode(node.right, config) },
         ],
       };
 
     case 'OR NOT':
       return {
         [Op.or]: [
-          processLuceneNode(node.left),
-          { [Op.not]: processLuceneNode(node.right) },
+          processLuceneNode(node.left, config),
+          { [Op.not]: processLuceneNode(node.right, config) },
         ],
       };
 
@@ -119,15 +147,17 @@ function processLuceneNode(node: AST | Node): WhereOptions {
   }
 }
 
-function processLuceneLeaf(leaf: Node): WhereOptions {
+function processLuceneLeaf(leaf: Node, config?: TLuceneToSqlConfig): WhereOptions {
+  const field = config?.fieldMap[leaf.field] ?? leaf.field;
+
   if (isNodeRangedTerm(leaf)) {
     return {
-      [leaf.field]: luceneRangedToSql(leaf),
+      [field]: luceneRangedToSql(leaf),
     };
   }
 
   return {
-    [leaf.field]: {
+    [field]: {
       [Op.iLike]: luceneTermToSqlLike(leaf.term),
     },
   };
@@ -218,8 +248,7 @@ function luceneTermToSqlLike(term: string): Literal {
     const previousLen = match[0].length;
     out += '\\'.repeat(previousLen / 2);
 
-    // @ts-expect-error
-    lastIndex = match.index + previousLen;
+    lastIndex = match.index! + previousLen;
   }
 
   out += term.substring(lastIndex, term.length);
