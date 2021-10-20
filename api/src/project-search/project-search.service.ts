@@ -17,6 +17,27 @@ import { normalizeRelayPagination } from '../utils/graphql-connection-utils';
 import { getMinecraftVersionsInRange } from '../utils/minecraft-utils';
 import { buildOrder, buildWhereComponent, contains, iLike, overlap } from '../utils/sequelize-utils';
 
+export enum ProjectSearchSortOrderDirection {
+  DESC = 'DESC',
+  ASC = 'ASC',
+}
+
+export enum ProjectSearchSortOrder {
+  ProjectName = 'ProjectName',
+  /**
+   * this sort-order is query-aware, meaning that if the query specifies a minecraftVersion or a modLoader,
+   * The CreationDate used for the sort order will be the date on which these specific versions were first supported by this mod.
+   * (first in the case of ASC, last in the case of DESC).
+   */
+  CreationDate = 'CreationDate',
+  /**
+   * this sort-order is query-aware, meaning that if the query specifies a minecraftVersion or a modLoader,
+   * The UpdateDate used for the sort order will be the date on which a jar that supports these versions was uploaded.
+   * (first in the case of ASC, last in the case of DESC).
+   */
+  UpdateDate = 'UpdateDate',
+}
+
 const oldestMcVersion = lastItem(minecraftVersions)!;
 const newestMcVersion = minecraftVersions[0]!;
 
