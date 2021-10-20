@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-commonjs
 module.exports = {
   extends: [
     '@foobarhq/eslint-config',
@@ -9,6 +8,8 @@ module.exports = {
     'babel/new-cap': 'off',
     'no-use-before-define': 'off',
     '@typescript-eslint/consistent-type-imports': 'off',
+
+    'no-console': 'error',
   },
   env: {
     node: true,
