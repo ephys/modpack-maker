@@ -51,10 +51,10 @@ Example 2: \`Magic Feather\` (interpreted as \`projectName:"*Magic Feather*"\`).
 
 The sort-order is query-aware. Meaning that if the query specifies a \`minecraftVersion\` or a \`modLoader\` field:
 
-- The CreationDate used for the sort order will be the date on which these specific versions were first supported by this mod.  
-(first in the case of \`ASC\`, last in the case of \`DESC\`)
-- The UpdateDate used for the sort order will be the date on which a jar that supports these versions was uploaded.  
-(first in the case of \`ASC\`, last in the case of \`DESC\`).
+- With FirstFileUpload, the date used for the sort order will be the date on the oldest file matching the query was uploaded.
+   This can be used for eg. "sort by the date on which the projects first supported this minecraft version"
+- With LastFileUpload, the used for the sort order will be the date on the most recent file matching the query was uploaded.
+   This can be used for eg. "sort by the date on which the projects last published an update compatible with this minecraft version"
 `,
   })
   async searchProjects(
@@ -67,7 +67,7 @@ The sort-order is query-aware. Meaning that if the query specifies a \`minecraft
     // TODO: order
 
     return sequelizeCursorToConnection(
-      async () => this.projectSearchService.searchProjects(query, pagination),
+      async () => this.projectSearchService.searchProjects(query, pagination, order, orderDir),
       {
         totalCount: async () => this.projectSearchService.countProjects(query),
       },

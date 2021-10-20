@@ -1,6 +1,7 @@
 import { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import type { Type } from '@nestjs/common';
 import { Field, ObjectType, Int, ArgsType } from '@nestjs/graphql';
+import { Model } from 'sequelize-typescript';
 import { MaybePromise } from '../../../common/typing-utils';
 import { clamp, lastItem } from './generic-utils';
 
@@ -108,13 +109,17 @@ function defaultGetCursor<T>(node: T, result: FindByCursorResult<T>): string {
   const out = Object.create(null);
 
   for (const key of result.cursorKeys) {
-    const value = node[key];
+    let value = node instanceof Model ? node.get(key) : node[key];
 
     if (value === undefined) {
       throw new Error(`node is missing cursor key ${key}`);
     }
 
-    out[key] = node[key];
+    if (value instanceof Date) {
+      value = value.toISOString();
+    }
+
+    out[key] = value;
   }
 
   return Buffer.from(JSON.stringify(out)).toString('base64');

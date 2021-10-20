@@ -26,16 +26,14 @@ export enum ProjectSearchSortOrder {
   ProjectName = 'ProjectName',
   /**
    * this sort-order is query-aware, meaning that if the query specifies a minecraftVersion or a modLoader,
-   * The CreationDate used for the sort order will be the date on which these specific versions were first supported by this mod.
-   * (first in the case of ASC, last in the case of DESC).
+   * The Date used for the sort order will be the date on the oldest file matching the query was uploaded.
    */
-  CreationDate = 'CreationDate',
+  FirstFileUpload = 'FirstFileUpload', // equals "first time a jar that matches this filter was uploaded"
   /**
    * this sort-order is query-aware, meaning that if the query specifies a minecraftVersion or a modLoader,
-   * The UpdateDate used for the sort order will be the date on which a jar that supports these versions was uploaded.
-   * (first in the case of ASC, last in the case of DESC).
+   * The UpdateDate used for the sort order will be the date on the most recent file matching the query was uploaded.
    */
-  UpdateDate = 'UpdateDate',
+  LastFileUpload = 'LastFileUpload', // equals "last time a jar that matches this filter was uploaded"
 }
 
 const oldestMcVersion = lastItem(minecraftVersions)!;
@@ -104,20 +102,27 @@ class ProjectSearchService {
   async searchProjects(
     userQuery: string | null,
     strPagination: IPagination,
+    order: ProjectSearchSortOrder,
+    orderDir: ProjectSearchSortOrderDirection,
   ): Promise<FindByCursorResult<Project>> {
     userQuery = userQuery ? userQuery.trim() : userQuery;
     const pagination = normalizeRelayPagination(strPagination);
 
+    const orderKey = order === ProjectSearchSortOrder.ProjectName ? 'name'
+      : order === ProjectSearchSortOrder.LastFileUpload ? 'lastFileUploadedAt'
+      : 'firstFileUploadedAt';
+
     return sequelizeFindByCursor({
       // @ts-expect-error
       model: Project,
-      order: [['name', 'ASC']],
+      order: [[orderKey, orderDir]],
       ...pagination,
       where: !userQuery ? undefined : internalProcessSearchProjectsLucene(userQuery, ProjectSearchLuceneConfig),
       findAll: async query => {
-        // Model.findAll does nto support DISTINCT ON
         return this.sequelize.query(`
-          SELECT DISTINCT ON ("Project"."name", "Project"."internalId") "Project"."internalId",
+          SELECT "Project"."internalId",
+            MIN(jars."releaseDate") as "firstFileUploadedAt",
+            MAX(jars."releaseDate") as "lastFileUploadedAt",
             "Project"."sourceId",
             "Project"."sourceType",
             "Project"."sourceSlug",
@@ -131,7 +136,8 @@ class ProjectSearchService {
             INNER JOIN "ModJars" AS "jars" ON "Project"."internalId" = "jars"."projectId"
             INNER JOIN "ModVersions" AS "jars->mods" ON "jars"."internalId" = "jars->mods"."jarId"
           WHERE "Project"."sourceSlug" IS NOT NULL
-           AND ${buildWhereComponent(query.where, Project, 'Project')}
+            AND ${buildWhereComponent(query.where, Project, 'Project')}
+          GROUP BY "Project"."internalId"
           ORDER BY ${buildOrder(query.order, 'Project', Project)}
           LIMIT ${query.limit};
         `, {

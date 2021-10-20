@@ -88,6 +88,15 @@ export async function destroyOne(model: ModelType<any>, options?: DestroyOptions
   return callback(options.transaction);
 }
 
+export function attributeNameToColumnIfExists(
+  model: ModelType<any>,
+  attributeName: string,
+): string | null {
+  const attribute = model.rawAttributes[attributeName];
+
+  return attribute?.field ?? null;
+}
+
 export function attributeNameToColumn(
   model: ModelType<any>,
   attributeName: string,
@@ -249,7 +258,13 @@ export function buildOrder(orders, tableAlias: string, model?: ModelType<any>) {
         return `"${associationReference[0]}"."${associationReference[1]}" ${dir}`;
       }
 
-      const columnName = model ? attributeNameToColumn(model, column) : column;
+      const attributeToCol = model ? attributeNameToColumnIfExists(model, column) : column;
+      const columnName = attributeToCol ?? column;
+
+      // if attributeName is not part of model, might be a custom column
+      if (attributeToCol == null) {
+        return `"${columnName}" ${dir}`;
+      }
 
       return `"${tableAlias}"."${columnName}" ${dir}`;
     })
