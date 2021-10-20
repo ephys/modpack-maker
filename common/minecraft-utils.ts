@@ -5,7 +5,13 @@ export type TMinecraftVersion = {
 
 const versionCache = new Map();
 
-export function parseMinecraftVersion(minecraftVersion: string): TMinecraftVersion {
+export function serializeMinecraftVersion(minecraftVersion: TMinecraftVersion) {
+  return `1.${minecraftVersion.major}.${minecraftVersion.minor}`;
+}
+
+const minecraftVersionRegex = /^1\.(?<major>[0-9]+)(?:\.(?<minor>[0-9]+))?$/;
+
+export function parseMinecraftVersion(minecraftVersion: string): TMinecraftVersion | null {
   if (versionCache.has(minecraftVersion)) {
     return versionCache.get(minecraftVersion);
   }
@@ -13,11 +19,19 @@ export function parseMinecraftVersion(minecraftVersion: string): TMinecraftVersi
   //   v major
   // 1.16.1 <- minor
   // ^ discarded
-  const parts = minecraftVersion.split('.');
+  const parts = minecraftVersion.match(minecraftVersionRegex);
 
+  const majorStr = parts?.groups?.major;
+  const minorStr = parts?.groups?.minor;
+
+  if (!majorStr) {
+    return null;
+  }
+
+  const major = Number(majorStr);
   const data = Object.freeze({
-    major: Number(parts[1]),
-    minor: parts[2] ? Number(parts[2]) : 0
+    major: major,
+    minor: minorStr ? Number(minorStr) : 0
   });
 
   versionCache.set(minecraftVersion, data);
@@ -26,8 +40,8 @@ export function parseMinecraftVersion(minecraftVersion: string): TMinecraftVersi
 }
 
 export function isMcVersionLikelyCompatibleWith(compatibleWith: string, checkedItem: string): boolean {
-  const source = parseMinecraftVersion(compatibleWith);
-  const checked = parseMinecraftVersion(checkedItem);
+  const source = parseMinecraftVersionThrows(compatibleWith);
+  const checked = parseMinecraftVersionThrows(checkedItem);
 
   if (source.major != checked.major) {
     return false;
@@ -42,16 +56,26 @@ export function isMcVersionLikelyCompatibleWith(compatibleWith: string, checkedI
   return true;
 }
 
+export function parseMinecraftVersionThrows(item: string): TMinecraftVersion {
+  const val = parseMinecraftVersion(item);
+
+  if (val == null) {
+    throw new Error(`Invalid minecraft version ${item}`);
+  }
+
+  return val;
+}
+
 export function getMostCompatibleMcVersion(requestedStr: string, availableStr: string[]): string {
-  const requested = parseMinecraftVersion(requestedStr);
+  const requested = parseMinecraftVersionThrows(requestedStr);
 
   sqlSort(availableStr, [
-    [item => parseMinecraftVersion(item).major === requested.major, 'DESC'],
-    [item => parseMinecraftVersion(item).major < requested.major, 'DESC'],
-    [item => parseMinecraftVersion(item).minor === requested.minor, 'DESC'],
-    [item => parseMinecraftVersion(item).minor < requested.minor, 'DESC'],
-    [item => parseMinecraftVersion(item).major, 'DESC'],
-    [item => parseMinecraftVersion(item).minor, 'DESC'],
+    [item => parseMinecraftVersionThrows(item).major === requested.major, 'DESC'],
+    [item => parseMinecraftVersionThrows(item).major < requested.major, 'DESC'],
+    [item => parseMinecraftVersionThrows(item).minor === requested.minor, 'DESC'],
+    [item => parseMinecraftVersionThrows(item).minor < requested.minor, 'DESC'],
+    [item => parseMinecraftVersionThrows(item).major, 'DESC'],
+    [item => parseMinecraftVersionThrows(item).minor, 'DESC'],
   ]);
 
   return availableStr[0];

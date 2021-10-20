@@ -1,5 +1,5 @@
 import * as semver from 'semver';
-import { parseMinecraftVersion } from '../../../common/minecraft-utils';
+import { parseMinecraftVersionThrows, parseMinecraftVersion } from '../../../common/minecraft-utils';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 
 export { parseMinecraftVersion };
@@ -12,8 +12,8 @@ export function minecraftVersionComparator(order: 'DESC' | 'ASC') {
       bStr = tmp;
     }
 
-    const a = parseMinecraftVersion(aStr);
-    const b = parseMinecraftVersion(bStr);
+    const a = parseMinecraftVersionThrows(aStr);
+    const b = parseMinecraftVersionThrows(bStr);
 
     if (a.major !== b.major) {
       return b.major - a.major;

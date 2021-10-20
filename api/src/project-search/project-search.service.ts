@@ -5,19 +5,46 @@ import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm } from 'lucene';
 import * as Lucene from 'lucene';
 import type { AndOperator, OrOperator, WhereOperators, WhereOptions } from 'sequelize';
 import { Op, QueryTypes, Sequelize } from 'sequelize';
+import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '../../../common/minecraft-utils';
+import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { Project } from '../mod/project.entity';
-import { EMPTY_ARRAY } from '../utils/generic-utils';
+import { EMPTY_ARRAY, lastItem } from '../utils/generic-utils';
 import type { IPagination } from '../utils/graphql-connection-utils';
 import { normalizeRelayPagination } from '../utils/graphql-connection-utils';
-import { buildOrder, buildWhereComponent } from '../utils/sequelize-utils';
+import { getMinecraftVersionsInRange } from '../utils/minecraft-utils';
+import { buildOrder, buildWhereComponent, contains, iLike, overlap } from '../utils/sequelize-utils';
 
-// TODO: minecraftVersion (range & no-range)
+const oldestMcVersion = lastItem(minecraftVersions)!;
+const newestMcVersion = minecraftVersions[0]!;
 
-const ProjectSearchLuceneConfig = {
+const ProjectSearchLuceneConfig: TLuceneToSqlConfig = {
   ranges: ['minecraftVersion'],
   fields: ['minecraftVersion', 'modLoader', 'modId', 'modName', 'projectName', 'tags'],
   implicitField: 'projectName',
+  cast: {
+    minecraftVersion: 'text[]',
+  },
+  whereBuilder: {
+    // @ts-expect-error
+    minecraftVersion: (node: Node) => {
+      if (isNodeTerm(node)) {
+        return contains(node.term);
+      }
+
+      // TODO: expose error to client
+      const min = parseMinecraftVersionThrows(node.term_min === '*' ? oldestMcVersion : node.term_min);
+      const max = parseMinecraftVersionThrows(node.term_max === '*' ? newestMcVersion : node.term_max);
+
+      const minInclusive = node.inclusive === 'both' || node.inclusive === 'left';
+      const maxInclusive = node.inclusive === 'both' || node.inclusive === 'right';
+
+      const semverRange = `${minInclusive ? '>=' : '>'}${serializeMinecraftVersion(min)} ${maxInclusive ? '<=' : '<'}${serializeMinecraftVersion(max)}`;
+      const versions: string[] = getMinecraftVersionsInRange(semverRange);
+
+      return overlap(...versions);
+    },
+  },
   fieldMap: {
     minecraftVersion: 'jars.mods.supportedMinecraftVersions',
     modLoader: 'jars.mods.supportedModLoader',
@@ -78,8 +105,13 @@ class ProjectSearchService {
   }
 }
 
-type TLuceneToSqlConfig = {
+type TNodePartWhere = OrOperator<any> | AndOperator<any> | WhereOperators;
+type TWhereBuilder = (node: Node) => TNodePartWhere;
+
+export type TLuceneToSqlConfig = {
   fieldMap?: { [luceneField: string]: string },
+  cast?: { [luceneField: string]: string },
+  whereBuilder?: { [luceneField: string]: TWhereBuilder },
   ranges?: string[],
   fields?: string[],
   implicitField: string,
@@ -99,11 +131,11 @@ function isLeftOnlyAst(val: any): val is LeftOnlyAST {
   return 'left' in val && !('op' in val) && !('right' in val);
 }
 
-function isNodeRangedTerm(val: any): val is NodeRangedTerm {
+export function isNodeRangedTerm(val: any): val is NodeRangedTerm {
   return isNode(val) && 'inclusive' in val;
 }
 
-function isNodeTerm(val: any): val is NodeTerm {
+export function isNodeTerm(val: any): val is NodeTerm {
   return isNode(val) && 'term' in val;
 }
 
@@ -171,10 +203,11 @@ function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOp
     }
   }
 
-  const sqlField = config?.fieldMap?.[node.field] ?? node.field;
+  const sqlField = config.fieldMap?.[node.field] ?? node.field;
+  const castAs = config.cast?.[node.field] ?? 'text';
 
   return Sequelize.where(
-    Sequelize.cast(Sequelize.col(sqlField), 'text'),
+    Sequelize.cast(Sequelize.col(sqlField), castAs),
     processLuceneNodePart(node, node.field, config),
   );
 }
@@ -188,8 +221,6 @@ interface OperatorNodeTerm extends NodeTerm {
 function isOperatorNodeTerm(val: any): val is OperatorNodeTerm {
   return 'operator' in val && val.operator != null;
 }
-
-type TNodePartWhere = OrOperator<any> | AndOperator<any> | WhereOperators;
 
 function processLuceneNodePart(
   node: Node,
@@ -219,21 +250,32 @@ function processLuceneNodePart(
     }
   }
 
+  const callCustomBuilder = config.whereBuilder?.[fieldName];
+
   if (isNodeRangedTerm(node)) {
-    const ranges: readonly string[] = config?.ranges ?? EMPTY_ARRAY;
+    const ranges: readonly string[] = config.ranges ?? EMPTY_ARRAY;
 
     if (!ranges.includes(fieldName)) {
-      // !TODO expose to client
+      // TODO expose to client
       throw new Error(`Field ${JSON.stringify(fieldName)} is not a range. Valid ranges: ${JSON.stringify(ranges)}`);
     }
 
+    if (callCustomBuilder) {
+      return callCustomBuilder(node);
+    }
+
     return luceneRangedTermToSql(node);
+
   }
 
-  const fields: readonly string[] = config?.fields ?? EMPTY_ARRAY;
+  const fields: readonly string[] = config.fields ?? EMPTY_ARRAY;
   if (!fields.includes(fieldName)) {
-    // !TODO expose to client
+    // TODO expose to client
     throw new Error(`Field ${JSON.stringify(fieldName)} is not recognised. Valid fields: ${JSON.stringify(fields)}`);
+  }
+
+  if (callCustomBuilder) {
+    return callCustomBuilder(node);
   }
 
   return luceneTermToSqlLike(node);
@@ -331,7 +373,7 @@ function luceneTermToSqlLike(node: NodeTerm): TNodePartWhere {
 
   out += term.substring(lastIndex, term.length);
 
-  return { [Op.iLike]: Sequelize.literal(`E'${out}'`) };
+  return iLike(Sequelize.literal(`E'${out}'`));
 }
 
 export { ProjectSearchService };

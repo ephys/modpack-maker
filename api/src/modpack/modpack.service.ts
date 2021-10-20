@@ -8,7 +8,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import uniq from 'lodash/uniq';
 import * as rimrafCb from 'rimraf';
 import { QueryTypes, Sequelize } from 'sequelize';
-import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '../../../common/minecraft-utils';
+import {
+  getMostCompatibleMcVersion,
+  isMcVersionLikelyCompatibleWith,
+  parseMinecraftVersionThrows,
+} from '../../../common/minecraft-utils';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import type { ModLoader } from '../../../common/modloaders';
 import { InjectSequelize } from '../database/database.providers';
@@ -16,7 +20,7 @@ import { ModDiscoveryService } from '../mod/mod-discovery.service';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
 import { generateId } from '../utils/generic-utils';
-import { minecraftVersionComparator, parseMinecraftVersion } from '../utils/minecraft-utils';
+import { minecraftVersionComparator } from '../utils/minecraft-utils';
 import ModpackMod from './modpack-mod.entity';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { Modpack } from './modpack.entity';
@@ -438,10 +442,10 @@ function slugifyJarForFs(input: string) {
 
 export function getPreferredMinecraftVersions(mainVersionStr: string, existingMcVersions: string[]) {
   const validMcVersions = [mainVersionStr];
-  const mainVersion = parseMinecraftVersion(mainVersionStr);
+  const mainVersion = parseMinecraftVersionThrows(mainVersionStr);
 
   for (const versionStr of existingMcVersions) {
-    const version = parseMinecraftVersion(versionStr);
+    const version = parseMinecraftVersionThrows(versionStr);
 
     if (version.major === mainVersion.major && version.minor <= mainVersion.minor) {
       validMcVersions.push(versionStr);

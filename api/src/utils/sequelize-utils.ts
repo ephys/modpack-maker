@@ -293,6 +293,18 @@ export function iLike(val) {
   return { [Op.iLike]: val };
 }
 
+export function equals<T>(val: T): { [Op.eq]: T } {
+  return { [Op.eq]: val };
+}
+
+export function contains(...val) {
+  return { [Op.contains]: val };
+}
+
+export function overlap(...val) {
+  return { [Op.overlap]: val };
+}
+
 export function not(condition) {
   return { [Op.not]: condition };
 }

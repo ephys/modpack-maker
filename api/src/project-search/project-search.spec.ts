@@ -1,10 +1,11 @@
+import type { Node } from 'lucene';
 import { Op, Sequelize } from 'sequelize';
-import { and, iLike, or } from '../utils/sequelize-utils';
-import { internalProcessSearchProjectsLucene } from './project-search.service';
+import { and, contains, iLike, or } from '../utils/sequelize-utils';
+import { internalProcessSearchProjectsLucene, isNodeTerm, TLuceneToSqlConfig } from './project-search.service';
 
 // TODO: test fieldMap
 
-const LuceneConfig = {
+const LuceneConfig: TLuceneToSqlConfig = {
   ranges: ['minecraftVersion'],
   fields: ['minecraftVersion', 'modId', 'displayName'],
   implicitField: 'displayName',
@@ -257,6 +258,48 @@ describe('internalProcessSearchProjectsLucene', () => {
         or(
           { [Op.gte]: 'x', [Op.lte]: 'y' },
           iLike(Sequelize.literal(`E'z'`)),
+        ),
+      ),
+    );
+  });
+
+  it('supports field:([x TO y])', () => {
+    expect(internalProcessSearchProjectsLucene(`minecraftVersion:([x TO y])`, LuceneConfig)).toEqual(
+      Sequelize.where(
+        Sequelize.cast(Sequelize.col('minecraftVersion'), 'text'),
+        { [Op.gte]: 'x', [Op.lte]: 'y' },
+      ),
+    );
+  });
+
+  it('supports field:(x)', () => {
+    expect(internalProcessSearchProjectsLucene(`minecraftVersion:(z)`, LuceneConfig)).toEqual(
+      Sequelize.where(
+        Sequelize.cast(Sequelize.col('minecraftVersion'), 'text'),
+        iLike(Sequelize.literal(`E'z'`)),
+      ),
+    );
+  });
+
+  it('supports custom builders (eg. for arrays)', () => {
+    const config: TLuceneToSqlConfig = {
+      ...LuceneConfig,
+      whereBuilder: {
+        minecraftVersion: (node: Node) => {
+          if (isNodeTerm(node)) {
+            return contains('term');
+          }
+
+          return contains('ranged');
+        },
+      },
+    };
+    expect(internalProcessSearchProjectsLucene(`minecraftVersion:([x TO y] OR z)`, config)).toEqual(
+      Sequelize.where(
+        Sequelize.col('minecraftVersion'),
+        or(
+          contains('ranged'),
+          contains('term'),
         ),
       ),
     );
