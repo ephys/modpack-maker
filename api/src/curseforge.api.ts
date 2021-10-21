@@ -13,7 +13,7 @@ type TSearchModsParams = {
 const MINECRAFT_GAME_ID = 432;
 const MINECRAFT_MODS_SECTION_ID = 6;
 
-export async function *iterateForgeModList(params: Omit<TSearchModsParams, 'page'>) {
+export async function *iterateCurseForgeModList(params: Omit<TSearchModsParams, 'page'>): AsyncGenerator<TCurseProject> {
   let page = 0;
   let results;
 
@@ -32,7 +32,7 @@ export async function *iterateForgeModList(params: Omit<TSearchModsParams, 'page
   } while (results.length === params.pageSize);
 }
 
-export async function searchCurseForgeModList(params: TSearchModsParams) {
+export async function searchCurseForgeModList(params: TSearchModsParams): Promise<TCurseProject[]> {
 
   const search = new URLSearchParams({
     gameId: String(MINECRAFT_GAME_ID),
@@ -55,18 +55,62 @@ export async function searchCurseForgeModList(params: TSearchModsParams) {
 export type TCurseforgeCategory = {
   id: number,
   name: string,
+  url: string,
+  avatarUrl: string,
+  parentId: number,
+  rootId: number,
+  projectId: number,
+  avatarId: number,
+  gameId: number,
+  slug: string,
+  dateModified: string,
 };
 
 export async function getCurseForgeModCategories(): Promise<TCurseforgeCategory[]> {
   return fetchCurseForge('/category/section/6');
 }
 
+export type TCurseProjectAttachement = {
+  id: number,
+  projectId: number,
+  description: string,
+  isDefault: boolean, // project icon
+  title: string,
+  url: string,
+  status: number,
+};
+
 export type TCurseProject = {
   id: number,
   name: string,
   // authors
-  // attachments
+  attachments: TCurseProjectAttachement[],
   websiteUrl: string,
+  sourceUrl: string,
+  wikiUrl: string,
+  summary: string,
+  defaultFileId: number,
+  downloadCount: number,
+  latestFiles: TCurseFile[],
+  categories: TCurseforgeCategory[],
+  status: number,
+  primaryCategoryId: number,
+  // categorySection
+  slug: string,
+// gameVersionLatestFiles
+// isFeatured
+//  popularityScore
+//  gamePopularityRank
+//  primaryLanguage
+//  gameSlug
+ modLoaders: Array<'Forge' | 'Fabric' | 'Rift'>,
+  gameName: string,
+  portalName: string,
+  dateModified: string,
+  dateCreated: string,
+  dateReleased: string,
+  isAvailable: boolean,
+  isExperimental: boolean,
 };
 
 export type TCurseFile = {

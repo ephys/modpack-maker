@@ -1,7 +1,7 @@
 import { Parent, ResolveProperty, Resolver } from '@nestjs/graphql';
 import { Connection } from '../utils/graphql-connection-utils';
 import { ModJar } from './mod-jar.entity';
-import { Project } from './project.entity';
+import { Project, ProjectSource } from './project.entity';
 
 const ProjectConnection = Connection(Project);
 
@@ -9,7 +9,16 @@ const ProjectConnection = Connection(Project);
 class ProjectResolver {
   @ResolveProperty('homepage', () => String)
   getProjectHomepage(@Parent() project: Project): string {
-    return `https://www.curseforge.com/minecraft/mc-mods/${encodeURIComponent(project.sourceSlug!)}`;
+    switch (project.sourceType) {
+      case ProjectSource.CURSEFORGE:
+        return `https://www.curseforge.com/minecraft/mc-mods/${encodeURIComponent(project.sourceSlug!)}`;
+
+      case ProjectSource.MODRINTH:
+        return `https://modrinth.com/mod/${encodeURIComponent(project.sourceSlug ?? project.sourceId)}`;
+
+      default:
+        throw new Error(`Unknown source type ${project.sourceType}`);
+    }
   }
 
   @ResolveProperty('jars', () => [ModJar])

@@ -16,7 +16,7 @@ type TModJarCreationAttributes = {
   releaseType: ReleaseType,
   releaseDate: string,
   projectId: number,
-  curseFileId: number,
+  sourceFileId: string,
   downloadUrl: string,
   fileName: string,
 };
@@ -56,32 +56,19 @@ export class ModJar extends DB.Model<ModJar, TModJarCreationAttributes> {
   @DB.Column(DB.DataType.DATE)
   releaseDate: string;
 
-  // @DB.AllowNull(false)
-  // @DB.Unique
-  // @DB.Column(DB.DataType.INTEGER)
-  // @DB.BelongsTo(() => Project, { as: 'project' })
-  // /**
-  //  * For files retrieved from curseforge: The curseforge project ID
-  //  * Used for finding mods by curseforge project ID
-  //  *
-  //  * @type {number}
-  //  */
-  // project: Project;
-
   @DB.ForeignKey(() => Project)
   @DB.Column(DB.DataType.INTEGER)
   projectId: number;
 
   @DB.AllowNull(false)
   @DB.Unique
-  @DB.Column(DB.DataType.INTEGER)
+  @DB.Column(DB.DataType.TEXT)
   /**
-   * For files retrieved from curseforge: The curseforge file ID
-   * Used to process the file only once
+   * For ID of the file in the source (curse / modrinth)'s database
    *
    * @type {number}
    */
-  curseFileId: number;
+  sourceFileId: string;
 
   @DB.AllowNull(false)
   @DB.Unique

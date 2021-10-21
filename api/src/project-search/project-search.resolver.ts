@@ -29,16 +29,17 @@ Mods fields combinations \`(modLoader AND minecraftVersion)\` are checked per-mo
 this means that if a Project has two jars, one that supports modLoader and one that supports minecraftVersion, but not
 both at the same time, it will not be returned. A single jar needs to support both to be returned.
 
-- **modId** - returns only projects that have at least one jar containing this modId
-- **modName** - returns only projects that have at least one jar containing one mod that matches modName
-- **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion
-- **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader
+- **modId** - returns only projects that have at least one jar containing this modId.
+- **modName** - returns only projects that have at least one jar containing one mod that matches modName.
+- **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion.
+- **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader.
 
 ### Supported fields (projects):
 Project fields combinations are checked per-projects.
 
-- **projectName** - returns only projects that have at least one jar containing one mod that matches projectName
-- **tags** - returns only projects that have this tag listed
+- **projectName** - returns only projects that have at least one jar containing one mod that matches projectName.
+- **tags** - returns only projects that have this tag listed.
+- **source** - returns only projects that have been fetched from a specific source. Supported values: \`modrinth\` or \`curseforge\`.
 
 ---
 
@@ -52,19 +53,17 @@ Example 2: \`Magic Feather\` (interpreted as \`projectName:"*Magic Feather*"\`).
 The sort-order is query-aware. Meaning that if the query specifies a \`minecraftVersion\` or a \`modLoader\` field:
 
 - With FirstFileUpload, the date used for the sort order will be the date on the oldest file matching the query was uploaded.
-   This can be used for eg. "sort by the date on which the projects first supported this minecraft version"
+   This can be used for eg. "sort by the date on which the projects first supported this minecraft version".
 - With LastFileUpload, the used for the sort order will be the date on the most recent file matching the query was uploaded.
-   This can be used for eg. "sort by the date on which the projects last published an update compatible with this minecraft version"
+   This can be used for eg. "sort by the date on which the projects last published an update compatible with this minecraft version".
 `,
   })
   async searchProjects(
     @Args() pagination: PaginationArgs,
     @Args('query', { nullable: true, type: () => String }) query: string | null,
-    @Args('order', { type: () => ProjectSearchSortOrder }) order: ProjectSearchSortOrder,
-    @Args('orderDir', { type: () => ProjectSearchSortOrderDirection }) orderDir: ProjectSearchSortOrderDirection,
+    @Args('order', { type: () => ProjectSearchSortOrder, defaultValue: ProjectSearchSortOrder.ProjectName }) order: ProjectSearchSortOrder,
+    @Args('orderDir', { type: () => ProjectSearchSortOrderDirection, defaultValue: ProjectSearchSortOrderDirection.ASC }) orderDir: ProjectSearchSortOrderDirection,
   ) {
-
-    // TODO: order
 
     return sequelizeCursorToConnection(
       async () => this.projectSearchService.searchProjects(query, pagination, order, orderDir),

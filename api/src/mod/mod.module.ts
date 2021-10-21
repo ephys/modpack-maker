@@ -3,14 +3,16 @@ import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { ModpackModule } from '../modpack/modpack.module';
-import { CurseforgeFileCrawlerProcessor } from './curseforge-file-crawler.processor';
+import { CurseforgeJarCrawlerProcessor } from './curseforge-jar-crawler.processor';
+import { CurseforgeProjectListCrawler } from './curseforge-project-list-crawler';
 import { ModDiscoveryService } from './mod-discovery.service';
 import { ModJarResolver } from './mod-jar.resolver';
-import { FETCH_CURSE_FILES_QUEUE, ModVersionRepository } from './mod.constants';
+import { FETCH_CURSE_JARS_QUEUE, FETCH_MODRINTH_JARS_QUEUE, ModVersionRepository } from './mod.constants';
 import { ModController } from './mod.controller';
 import { ModResolver } from './mod.resolver';
 import { ModService } from './mod.service';
-import { ProjectListUpdater } from './project-list-updater';
+import { ModrinthJarCrawlerProcessor } from './modrinth-jar-crawler.processor';
+import { ModrinthProjectListCrawler } from './modrinth-project-list-crawler';
 import { ProjectResolver } from './project.resolver';
 
 @Module({
@@ -18,7 +20,10 @@ import { ProjectResolver } from './project.resolver';
     forwardRef(() => ModpackModule),
     DatabaseModule,
     BullModule.registerQueue({
-      name: FETCH_CURSE_FILES_QUEUE,
+      name: FETCH_CURSE_JARS_QUEUE,
+    }),
+    BullModule.registerQueue({
+      name: FETCH_MODRINTH_JARS_QUEUE,
     }),
     BullModule.registerQueue({
       name: INSERT_DISCOVERED_MODS_QUEUE,
@@ -32,11 +37,13 @@ import { ProjectResolver } from './project.resolver';
     ModController,
   ],
   providers: [
-    CurseforgeFileCrawlerProcessor,
+    CurseforgeJarCrawlerProcessor,
+    ModrinthJarCrawlerProcessor,
     ModDiscoveryService,
     ModJarResolver,
     ModService,
-    ProjectListUpdater,
+    CurseforgeProjectListCrawler,
+    ModrinthProjectListCrawler,
     ModResolver,
     ModVersionRepository,
     ProjectResolver,

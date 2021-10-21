@@ -41,7 +41,7 @@ const newestMcVersion = minecraftVersions[0]!;
 
 const ProjectSearchLuceneConfig: TLuceneToSqlConfig = {
   ranges: ['minecraftVersion'],
-  fields: ['minecraftVersion', 'modLoader', 'modId', 'modName', 'projectName', 'tags'],
+  fields: ['minecraftVersion', 'modLoader', 'modId', 'modName', 'projectName', 'tags', 'source'],
   implicitField: 'projectName',
   cast: {
     minecraftVersion: 'text[]',
@@ -72,6 +72,7 @@ const ProjectSearchLuceneConfig: TLuceneToSqlConfig = {
     modId: 'jars.mods.modId',
     modName: 'jars.mods.displayName',
     projectName: 'name',
+    source: 'sourceType',
   },
 };
 

@@ -3,14 +3,14 @@ import { Injectable } from '@nestjs/common';
 import type { Queue } from 'bull';
 import { Op, Sequelize } from 'sequelize';
 import { ModJar } from './mod-jar.entity';
-import { FETCH_CURSE_FILES_QUEUE } from './mod.constants';
+import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
 import { Project, ProjectSource } from './project.entity';
 
 const curseForgeProjectUrl = /^https?:\/\/www.curseforge.com\/minecraft\/mc-mods\/([^/]+)(\/.+)?$/;
 
 @Injectable()
 class ModDiscoveryService {
-  constructor(@InjectQueue(FETCH_CURSE_FILES_QUEUE) private readonly modDiscoveryQueue: Queue) {}
+  constructor(@InjectQueue(FETCH_CURSE_JARS_QUEUE) private readonly modDiscoveryQueue: Queue) {}
 
   async retryFailedFiles() {
     const projects = await Project.findAll({

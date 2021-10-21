@@ -9,12 +9,15 @@ export enum ProjectSource {
 
 type TFileErrors = { [key: string]: string };
 
-type TProjectCreationAttributes = {
+export type TProjectCreationAttributes = {
   internalId?: number,
   sourceId: string,
   sourceType: ProjectSource,
   sourceSlug: string,
   lastSourceEditAt: Date,
+  name: string,
+  description: string,
+  iconUrl: string,
   versionListUpToDate?: boolean,
   failedFiles?: TFileErrors,
 };
@@ -50,6 +53,18 @@ class Project extends DB.Model<Project, TProjectCreationAttributes> {
   @Field()
   /** Retrieved from source store */
   name: string;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.TEXT)
+  @Field()
+  /** Retrieved from source store */
+  description: string;
+
+  @DB.AllowNull(false)
+  @DB.Column(DB.DataType.TEXT)
+  @Field()
+  /** Retrieved from source store */
+  iconUrl: string;
 
   @DB.AllowNull(false)
   @DB.Column(DB.DataType.DATE)
