@@ -1,14 +1,15 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import type { Queue } from 'bull';
+import { Queue } from 'bull';
 import { Op, QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { getCurseForgeModCategories, iterateCurseForgeModList } from '../curseforge.api';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { lastItem } from '../utils/generic-utils';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
-import { Project, ProjectSource, TProjectCreationAttributes } from './project.entity';
+import type { TProjectCreationAttributes } from './project.entity';
+import { Project, ProjectSource } from './project.entity';
 
 const PAGE_SIZE = 50;
 

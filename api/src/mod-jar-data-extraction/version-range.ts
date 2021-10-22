@@ -9,8 +9,8 @@ export function mavenVersionRangeToSemver(mavenRange: string): string {
 export class VersionRange {
   #sets: VersionRangeSet[] = [];
 
-  static fromMaven(range: string): VersionRange {
-    const ranges = splitMavenRange(range);
+  static fromMaven(rangeStr: string): VersionRange {
+    const ranges = splitMavenRange(rangeStr);
 
     const obj = new VersionRange();
 

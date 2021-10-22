@@ -7,12 +7,14 @@ module.exports = {
   rules: {
     'babel/new-cap': 'off',
     'no-use-before-define': 'off',
-    '@typescript-eslint/consistent-type-imports': 'off',
-
     'no-console': 'error',
+    'valid-jsdoc': 'off',
   },
   env: {
     node: true,
+  },
+  parserOptions: {
+    requireConfigFile: false,
   },
 };
 

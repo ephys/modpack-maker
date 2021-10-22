@@ -12,8 +12,7 @@ import {
 import { MinLength, MaxLength, IsEnum, IsIn } from 'class-validator';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
-import type { ModJar } from '../mod/mod-jar.entity';
-import { ReleaseType } from '../mod/mod-jar.entity';
+import { ModJar, ReleaseType } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
 import { Payload } from '../utils/graphql-payload';
 import ModpackMod from './modpack-mod.entity';

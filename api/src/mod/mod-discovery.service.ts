@@ -1,10 +1,11 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
-import type { Queue } from 'bull';
+import { Queue } from 'bull';
 import { Op, Sequelize } from 'sequelize';
 import { ModJar } from './mod-jar.entity';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
-import { Project, ProjectSource } from './project.entity';
+import type { ProjectSource } from './project.entity';
+import { Project } from './project.entity';
 
 const curseForgeProjectUrl = /^https?:\/\/www.curseforge.com\/minecraft\/mc-mods\/([^/]+)(\/.+)?$/;
 

@@ -1,18 +1,18 @@
 import * as assert from 'assert';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import type { Job, Queue } from 'bull';
-import type { Sequelize } from 'sequelize';
-import { Op } from 'sequelize';
+import { Job, Queue } from 'bull';
+import { Sequelize, Op } from 'sequelize';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { InjectSequelize } from '../database/database.providers';
 import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
-import { getModrinthModFiles, getModrinthReleaseType, TModrinthProjectVersion } from '../modrinth.api';
+import type { TModrinthProjectVersion } from '../modrinth.api';
+import { getModrinthModFiles, getModrinthReleaseType } from '../modrinth.api';
 import { generateId } from '../utils/generic-utils';
 import { getModVersionsFromJar } from './curseforge-jar-crawler.processor';
-import { TFetchJarQueueData } from './curseforge-project-list-crawler';
+import type { TFetchJarQueueData } from './curseforge-project-list-crawler';
 import { ModJar } from './mod-jar.entity';
-import { ModVersion } from './mod-version.entity';
+import type { ModVersion } from './mod-version.entity';
 import { FETCH_MODRINTH_JARS_QUEUE } from './mod.constants';
 import { Project, ProjectSource } from './project.entity';
 

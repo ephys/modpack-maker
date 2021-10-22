@@ -1,9 +1,9 @@
 import 'core-js/es/string/replace-all';
-import { FindByCursorResult, sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
+import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
+import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Inject } from '@nestjs/common';
-import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm } from 'lucene';
 import * as Lucene from 'lucene';
-import { NodeField } from 'lucene';
+import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm, NodeField } from 'lucene';
 import type { AndOperator, OrOperator, WhereOperators, WhereOptions } from 'sequelize';
 import { Op, QueryTypes, Sequelize } from 'sequelize';
 import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '../../../common/minecraft-utils';

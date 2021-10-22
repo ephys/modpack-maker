@@ -1,5 +1,5 @@
 import { Process, Processor } from '@nestjs/bull';
-import type { Job } from 'bull';
+import { Job } from 'bull';
 import { Op } from 'sequelize';
 import { INSERT_DISCOVERED_MODS_QUEUE } from './modpack.constants';
 import { Modpack } from './modpack.entity';

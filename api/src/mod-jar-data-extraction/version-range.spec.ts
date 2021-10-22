@@ -12,7 +12,7 @@ describe('mavenVersionRangeToSemver', () => {
     };
 
     for (const [input, output] of Object.entries(tests)) {
-      expect(input + ' -> ' + mavenVersionRangeToSemver(input)).toEqual(input + ' -> ' + output);
+      expect(`${input} -> ${mavenVersionRangeToSemver(input)}`).toEqual(`${input} -> ${output}`);
     }
   });
 });
@@ -31,5 +31,5 @@ describe('splitMavenRange', () => {
     for (const [input, output] of Object.entries(tests)) {
       expect(splitMavenRange(input)).toEqual(output);
     }
-  })
+  });
 });

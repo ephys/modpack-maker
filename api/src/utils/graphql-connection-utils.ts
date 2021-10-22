@@ -1,4 +1,4 @@
-import { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
+import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import type { Type } from '@nestjs/common';
 import { Field, ObjectType, Int, ArgsType } from '@nestjs/graphql';
 import { Model } from 'sequelize-typescript';

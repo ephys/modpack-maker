@@ -1,7 +1,8 @@
 import type { Node } from 'lucene';
 import { Op, Sequelize } from 'sequelize';
 import { and, contains, iLike, not, or } from '../utils/sequelize-utils';
-import { internalProcessSearchProjectsLucene, isNodeTerm, TLuceneToSqlConfig } from './project-search.service';
+import type { TLuceneToSqlConfig } from './project-search.service';
+import { internalProcessSearchProjectsLucene, isNodeTerm } from './project-search.service';
 
 const LuceneConfig: TLuceneToSqlConfig = {
   ranges: ['minecraftVersion'],

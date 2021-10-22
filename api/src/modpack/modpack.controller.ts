@@ -5,17 +5,18 @@ import { ModpackService } from './modpack.service';
 @Controller()
 export class ModpackController {
   constructor(
-    private modpackService: ModpackService,
+    private readonly modpackService: ModpackService,
   ) {}
 
   @Get('/modpacks/:modpackId/download')
   async getJar(
     @Param('modpackId') modpackId: string,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<void> {
     const modpack = await this.modpackService.getModpackByEid(modpackId);
     if (!modpack) {
       res.status(404).send();
+
       return;
     }
 
