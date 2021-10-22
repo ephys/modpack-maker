@@ -116,7 +116,7 @@ export class ModpackResolver {
   }
 
   @Query(() => [Modpack], {
-    nullable: true,
+    nullable: false,
     name: 'modpacks',
   })
   async getModpacks() {

@@ -1,9 +1,11 @@
-import { Parent, ResolveProperty, Resolver } from '@nestjs/graphql';
+import { Parent, registerEnumType, ResolveProperty, Resolver } from '@nestjs/graphql';
 import { Connection } from '../utils/graphql-connection-utils';
 import { ModJar } from './mod-jar.entity';
 import { Project, ProjectSource } from './project.entity';
 
 const ProjectConnection = Connection(Project);
+
+registerEnumType(ProjectSource, { name: 'ProjectSource' });
 
 @Resolver(Project)
 class ProjectResolver {
@@ -24,6 +26,11 @@ class ProjectResolver {
   @ResolveProperty('jars', () => [ModJar])
   async getProjectJars(@Parent() project: Project): Promise<ModJar[]> {
     return project.$get('jars');
+  }
+
+  @ResolveProperty('source', () => ProjectSource)
+  getProjectSource(@Parent() project: Project): ProjectSource {
+    return project.sourceType;
   }
 }
 
