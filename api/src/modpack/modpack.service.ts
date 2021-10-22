@@ -380,6 +380,7 @@ export class ModpackService {
     await new Promise<void>((resolve, reject) => {
       const command = `cd ${tmpModpackDir} && zip ${path.relative(tmpModpackDir, outputZipFile)} -r ${modsDirRel}`;
       childProcess.exec(command, (error, stdout, stderr) => {
+        // eslint-disable-next-line no-console
         console.log(stdout);
         console.error(stderr);
 
