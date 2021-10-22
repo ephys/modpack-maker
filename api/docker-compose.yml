@@ -4,7 +4,7 @@ services:
     image: postgres:12.2-alpine
     container_name: mp-psql
     ports:
-      - "19132:5432"
+      - "18132:5432"
     environment:
       # dev database, don't use these in prod!
       POSTGRES_PASSWORD: password
