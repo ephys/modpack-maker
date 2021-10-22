@@ -14,7 +14,7 @@ import { ProjectSearchModule } from './project-search/project-search.module';
     ModModule,
     ProjectSearchModule,
     GraphQLModule.forRoot({
-      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      autoSchemaFile: join(process.cwd(), '/../schema.gql'),
       sortSchema: true,
       formatError: error => {
         const code = error.extensions?.code || 'INTERNAL_SERVER_ERROR';
