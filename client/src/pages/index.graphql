@@ -1,0 +1,8 @@
+query ModpackListView {
+  modpacks {
+    id
+    minecraftVersion
+    modLoader
+    name
+  }
+}

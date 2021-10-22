@@ -1,0 +1,38 @@
+query ModpackView($id: ID!) {
+  modpack(id: $id) {
+    id
+    minecraftVersion
+    modLoader
+    processingCount
+    name
+    downloadUrl
+    modJars {
+      addedAt
+      isLibraryDependency
+      jar {
+        id
+        downloadUrl
+        fileName
+        releaseType
+        curseForgePage
+        mods(matchingModpack: $id) {
+          modId
+          modVersion
+          name
+          supportedMinecraftVersions
+          supportedModLoader
+          updatedVersion(matchingModpack: $id) {
+            fileName
+            id
+            releaseType
+          }
+          dependencies {
+            modId
+            versionRange
+            type
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
 import classnames from 'classnames';
+import type { ReactNode } from 'react';
 import css from './actions.module.scss';
 
 type ActionListProps = {
@@ -14,5 +14,5 @@ export default function Actions(props: ActionListProps) {
         {props.children}
       </div>
     </div>
-  )
+  );
 }

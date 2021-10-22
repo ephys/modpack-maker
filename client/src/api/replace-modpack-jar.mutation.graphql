@@ -1,0 +1,10 @@
+mutation replaceModpackJar($input: ReplaceModpackJarInput!) {
+  replaceModpackJar(input: $input) {
+    node {
+      id
+    }
+    error {
+      code
+    }
+  }
+}

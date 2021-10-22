@@ -1,4 +1,4 @@
-export function uriTag(strings, ...parameters) {
+export function uriTag(strings: TemplateStringsArray, ...parameters: any[]) {
   let out = '';
   let i = 0;
 

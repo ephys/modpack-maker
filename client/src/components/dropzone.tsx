@@ -1,14 +1,15 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
-import css from './dropzone.module.scss';
-import classnames from 'classnames';
-import { MaybePromise } from '../utils/typing';
 import UploadIcon from '@material-ui/icons/CloudUploadOutlined';
+import classnames from 'classnames';
+import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { MaybePromise } from '../utils/typing.js';
+import css from './dropzone.module.scss';
 
 type Props = {
   children: ReactNode,
   className?: string,
-  itemFilter: (list: DataTransferItemList) => MaybePromise<Array<any>>,
-  onDrop: (data: { items: Array<any> }) => void,
+  itemFilter(list: DataTransferItemList): MaybePromise<any[]>,
+  onDrop(data: { items: any[] }): void,
 };
 
 export default function DropZone(props: Props) {
@@ -72,7 +73,7 @@ export default function DropZone(props: Props) {
   );
 }
 
-function getDroppedItems(dataTransferItems: DataTransferItemList) {
+async function getDroppedItems(dataTransferItems: DataTransferItemList) {
 
   return Promise.all(Array.from(dataTransferItems).map(async item => {
     return {
@@ -83,6 +84,6 @@ function getDroppedItems(dataTransferItems: DataTransferItemList) {
   }));
 }
 
-export function getAsStringAsync(item): Promise<string> {
+export async function getAsStringAsync(item): Promise<string> {
   return new Promise<string>(resolve => item.getAsString(resolve));
 }

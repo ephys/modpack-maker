@@ -1,0 +1,10 @@
+mutation addModToModpack($input: AddModpackModInput!) {
+  addModToModpack(input: $input) {
+    node {
+      id
+    }
+    error {
+      code
+    }
+  }
+}

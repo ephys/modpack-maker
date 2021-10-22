@@ -1,22 +1,23 @@
+import IconButton from '@material-ui/core/IconButton';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
-import IconButton from '@material-ui/core/IconButton';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
+import type { ComponentProps } from 'react';
+import { isValidElement, useState } from 'react';
 import css from './action-menu.module.scss';
-import { ComponentProps, isValidElement, useState } from 'react';
 import { AnyLink } from './any-link';
 
 export type TAction = {
   key: string | number,
   icon?: React.ReactElement | React.ComponentType,
   title: string,
-  onClick?: (e: React.SyntheticEvent<HTMLButtonElement>) => void,
+  onClick?(e: React.SyntheticEvent<HTMLButtonElement>): void,
   href?: string,
 };
 
 type TActionMenuProps = {
   actions: TAction[],
-  onRequestClose?: () => void,
+  onRequestClose?(): void,
   anchorEl: HTMLElement | null,
 };
 

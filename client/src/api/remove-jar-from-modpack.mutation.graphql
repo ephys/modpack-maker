@@ -1,0 +1,10 @@
+mutation removeJarFromModpack($input: RemoveJarFromModpackInput!) {
+  removeJarFromModpack(input: $input) {
+    node {
+      id
+    }
+    error {
+      code
+    }
+  }
+}

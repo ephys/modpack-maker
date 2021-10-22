@@ -1,17 +1,17 @@
 export function getFormValue(e: HTMLFormElement, fieldName: string): number | string | null | Array<number | string> {
-  // @ts-ignore
+  // @ts-expect-error
   return getFormElementValue(e.elements[fieldName]);
 }
 
 // TODO: test me once RadioNodeList is available https://github.com/jsdom/jsdom/issues/2600
 export function getFormValues(form: HTMLFormElement): {
-  [key: string]: number | string | null | Array<number | string>
+  [key: string]: number | string | null | Array<number | string>,
 } {
 
   const out = Object.create(null);
 
   for (const element of form.elements) {
-    // @ts-ignore
+    // @ts-expect-error
     const name = element.name;
 
     // some .elements don't contain any data (eg. buttons)
@@ -38,7 +38,7 @@ export function getFormElementValue(
     return getRadioNodeListValue(element);
   }
 
-  // @ts-ignore
+  // @ts-expect-error
   const elementGroup = element.form && element.name ? element.form.elements[element.name] : null;
   if (elementGroup && isRadioNodeList(elementGroup)) {
     return getRadioNodeListValue(elementGroup);

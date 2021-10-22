@@ -1,27 +1,27 @@
-import { useRouter } from 'next/router';
-import { useGraphQl } from '../../api/graphql';
-import { isLoadedSwr } from '../../api/swr';
-import DropZone, { getAsStringAsync } from '../../components/dropzone';
-import { ComponentProps, useCallback, useEffect, useMemo } from 'react';
-import css from './[id].module.scss';
-import { addModToModpack } from '../../api/add-mod-to-modpack';
 import { CircularProgress, List, ListItem } from '@material-ui/core';
+import { HelpOutlined } from '@material-ui/icons';
 import classnames from 'classnames';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import type { ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { DependencyType } from '../../../../common/dependency-type';
 import {
   getMostCompatibleMcVersion,
   isMcVersionLikelyCompatibleWith,
   parseMinecraftVersion,
-} from '../../../common/minecraft-utils';
-import { HelpOutlined } from '@material-ui/icons';
-import { TModpack, TModpackMod, TModVersion } from '../../api/schema-typings';
-import { removeJarFromModpack } from '../../api/remove-jar-from-modpack';
+} from '../../../../common/minecraft-utils';
+import { assertIsString } from '../../../../common/typing-utils';
+import {
+  useAddModToModpackMutation,
+  useModpackViewQuery,
+  useRemoveJarFromModpackMutation, useReplaceModpackJarMutation, useSetModpackJarIsLibraryMutation,
+} from '../../api/graphql.generated';
+import { isLoadedUrql } from '../../api/urql';
 import { MoreMenu } from '../../components/action-menu';
-import { setModpackJarIsLibrary } from '../../api/set-modpack-jar-is-library';
-import { assertIsString } from '../../../common/typing-utils';
-import { DependencyType } from '../../../common/dependency-type';
-import Head from 'next/head';
 import { AnyLink } from '../../components/any-link';
-import { replaceModpackJar } from '../../api/replace-modpack-jar';
+import DropZone, { getAsStringAsync } from '../../components/dropzone';
+import css from './[id].module.scss';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -81,19 +81,22 @@ function ModpackView(props: { id: string }) {
 
   assertIsString(id);
 
-  const swr = useData(id);
+  const urql = useModpackViewQuery({
+    variables: { id },
+  });
 
+  const callAddModToModpack = useAddModToModpackMutation();
   const onDrop = useCallback(async data => {
-    await addModToModpack({
+    await callAddModToModpack({
       byUrl: data.items,
       modpackId: id,
     });
 
-    await swr.revalidate();
+    await urql.revalidate();
   }, [id]);
 
   useEffect(() => {
-    const modpack = swr.data?.modpack;
+    const modpack = urql.data?.modpack;
 
     if (!modpack) {
       return;
@@ -102,14 +105,14 @@ function ModpackView(props: { id: string }) {
     let timeout;
     if (modpack.processingCount > 0) {
       timeout = setTimeout(() => {
-        swr.revalidate();
+        urql.revalidate();
       }, 4000);
     }
 
     return () => clearTimeout(timeout);
-  }, [swr]);
+  }, [urql]);
 
-  const modpack = swr.data?.modpack;
+  const modpack = urql.data?.modpack;
   const lists = useMemo(() => {
     const output = {
       mods: [],
@@ -139,18 +142,17 @@ function ModpackView(props: { id: string }) {
         continue;
       }
 
-
       output.mods.push(jar);
     }
 
     return output;
   }, [modpack]);
 
-  if (!isLoadedSwr(swr)) {
+  if (!isLoadedUrql(urql)) {
     return 'loading';
   }
 
-  if (swr.error) {
+  if (urql.error) {
     return 'error';
   }
 
@@ -172,7 +174,7 @@ function ModpackView(props: { id: string }) {
           <h2>Mod List ({modpack.modJars.length} mods, {modpack.processingCount} processing)</h2>
           <List>
             {lists.mods.map(mod => {
-              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
+              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
             })}
           </List>
           {modpack.processingCount > 0 && (
@@ -185,7 +187,7 @@ function ModpackView(props: { id: string }) {
           <p>Put in this section the mods that are library dependencies of other mods, we'll tell you if they can be safely removed.</p>
           <List>
             {lists.libraries.map(mod => {
-              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
+              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
             })}
           </List>
           {lists.incompatible.length > 0 && (
@@ -194,7 +196,7 @@ function ModpackView(props: { id: string }) {
               <p>These mods are not included in your modpack, but we'll check if a compatible update is published.</p>
               <List>
                 {lists.incompatible.map(mod => {
-                  return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={swr.revalidate} />;
+                  return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
                 })}
               </List>
             </>
@@ -205,7 +207,7 @@ function ModpackView(props: { id: string }) {
   );
 }
 
-function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onChange: () => void }) {
+function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onChange(): void }) {
   const { installedMod, modpack, onChange } = props;
 
   const jar = installedMod.jar;
@@ -232,14 +234,15 @@ function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onCh
   );
 }
 
-function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange: () => void }) {
+function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange(): void }) {
   const { onChange, jar, modpack } = props;
 
   const jarId = jar.jar.id;
 
+  const callRemoveJarFromModpack = useRemoveJarFromModpackMutation();
   const removeJar = useCallback(async () => {
-    await removeJarFromModpack({
-      jarId: jarId,
+    await callRemoveJarFromModpack({
+      jarId,
       modpackId: modpack.id,
     });
 
@@ -247,8 +250,9 @@ function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange: () =
   }, [onChange, jarId, modpack.id]);
 
   const isLibrary = props.jar.isLibraryDependency;
+  const callSetModpackJarIsLibrary = useSetModpackJarIsLibraryMutation();
   const switchModType = useCallback(async () => {
-    await setModpackJarIsLibrary({
+    await callSetModpackJarIsLibrary({
       isLibrary: !isLibrary,
       jarId,
       modpackId: modpack.id,
@@ -295,7 +299,7 @@ type TModListItemProps = {
   mod: TModVersion,
   installedMod: TModpackMod,
   disableActions?: boolean,
-  onChange: () => void,
+  onChange(): void,
   title?: string,
 };
 
@@ -350,8 +354,9 @@ function ModListItem(props: TModListItemProps) {
     return Array.from(ids).sort();
   }, [mod.modId, modpack.modJars]);
 
+  const callReplaceModpackJar = useReplaceModpackJarMutation();
   const installUpdatedVersion = useCallback(async () => {
-    await replaceModpackJar({
+    await callReplaceModpackJar({
       modpackId: modpack.id,
       newJarId: mod.updatedVersion.id,
       oldJarId: installedMod.jar.id,
@@ -384,11 +389,11 @@ function ModListItem(props: TModListItemProps) {
             </span></>
           )}
         </p>
-        {/*<Tag>Update available!</Tag>*/}
-        {/*<Tag>Beta available!</Tag>*/}
-        {/*<Tag>Alpha available!</Tag>*/}
+        {/* <Tag>Update available!</Tag> */}
+        {/* <Tag>Beta available!</Tag> */}
+        {/* <Tag>Alpha available!</Tag> */}
         <div className={css.tags}>
-          {mod.supportedModLoader != modpack.modLoader && (
+          {mod.supportedModLoader !== modpack.modLoader && (
             <Tag type="error" title="This mod does not support your mod loader">
               {mod.supportedModLoader} only
               <HelpOutlined />
@@ -429,56 +434,8 @@ function ModListItem(props: TModListItemProps) {
 
 function Tag(props: ComponentProps<'div'> & { type: 'error' | 'warn' | 'info' }) {
   const { type, ...passDown } = props;
-  return <div {...passDown} className={classnames(css.tag, css[type])} />;
-}
 
-function useData(modpackId: string) {
-  return useGraphQl<{ modpack: TModpack | null }, Error>({
-    // language=GraphQL
-    query: `
-      query Data($id: ID!) {
-        modpack(id: $id) {
-          id
-          minecraftVersion
-          modLoader
-          processingCount
-          name
-          downloadUrl
-          modJars {
-            addedAt
-            isLibraryDependency
-            jar {
-              id
-              downloadUrl
-              fileName
-              releaseType
-              curseForgePage
-              mods(matchingModpack: $id) {
-                modId
-                modVersion
-                name
-                supportedMinecraftVersions
-                supportedModLoader
-                updatedVersion(matchingModpack: $id) {
-                  fileName
-                  id
-                  releaseType
-                }
-                dependencies {
-                  modId
-                  versionRange
-                  type
-                }
-              }
-            }
-          }
-        }
-      }
-    `,
-    variables: {
-      id: modpackId,
-    },
-  });
+  return <div {...passDown} className={classnames(css.tag, css[type])} />;
 }
 
 const supportedUrls = new Set(['text/uri-list', 'text/x-moz-url']);
@@ -499,6 +456,7 @@ async function urlItemFilter(items: DataTransferItemList) {
     .filter((item: string) => {
       try {
         const uri = new URL(item);
+
         return uri.protocol === 'http:' || uri.protocol === 'https:';
       } catch (e) {
         return false;

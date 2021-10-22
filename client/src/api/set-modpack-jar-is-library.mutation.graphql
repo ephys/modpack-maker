@@ -1,0 +1,10 @@
+mutation setModpackJarIsLibrary($input: SetModpackJarIsLibraryInput!) {
+  setModpackJarIsLibrary(input: $input) {
+    node {
+      isLibraryDependency
+    }
+    error {
+      code
+    }
+  }
+}

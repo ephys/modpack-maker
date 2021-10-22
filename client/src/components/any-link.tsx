@@ -1,5 +1,5 @@
-import { ComponentProps } from 'react';
 import Link from 'next/link';
+import type { ComponentProps } from 'react';
 
 type TAnyLinkProps = Omit<ComponentProps<'a'>, 'href'> & {
   href: ComponentProps<typeof Link>['href'],

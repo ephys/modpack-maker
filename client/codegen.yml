@@ -1,0 +1,23 @@
+overwrite: true
+schema: "../schema.gql"
+documents: "src/**/*.graphql"
+generates:
+  src/api/graphql.generated.ts:
+    plugins:
+      - "typescript"
+      - typescript-operations
+      - typescript-urql
+    config:
+      gqlImport: urql#gql
+      urqlImportFrom: ./urql
+      pureMagicComment: true
+      withHooks: true
+      typesPrefix: T
+      enumPrefix: false
+      nonOptionalTypename: true
+      strictScalars: true
+      scalars:
+        JSONObject: object
+        JSON: unknown
+        Date: string
+        ListOrder: string
