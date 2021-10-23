@@ -1,17 +1,18 @@
-import IconButton from '@material-ui/core/IconButton';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
-import type { ComponentProps } from 'react';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import classNames from 'classnames';
+import type { ComponentProps, ComponentType, ReactElement, SyntheticEvent } from 'react';
 import { isValidElement, useState } from 'react';
 import css from './action-menu.module.scss';
 import { AnyLink } from './any-link';
 
 export type TAction = {
   key: string | number,
-  icon?: React.ReactElement | React.ComponentType,
+  icon?: ReactElement | ComponentType,
   title: string,
-  onClick?(e: React.SyntheticEvent<HTMLButtonElement>): void,
+  onClick?(e: SyntheticEvent<HTMLButtonElement>): void,
   href?: string,
 };
 
@@ -97,10 +98,10 @@ export function MoreMenu(props: TMoreMenuProps) {
       <IconButton
         aria-haspopup="true"
         onClick={openMoreMenu}
-        className={props.className}
+        className={classNames(props.className, css.moreMenuIcon)}
         title="Open Menu"
       >
-        <MoreVertIcon color="inherit" htmlColor={props.htmlColor} />
+        <MoreVertIcon color="inherit" />
       </IconButton>
       <ActionMenu actions={props.actions} onRequestClose={closeMoreMenu} anchorEl={moreMenu} />
     </>

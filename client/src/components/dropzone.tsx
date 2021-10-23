@@ -1,4 +1,4 @@
-import UploadIcon from '@material-ui/icons/CloudUploadOutlined';
+import UploadIcon from '@mui/icons-material/CloudUploadOutlined';
 import classnames from 'classnames';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';

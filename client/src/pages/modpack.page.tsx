@@ -1,27 +1,28 @@
-import { CircularProgress, List, ListItem } from '@material-ui/core';
-import { HelpOutlined } from '@material-ui/icons';
+import { HelpOutlined } from '@mui/icons-material';
+import { CircularProgress, List, ListItem } from '@mui/material';
 import classnames from 'classnames';
-import Head from 'next/head';
-import { useRouter } from 'next/router';
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useMemo } from 'react';
-import { DependencyType } from '../../../../common/dependency-type';
+import { Helmet } from 'react-helmet-async';
+import { useParams } from 'react-router-dom';
+import { DependencyType } from '../../../common/dependency-type';
 import {
   getMostCompatibleMcVersion,
   isMcVersionLikelyCompatibleWith,
   parseMinecraftVersion,
-} from '../../../../common/minecraft-utils';
-import { assertIsString } from '../../../../common/typing-utils';
+} from '../../../common/minecraft-utils';
+import { assertIsString } from '../../../common/typing-utils';
 import {
   useAddModToModpackMutation,
   useModpackViewQuery,
   useRemoveJarFromModpackMutation, useReplaceModpackJarMutation, useSetModpackJarIsLibraryMutation,
-} from '../../api/graphql.generated';
-import { isLoadedUrql } from '../../api/urql';
-import { MoreMenu } from '../../components/action-menu';
-import { AnyLink } from '../../components/any-link';
-import DropZone, { getAsStringAsync } from '../../components/dropzone';
-import css from './[id].module.scss';
+} from '../api/graphql.generated';
+import { isLoadedUrql } from '../api/urql';
+import { MoreMenu } from '../components/action-menu';
+import { AnyLink } from '../components/any-link';
+import DropZone, { getAsStringAsync } from '../components/dropzone';
+import { UrqlErrorDisplay } from '../components/urql-error-display';
+import css from './modpack.module.scss';
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -48,9 +49,12 @@ import css from './[id].module.scss';
 //  - how many incompatible mods
 //  Clicking them jumps to section
 
+type TModpackRouteParams = {
+  id: string,
+};
+
 export default function ModpackRoute() {
-  const router = useRouter();
-  const { id } = router.query;
+  const { id } = useParams<TModpackRouteParams>();
 
   if (!id) {
     return null;
@@ -68,9 +72,9 @@ export default function ModpackRoute() {
 
   return (
     <>
-      <Head>
+      <Helmet>
         <title>Modpack</title>
-      </Head>
+      </Helmet>
       <ModpackView id={id} />
     </>
   );
@@ -102,14 +106,14 @@ function ModpackView(props: { id: string }) {
       return;
     }
 
-    let timeout;
     if (modpack.processingCount > 0) {
-      timeout = setTimeout(() => {
+      const timeout = setTimeout(() => {
         urql.revalidate();
       }, 4000);
-    }
 
-    return () => clearTimeout(timeout);
+      // eslint-disable-next-line consistent-return
+      return () => clearTimeout(timeout);
+    }
   }, [urql]);
 
   const modpack = urql.data?.modpack;
@@ -153,7 +157,7 @@ function ModpackView(props: { id: string }) {
   }
 
   if (urql.error) {
-    return 'error';
+    return <UrqlErrorDisplay urql={urql} />;
   }
 
   if (!modpack) {
@@ -167,8 +171,8 @@ function ModpackView(props: { id: string }) {
           <h1>{modpack.name} Modpack</h1>
           <p>Minecraft {modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
-          <AnyLink href={modpack.downloadUrl}>Download Modpack</AnyLink>
-          <button>Add Mod</button>
+          <AnyLink to={modpack.downloadUrl}>Download Modpack</AnyLink>
+          <AnyLink to={{ search: 'mod-library' }}>Add Mod</AnyLink>
           <button>Edit modpack details</button>
 
           <h2>Mod List ({modpack.modJars.length} mods, {modpack.processingCount} processing)</h2>
@@ -184,7 +188,10 @@ function ModpackView(props: { id: string }) {
             </div>
           )}
           <h2>Libraries</h2>
-          <p>Put in this section the mods that are library dependencies of other mods, we'll tell you if they can be safely removed.</p>
+          <p>
+            Put in this section the mods that are library dependencies of other mods,
+            we'll tell you if they can be safely removed.
+          </p>
           <List>
             {lists.libraries.map(mod => {
               return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
@@ -213,7 +220,8 @@ function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onCh
   const jar = installedMod.jar;
 
   if (jar.mods.length === 1) {
-    return <ModListItem mod={jar.mods[0]} installedMod={installedMod} modpack={modpack} onChange={onChange} title={jar.fileName} />;
+    return <ModListItem mod={jar.mods[0]} installedMod={installedMod}
+      modpack={modpack} onChange={onChange} title={jar.fileName} />;
   }
 
   return (

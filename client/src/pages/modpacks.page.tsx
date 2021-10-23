@@ -1,6 +1,6 @@
-import { Button, FormControl, InputLabel, MenuItem, Select, TextField } from '@material-ui/core';
-import { useRouter } from 'next/router';
+import { Button, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import { useCallback } from 'react';
+import { useHistory } from 'react-router-dom';
 import minecraftVersions from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { useCreateModpackMutation, useModpackListViewQuery } from '../api/graphql.generated';
@@ -9,10 +9,10 @@ import Actions from '../components/actions';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
 import { getFormValues } from '../utils/dom-utils';
 import { uriTag } from '../utils/url-utils';
-import css from './index.module.scss';
+import css from './modpacks.module.scss';
 
 export default function Home() {
-  const router = useRouter();
+  const history = useHistory();
 
   const callCreateModpack = useCreateModpackMutation();
   const createModpackSubmit = useCallback(e => {
@@ -21,12 +21,12 @@ export default function Home() {
     const form = e.currentTarget;
 
     callCreateModpack(getFormValues(form)).then(res => {
-      void router.push(uriTag`/modpacks/${res.createModpack.node.id}`);
+      history.push(uriTag`/modpacks/${res.createModpack.node.id}`);
     }, error => {
       // TODO error snack
       console.error(error);
     });
-  }, [router, callCreateModpack]);
+  }, [history, callCreateModpack]);
 
   return (
     <>
@@ -39,7 +39,7 @@ export default function Home() {
           <div>
             <FormControl className={css.formControl}>
               <InputLabel htmlFor="minecraft-version">Minecraft Version</InputLabel>
-              <Select id="minecraft-version" name="minecraftVersion" required>
+              <Select id="minecraft-version" name="minecraftVersion" required defaultValue="">
                 {minecraftVersions.map(version => {
                   return (
                     <MenuItem key={version} value={version}>{version}</MenuItem>
@@ -52,7 +52,7 @@ export default function Home() {
             <FormControl className={css.formControl}>
               <InputLabel htmlFor="mod-loader">Mod Loader</InputLabel>
 
-              <Select id="mod-loader" name="modLoader" required>
+              <Select id="mod-loader" name="modLoader" required defaultValue="">
                 {Object.keys(ModLoader).map(loader => {
                   return (
                     <MenuItem key={loader} value={loader}>{loader}</MenuItem>
@@ -84,7 +84,7 @@ function ExistingModpackList() {
 
   if (urql.error) {
     return (
-      <UrqlErrorDisplay error={urql.error} />
+      <UrqlErrorDisplay urql={urql} />
     );
   }
 

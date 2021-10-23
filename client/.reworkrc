@@ -1,0 +1,6 @@
+{
+  "entry-react": "src/pages/_app",
+  "directories": {
+    "translations": "./src/translations"
+  }
+}

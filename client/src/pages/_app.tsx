@@ -1,5 +1,6 @@
 import './_app.scss';
-import { createTheme as createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
+import { createTheme as createMuiTheme, ThemeProvider } from '@mui/material/styles';
+import type { ReactNode } from 'react';
 import { Provider } from 'urql';
 import { urqlClient } from '../api/urql';
 
@@ -13,14 +14,20 @@ const theme = createMuiTheme({
       main: '#4cc9f0',
       contrastText: '#fafafa',
     },
-    type: 'dark',
+    mode: 'dark',
   },
 });
 
-export default function MyApp({ Component, pageProps }) {
+type Props = {
+  children: ReactNode,
+};
+
+export default function App(props: Props) {
   return (
     <Provider value={urqlClient}>
-      <ThemeProvider theme={theme}><Component {...pageProps} /></ThemeProvider>
+      <ThemeProvider theme={theme}>
+        {props.children}
+      </ThemeProvider>
     </Provider>
   );
 }

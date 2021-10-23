@@ -1,11 +1,11 @@
-import type { CombinedError } from 'urql';
+import type { TUseQueryOutput } from '../api/urql.js';
 
 type Props = {
-  error: CombinedError,
+  urql: TUseQueryOutput<any, any>,
 };
 
 export function UrqlErrorDisplay(props: Props) {
-  console.error(props.error);
+  console.error(props.urql.error);
 
   return <p>error</p>;
 }

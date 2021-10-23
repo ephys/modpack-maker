@@ -85,6 +85,6 @@ body {
   background: #2a2d3e;
 }
 
-#__next {
+:global(#app) {
   display: contents;
 }
