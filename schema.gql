@@ -2,25 +2,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type AddModpackModError {
-  code: AddModpackModErrorCodes!
-  message: String!
-}
-
-enum AddModpackModErrorCodes {
-  MODPACK_NOT_FOUND
-}
-
-input AddModpackModInput {
-  byUrl: [String!]!
-  modpackId: ID!
-}
-
-type AddModpackModPayload {
-  error: AddModpackModError
-  node: Modpack
-}
-
 input CreateModpackInput {
   minecraftVersion: String!
   modLoader: ModLoader!
@@ -75,13 +56,13 @@ type ModVersion {
 }
 
 type Modpack {
-  downloadUrl: String!
   id: ID!
+  lastVersion: ModpackVersion!
+  lastVersionIndex: Int!
   minecraftVersion: String!
-  modJars: [ModpackMod!]!
   modLoader: ModLoader!
   name: String!
-  processingCount: Int!
+  version(index: Int!): ModpackVersion
 }
 
 type ModpackMod {
@@ -90,8 +71,14 @@ type ModpackMod {
   jar: ModJar!
 }
 
+type ModpackVersion {
+  downloadUrl: String!
+  id: ID!
+  installedJars: [ModpackMod!]!
+  name: String!
+}
+
 type Mutation {
-  addModToModpack(input: AddModpackModInput!): AddModpackModPayload!
   createModpack(input: CreateModpackInput!): CreateModpackPayload!
   removeJarFromModpack(input: RemoveJarFromModpackInput!): RemoveJarFromModpackPayload!
   replaceModpackJar(input: ReplaceModpackJarInput!): ReplaceModpackJarPayload!
@@ -206,13 +193,13 @@ enum RemoveJarFromModpackErrorCodes {
 }
 
 input RemoveJarFromModpackInput {
-  jarId: ID!
-  modpackId: ID!
+  jar: ID!
+  modpackVersion: ID!
 }
 
 type RemoveJarFromModpackPayload {
   error: RemoveJarFromModpackError
-  node: Modpack
+  node: ModpackVersion
 }
 
 type ReplaceModpackJarError {
@@ -227,14 +214,14 @@ enum ReplaceModpackJarErrorCodes {
 }
 
 input ReplaceModpackJarInput {
-  modpackId: ID!
-  newJarId: ID!
-  oldJarId: ID!
+  modpackVersion: ID!
+  newJar: ID!
+  oldJar: ID!
 }
 
 type ReplaceModpackJarPayload {
   error: ReplaceModpackJarError
-  node: Modpack
+  node: ModpackVersion
 }
 
 type SetModpackJarIsLibraryError {
@@ -250,8 +237,8 @@ enum SetModpackJarIsLibraryErrorCodes {
 
 input SetModpackJarIsLibraryInput {
   isLibrary: Boolean!
-  jarId: ID!
-  modpackId: ID!
+  jar: ID!
+  modpackVersion: ID!
 }
 
 type SetModpackJarIsLibraryPayload {

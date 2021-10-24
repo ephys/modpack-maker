@@ -1,19 +1,26 @@
 import { Field as GraphQl, ObjectType as GraphQlObject } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
 import { ModJar } from '../mod/mod-jar.entity';
-import { Modpack } from './modpack.entity';
+import { ModpackVersion } from './modpack-version.entity';
+
+type TModpackModCreationAttributes = {
+  modpackVersionId: number,
+  jarId: number,
+  isLibraryDependency: boolean,
+  createdAt?: Date,
+};
 
 @GraphQlObject()
 @DB.Table
-export default class ModpackMod extends DB.Model<ModpackMod> {
+export default class ModpackMod extends DB.Model<ModpackMod, TModpackModCreationAttributes> {
 
-  @DB.BelongsTo(() => Modpack)
-  modpack: Modpack;
+  @DB.BelongsTo(() => ModpackVersion)
+  modpackVersion: ModpackVersion;
 
-  @DB.ForeignKey(() => Modpack)
+  @DB.ForeignKey(() => ModpackVersion)
   @DB.PrimaryKey
   @DB.Column(DB.DataType.INTEGER)
-  modpackId: number;
+  modpackVersionId: number;
 
   @DB.BelongsTo(() => ModJar)
   jar: ModJar;

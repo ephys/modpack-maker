@@ -5,7 +5,6 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as nodeUtils from 'util';
 import { Inject, Injectable } from '@nestjs/common';
-import uniq from 'lodash/uniq';
 import * as rimrafCb from 'rimraf';
 import { QueryTypes, Sequelize } from 'sequelize';
 import {
@@ -16,12 +15,12 @@ import {
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import type { ModLoader } from '../../../common/modloaders';
 import { InjectSequelize } from '../database/database.providers';
-import { ModDiscoveryService } from '../mod/mod-discovery.service';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
+import ModpackMod from '../modpack-version/modpack-mod.entity';
+import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { generateId } from '../utils/generic-utils';
 import { minecraftVersionComparator } from '../utils/minecraft-utils';
-import ModpackMod from './modpack-mod.entity';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { Modpack } from './modpack.entity';
 
@@ -37,7 +36,6 @@ type TCreateModpackInput = {
 export class ModpackService {
   constructor(
     @Inject(MODPACK_REPOSITORY) private readonly modpackRepository: typeof Modpack,
-    private readonly modDiscoveryService: ModDiscoveryService,
     private readonly modService: ModService,
     @InjectSequelize private readonly sequelize: Sequelize,
   ) {
@@ -48,38 +46,26 @@ export class ModpackService {
   }
 
   async createModpack(input: TCreateModpackInput): Promise<Modpack> {
-    // @ts-expect-error
-    return Modpack.create({
-      ...input,
-      externalId: generateId(),
+    return this.sequelize.transaction(async () => {
+      const modpack = await Modpack.create({
+        ...input,
+        externalId: generateId(),
+      });
+
+      await ModpackVersion.create({
+        modpackId: modpack.internalId,
+        name: 'Initial version',
+        versionIndex: 0,
+      });
+
+      return modpack;
     });
+
   }
 
   async getModpackByEid(externalId: string) {
     // TODO: use DataLoader
     return Modpack.findOne({ where: { externalId } });
-  }
-
-  async addModUrlsToModpack(modpack: Modpack, byUrl: string[]): Promise<Modpack> {
-    // TODO: transaction
-
-    const {
-      availableCurseProjectIds,
-      pendingCurseProjectIds,
-      // unknownUrls,
-    } = await this.modDiscoveryService.discoverUrls(byUrl);
-
-    if (pendingCurseProjectIds.length > 0) {
-      modpack.pendingCurseForgeProjectIds = uniq([...modpack.pendingCurseForgeProjectIds, ...pendingCurseProjectIds]);
-    }
-
-    await Promise.all(availableCurseProjectIds.map(async projectId => {
-      return this.addCurseProjectToModpack(modpack, projectId);
-    }));
-
-    // TODO: return unknownUrls to front
-
-    return modpack.save();
   }
 
   async addCurseProjectToModpack(modpack: Modpack, curseProjectId: number): Promise<Modpack> {
@@ -104,7 +90,7 @@ export class ModpackService {
           v."supportedMinecraftVersions",
             row_number() over (
             PARTITION BY "modId"
-            ORDER BY 
+            ORDER BY
               ${validMcVersions.map((_mcVersion, index) => {
     const versions: string[] = [];
     for (let i = 0; i <= index; i++) {
@@ -122,8 +108,7 @@ export class ModpackService {
     //  a version that only supports 1.16.5 would be selected.
 
     return `v."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC,\n`;
-  }).join('')}
-              v."supportedModLoader" = :modLoader DESC,
+  }).join('')} v."supportedModLoader" = :modLoader DESC,
               j."releaseType" = 'STABLE' DESC,
               j."releaseType" = 'BETA' DESC,
               j."releaseType" = 'ALPHA' DESC,
@@ -221,66 +206,6 @@ export class ModpackService {
     });
   }
 
-  /**
-   * Adds our best matching available mod version to the modpack
-   *
-   * It tries to find one using the following criteria
-   * - A version that matches the minecraft version
-   * - A version that matches the modLoader
-   * - STABLE first, then BETA, then ALPHA
-   * - The most recent file
-   *
-   * @param {Modpack} modpack
-   * @param {string} modId
-   * @returns {Promise<void>}
-   */
-  async addModIdToModpack(modpack: Modpack, modId: string): Promise<Modpack> {
-
-    const installedModVersion = await ModpackMod.findOne({
-      where: {
-        modpackId: modpack.internalId,
-      },
-      include: [{
-        association: ModpackMod.associations.jar,
-        required: true,
-        include: [{
-          association: ModJar.associations.mods,
-          required: true,
-          where: {
-            modId,
-          },
-        }],
-      }],
-    });
-
-    if (installedModVersion != null) {
-      return modpack;
-    }
-
-    const mod = await this.getModIdBestMatchForModpack(modpack, modId);
-
-    if (!mod) {
-      throw new Error(`Could not find any valid mod for ${modId}`);
-    }
-
-    // @ts-expect-error
-    await ModpackMod.create({
-      modpackId: modpack.internalId,
-      jarId: mod.internalId,
-    });
-
-    return modpack;
-  }
-
-  async getModpackInstalledJars(modpack: Modpack): Promise<ModpackMod[]> {
-    return modpack.$get('installedMods', {
-      include: [{
-        association: ModpackMod.associations.jar,
-      }],
-      order: [['createdAt', 'ASC']],
-    });
-  }
-
   async getModpackJars(modpack: Modpack): Promise<ModJar[]> {
     return ModJar.findAll({
       include: [{
@@ -298,35 +223,6 @@ export class ModpackService {
         }],
       }],
     });
-  }
-
-  async removeJarFromModpack(modpack: Modpack, jar: ModJar) {
-    return ModpackMod.destroy({
-      where: {
-        modpackId: modpack.internalId,
-        jarId: jar.internalId,
-      },
-    });
-  }
-
-  async setModpackJarIsLibrary(modpack: ModJar | Modpack, jar: ModJar | Modpack, isLibrary: boolean) {
-    const modpackMod: ModpackMod | null = await ModpackMod.findOne({
-      where: {
-        modpackId: modpack.internalId,
-        jarId: jar.internalId,
-      },
-    });
-
-    if (modpackMod == null) {
-      return null;
-    }
-
-    if (modpackMod.isLibraryDependency !== isLibrary) {
-      modpackMod.isLibraryDependency = isLibrary;
-      await modpackMod.save();
-    }
-
-    return modpackMod;
   }
 
   async downloadModpackToFileStream(modpack: Modpack): Promise<NodeJS.ReadableStream> {
@@ -395,34 +291,6 @@ export class ModpackService {
     await rimraf(tmpModpackDir);
 
     return fsCb.createReadStream(outputZipFile);
-  }
-
-  async replaceModpackJar(modpack: Modpack, oldJar: ModJar, newJar: ModJar): Promise<void> {
-    return this.sequelize.transaction(async transaction => {
-      const oldInstalledJar: ModpackMod | null = await ModpackMod.findOne({
-        where: {
-          jarId: oldJar.internalId,
-          modpackId: modpack.internalId,
-        },
-        transaction,
-      });
-
-      if (!oldInstalledJar) {
-        // TODO: throw ServiceError
-        throw new Error('Old jar missing');
-      }
-
-      await Promise.all([
-        // @ts-expect-error
-        ModpackMod.create({
-          jarId: newJar.internalId,
-          modpackId: modpack.internalId,
-          createdAt: oldInstalledJar.createdAt,
-          isLibraryDependency: oldInstalledJar.isLibraryDependency,
-        }, { transaction }),
-        oldInstalledJar.destroy({ transaction }),
-      ]);
-    });
   }
 }
 

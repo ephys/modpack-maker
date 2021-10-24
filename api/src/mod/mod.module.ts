@@ -1,7 +1,6 @@
 import { BullModule } from '@nestjs/bull';
 import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
-import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { ModpackModule } from '../modpack/modpack.module';
 import { CurseforgeJarCrawlerProcessor } from './curseforge-jar-crawler.processor';
 import { CurseforgeProjectListCrawler } from './curseforge-project-list-crawler';
@@ -24,9 +23,6 @@ import { ProjectResolver } from './project.resolver';
     }),
     BullModule.registerQueue({
       name: FETCH_MODRINTH_JARS_QUEUE,
-    }),
-    BullModule.registerQueue({
-      name: INSERT_DISCOVERED_MODS_QUEUE,
     }),
   ],
   exports: [

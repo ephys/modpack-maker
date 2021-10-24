@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { DatabaseModule } from './database/database.module';
 import { ModModule } from './mod/mod.module';
+import { ModpackVersionModule } from './modpack-version/modpack-version.module';
 import { ModpackModule } from './modpack/modpack.module';
 import { ProjectSearchModule } from './project-search/project-search.module';
 
@@ -13,6 +14,7 @@ import { ProjectSearchModule } from './project-search/project-search.module';
     ModpackModule,
     ModModule,
     ProjectSearchModule,
+    ModpackVersionModule,
     GraphQLModule.forRoot({
       autoSchemaFile: join(process.cwd(), '/../schema.gql'),
       sortSchema: true,

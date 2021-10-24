@@ -2,6 +2,7 @@ mutation createModpack($input: CreateModpackInput!) {
   createModpack(input: $input) {
     node {
       id
+      lastVersionIndex
     }
   }
 }

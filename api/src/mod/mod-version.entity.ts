@@ -5,10 +5,10 @@ import {
   ObjectType as GraphQlObject,
 } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
-import { DependencyType } from '../../../common/dependency-type';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { tsEnum } from '../utils/sequelize-utils';
+import { DependencyType } from './dependency-type';
 import { ModJar } from './mod-jar.entity';
 
 export type TModDependency = {

@@ -1,8 +1,8 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { ModModule } from '../mod/mod.module';
-import { InsertDiscoveredModsProcessor } from './insert-discovered-mods.processor';
-import { ModpackModResolver } from './modpack-mod.resolver';
+import { ModpackModResolver } from '../modpack-version/modpack-mod.resolver';
+import { ModpackVersionModule } from '../modpack-version/modpack-version.module';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { ModpackController } from './modpack.controller';
 import { Modpack } from './modpack.entity';
@@ -13,6 +13,7 @@ import { ModpackService } from './modpack.service';
   imports: [
     DatabaseModule,
     forwardRef(() => ModModule),
+    forwardRef(() => ModpackVersionModule),
   ],
   exports: [ModpackService],
   controllers: [ModpackController],
@@ -20,7 +21,6 @@ import { ModpackService } from './modpack.service';
     ModpackService,
     ModpackResolver,
     ModpackModResolver,
-    InsertDiscoveredModsProcessor,
     {
       provide: MODPACK_REPOSITORY,
       useValue: Modpack,

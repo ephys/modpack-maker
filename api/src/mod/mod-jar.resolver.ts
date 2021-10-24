@@ -1,7 +1,7 @@
 import { Args, ID, Parent, registerEnumType, ResolveField, Resolver } from '@nestjs/graphql';
-import { DependencyType } from '../../../common/dependency-type';
 import { ModpackService } from '../modpack/modpack.service';
 import { Connection } from '../utils/graphql-connection-utils';
+import { DependencyType } from './dependency-type';
 import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
 import { ModService } from './mod.service';

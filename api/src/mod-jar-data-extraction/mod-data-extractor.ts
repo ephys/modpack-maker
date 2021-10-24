@@ -1,9 +1,9 @@
 import 'core-js/features/string/replace-all';
 import * as Toml from '@iarna/toml';
 import * as Zip from 'jszip';
-import { DependencyType } from '../../../common/dependency-type';
 import { ModLoader } from '../../../common/modloaders';
 import { assertIsString } from '../../../common/typing-utils';
+import { DependencyType } from '../mod/dependency-type';
 import type { TModDependency } from '../mod/mod-version.entity';
 import { parseJarManifest } from './jar-manifestmf-parser';
 import { mavenVersionRangeToSemver } from './version-range';

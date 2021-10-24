@@ -1,7 +1,7 @@
 import * as assert from 'assert';
-import { InjectQueue, Process, Processor } from '@nestjs/bull';
+import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
-import { Job, Queue } from 'bull';
+import { Job } from 'bull';
 import fetch from 'node-fetch';
 import { Sequelize, Op } from 'sequelize';
 import * as minecraftVersion from '../../../common/minecraft-versions.json';
@@ -10,7 +10,6 @@ import { getCurseForgeModFiles, getCurseReleaseType } from '../curseforge.api';
 import type { TCurseFile } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
 import { getModMetasFromJar } from '../mod-jar-data-extraction/mod-data-extractor';
-import { INSERT_DISCOVERED_MODS_QUEUE } from '../modpack/modpack.constants';
 import { generateId } from '../utils/generic-utils';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler';
 import { ModJar } from './mod-jar.entity';
@@ -23,7 +22,6 @@ export class CurseforgeJarCrawlerProcessor {
   private readonly logger = new Logger(CurseforgeJarCrawlerProcessor.name);
 
   constructor(
-    @InjectQueue(INSERT_DISCOVERED_MODS_QUEUE) private readonly insertDiscoveredModsQueue: Queue,
     @InjectSequelize private readonly sequelize: Sequelize,
   ) {
   }
@@ -110,17 +108,14 @@ export class CurseforgeJarCrawlerProcessor {
         }
       }
 
-      await Promise.all([
-        Project.update({
-          versionListUpToDate: true,
-        }, {
-          where: {
-            sourceType: projectSourceType,
-            sourceId: sourceProjectId,
-          },
-        }),
-        this.insertDiscoveredModsQueue.add(sourceProjectId),
-      ]);
+      await Project.update({
+        versionListUpToDate: true,
+      }, {
+        where: {
+          sourceType: projectSourceType,
+          sourceId: sourceProjectId,
+        },
+      });
     } catch (e) {
       this.logger.error(`Error while processing ${job.data}`);
       this.logger.error(e);

@@ -4,7 +4,7 @@ export function uriTag(strings: TemplateStringsArray, ...parameters: any[]) {
 
   for (const string of strings) {
     out += string;
-    if (parameters[i]) {
+    if (parameters[i] != null && parameters[i] !== '') {
       out += encodeURIComponent(String(parameters[i]));
       i++;
     }

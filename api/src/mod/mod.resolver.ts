@@ -9,6 +9,10 @@ export class ModResolver {
     private readonly modpackService: ModpackService,
   ) {}
 
+  // TODO: move to Jar
+  //  check each modId has an update & which jar(s) to install
+  //  only search in same project
+
   @ResolveField('updatedVersion', () => ModJar, { nullable: true })
   async checkModHasUpdate(
     @Parent() mod: ModVersion,

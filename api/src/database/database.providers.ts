@@ -1,14 +1,19 @@
 import { Inject } from '@nestjs/common';
+import * as cls from 'cls-hooked';
 import { Sequelize } from 'sequelize-typescript';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModVersion } from '../mod/mod-version.entity';
 import { Project } from '../mod/project.entity';
-import ModpackMod from '../modpack/modpack-mod.entity';
+import ModpackMod from '../modpack-version/modpack-mod.entity';
+import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { Modpack } from '../modpack/modpack.entity';
 
 export const SEQUELIZE_PROVIDER = 'SEQUELIZE';
 
 export const InjectSequelize = Inject(SEQUELIZE_PROVIDER);
+
+const transactionNamespace = cls.createNamespace('sequelize-transaction');
+Sequelize.useCLS(transactionNamespace);
 
 export const databaseProviders = [
   {
@@ -26,6 +31,7 @@ export const databaseProviders = [
 
       sequelize.addModels([
         Modpack,
+        ModpackVersion,
         ModpackMod,
         ModJar,
         ModVersion,

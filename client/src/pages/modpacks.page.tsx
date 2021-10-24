@@ -1,6 +1,6 @@
 import { Button, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import { useCallback } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, Link } from 'react-router-dom';
 import minecraftVersions from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { useCreateModpackMutation, useModpackListViewQuery } from '../api/graphql.generated';
@@ -21,7 +21,8 @@ export default function Home() {
     const form = e.currentTarget;
 
     callCreateModpack(getFormValues(form)).then(res => {
-      history.push(uriTag`/modpacks/${res.createModpack.node.id}`);
+      const modpack = res.createModpack.node;
+      history.push(uriTag`/modpacks/${modpack.id}/${modpack.lastVersionIndex}`);
     }, error => {
       // TODO error snack
       console.error(error);
@@ -99,7 +100,7 @@ function ExistingModpackList() {
         {urql.data.modpacks.map(modpack => {
           return (
             <li key={modpack.id}>
-              <a href={`/modpacks/${modpack.id}`}>{modpack.name} {modpack.minecraftVersion} {modpack.modLoader}</a>
+              <Link to={uriTag`/modpacks/${modpack.id}/${modpack.lastVersionIndex}`}>{modpack.name} {modpack.minecraftVersion} {modpack.modLoader}</Link>
             </li>
           );
         })}

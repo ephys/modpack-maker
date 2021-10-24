@@ -5,18 +5,18 @@ import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams } from 'react-router-dom';
-import { DependencyType } from '../../../common/dependency-type';
 import {
   getMostCompatibleMcVersion,
   isMcVersionLikelyCompatibleWith,
-  parseMinecraftVersion,
+  parseMinecraftVersionThrows,
 } from '../../../common/minecraft-utils';
-import { assertIsString } from '../../../common/typing-utils';
+import type { TModpackViewQuery } from '../api/graphql.generated';
 import {
-  useAddModToModpackMutation,
   useModpackViewQuery,
   useRemoveJarFromModpackMutation, useReplaceModpackJarMutation, useSetModpackJarIsLibraryMutation,
+  DependencyType,
 } from '../api/graphql.generated';
+import type { TUseQueryOutput } from '../api/urql';
 import { isLoadedUrql } from '../api/urql';
 import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
@@ -50,17 +50,18 @@ import css from './modpack.module.scss';
 //  Clicking them jumps to section
 
 type TModpackRouteParams = {
-  id: string,
+  modpackId: string,
+  versionIndex: string,
 };
 
 export default function ModpackRoute() {
-  const { id } = useParams<TModpackRouteParams>();
+  const { modpackId, versionIndex: versionIndexStr } = useParams<TModpackRouteParams>();
 
-  if (!id) {
+  if (modpackId == null || versionIndexStr == null) {
     return null;
   }
 
-  assertIsString(id);
+  const versionIndex = Number(versionIndexStr);
 
   useEffect(() => {
     document.documentElement.classList.add(css.html);
@@ -70,55 +71,58 @@ export default function ModpackRoute() {
     };
   }, []);
 
+  const urql = useModpackViewQuery({
+    variables: {
+      modpackId,
+      versionIndex,
+    },
+  });
+
+  if (!isLoadedUrql(urql)) {
+    return <CircularProgress />;
+  }
+
+  if (urql.error) {
+    return <UrqlErrorDisplay urql={urql} />;
+  }
+
+  const modpack = urql.data.modpack;
+  const modpackVersion = modpack?.version;
+  if (!modpack || !modpackVersion) {
+    return '404';
+  }
+
   return (
     <>
       <Helmet>
         <title>Modpack</title>
       </Helmet>
-      <ModpackView id={id} />
+      <ModpackView modpack={modpack} modpackVersion={modpackVersion} urql={urql} />
     </>
   );
 }
 
-function ModpackView(props: { id: string }) {
-  const { id } = props;
+type TModpack = NonNullable<TModpackViewQuery['modpack']>;
+type TModpackVersion = NonNullable<TModpack['version']>;
+type TModpackMod = TModpackVersion['installedJars'][0];
+type TJar = TModpackMod['jar'];
 
-  assertIsString(id);
+type Props = {
+  modpack: TModpack,
+  modpackVersion: TModpackVersion,
+  urql: TUseQueryOutput<any, any>,
+};
 
-  const urql = useModpackViewQuery({
-    variables: { id },
-  });
+function ModpackView(props: Props) {
+  const { modpack, modpackVersion, urql } = props;
 
-  const callAddModToModpack = useAddModToModpackMutation();
-  const onDrop = useCallback(async data => {
-    await callAddModToModpack({
-      byUrl: data.items,
-      modpackId: id,
-    });
+  const onDrop = useCallback(async _data => {
+    // eslint-disable-next-line no-alert
+    alert('dropping files is currently disabled');
+  }, []);
 
-    await urql.revalidate();
-  }, [id]);
-
-  useEffect(() => {
-    const modpack = urql.data?.modpack;
-
-    if (!modpack) {
-      return;
-    }
-
-    if (modpack.processingCount > 0) {
-      const timeout = setTimeout(() => {
-        urql.revalidate();
-      }, 4000);
-
-      // eslint-disable-next-line consistent-return
-      return () => clearTimeout(timeout);
-    }
-  }, [urql]);
-
-  const modpack = urql.data?.modpack;
   const lists = useMemo(() => {
-    const output = {
+    const output: { mods: TModpackMod[], libraries: TModpackMod[], incompatible: TModpackMod[] } = {
       mods: [],
       libraries: [],
       incompatible: [],
@@ -128,7 +132,7 @@ function ModpackView(props: { id: string }) {
       return output;
     }
 
-    for (const jar of modpack.modJars) {
+    for (const jar of modpackVersion.installedJars) {
       if (jar.isLibraryDependency) {
         output.libraries.push(jar);
         continue;
@@ -152,18 +156,6 @@ function ModpackView(props: { id: string }) {
     return output;
   }, [modpack]);
 
-  if (!isLoadedUrql(urql)) {
-    return 'loading';
-  }
-
-  if (urql.error) {
-    return <UrqlErrorDisplay urql={urql} />;
-  }
-
-  if (!modpack) {
-    return '404';
-  }
-
   return (
     <>
       <DropZone onDrop={onDrop} itemFilter={urlItemFilter} className={css.dropZone}>
@@ -171,22 +163,17 @@ function ModpackView(props: { id: string }) {
           <h1>{modpack.name} Modpack</h1>
           <p>Minecraft {modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
-          <AnyLink to={modpack.downloadUrl}>Download Modpack</AnyLink>
+          <AnyLink to={modpackVersion.downloadUrl}>Download Modpack</AnyLink>
           <AnyLink to={{ search: 'mod-library' }}>Add Mod</AnyLink>
           <button>Edit modpack details</button>
 
-          <h2>Mod List ({modpack.modJars.length} mods, {modpack.processingCount} processing)</h2>
+          <h2>Mod List ({modpackVersion.installedJars.length} mods)</h2>
           <List>
             {lists.mods.map(mod => {
-              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
+              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack}
+                modpackVersion={modpackVersion} onChange={urql.revalidate} />;
             })}
           </List>
-          {modpack.processingCount > 0 && (
-            <div className={css.processingRow}>
-              <CircularProgress />
-              <p>We're processing the mods you added, please stand by.</p>
-            </div>
-          )}
           <h2>Libraries</h2>
           <p>
             Put in this section the mods that are library dependencies of other mods,
@@ -194,7 +181,8 @@ function ModpackView(props: { id: string }) {
           </p>
           <List>
             {lists.libraries.map(mod => {
-              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
+              return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack}
+                modpackVersion={modpackVersion} onChange={urql.revalidate} />;
             })}
           </List>
           {lists.incompatible.length > 0 && (
@@ -203,7 +191,8 @@ function ModpackView(props: { id: string }) {
               <p>These mods are not included in your modpack, but we'll check if a compatible update is published.</p>
               <List>
                 {lists.incompatible.map(mod => {
-                  return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack} onChange={urql.revalidate} />;
+                  return <JarListItem key={mod.jar.id} installedMod={mod}
+                    modpack={modpack} modpackVersion={modpackVersion} onChange={urql.revalidate} />;
                 })}
               </List>
             </>
@@ -214,13 +203,13 @@ function ModpackView(props: { id: string }) {
   );
 }
 
-function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onChange(): void }) {
-  const { installedMod, modpack, onChange } = props;
+function JarListItem(props: { installedMod: TModpackMod, modpackVersion: TModpackVersion, modpack: TModpack, onChange(): void }) {
+  const { installedMod, modpackVersion, modpack, onChange } = props;
 
   const jar = installedMod.jar;
 
   if (jar.mods.length === 1) {
-    return <ModListItem mod={jar.mods[0]} installedMod={installedMod}
+    return <ModListItem mod={jar.mods[0]} installedMod={installedMod} modpackVersion={modpackVersion}
       modpack={modpack} onChange={onChange} title={jar.fileName} />;
   }
 
@@ -231,43 +220,44 @@ function JarListItem(props: { installedMod: TModpackMod, modpack: TModpack, onCh
           <h3>{jar.fileName}</h3>
           <p>This file contains more than one mod</p>
         </div>
-        <JarActions jar={installedMod} modpack={modpack} onChange={onChange} />
+        <JarActions jar={installedMod} modpackVersion={modpackVersion} onChange={onChange} />
       </div>
       <List>
         {jar.mods.map(mod => {
-          return <ModListItem mod={mod} installedMod={installedMod} modpack={modpack} onChange={onChange} disableActions />;
+          return <ModListItem mod={mod} installedMod={installedMod} modpack={modpack}
+            modpackVersion={modpackVersion} onChange={onChange} disableActions />;
         })}
       </List>
     </li>
   );
 }
 
-function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange(): void }) {
-  const { onChange, jar, modpack } = props;
+function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion, onChange(): void }) {
+  const { onChange, jar, modpackVersion } = props;
 
   const jarId = jar.jar.id;
 
   const callRemoveJarFromModpack = useRemoveJarFromModpackMutation();
   const removeJar = useCallback(async () => {
     await callRemoveJarFromModpack({
-      jarId,
-      modpackId: modpack.id,
+      jar: jarId,
+      modpackVersion: modpackVersion.id,
     });
 
     onChange();
-  }, [onChange, jarId, modpack.id]);
+  }, [onChange, jarId, modpackVersion.id]);
 
   const isLibrary = props.jar.isLibraryDependency;
   const callSetModpackJarIsLibrary = useSetModpackJarIsLibraryMutation();
   const switchModType = useCallback(async () => {
     await callSetModpackJarIsLibrary({
       isLibrary: !isLibrary,
-      jarId,
-      modpackId: modpack.id,
+      jar: jarId,
+      modpackVersion: modpackVersion.id,
     });
 
     onChange();
-  }, [jarId, modpack.id, isLibrary]);
+  }, [jarId, modpackVersion.id, isLibrary]);
 
   return (
     <div className={css.actions}>
@@ -304,7 +294,8 @@ function JarActions(props: { jar: TModpackMod, modpack: TModpack, onChange(): vo
 
 type TModListItemProps = {
   modpack: TModpack,
-  mod: TModVersion,
+  modpackVersion: TModpackVersion,
+  mod: TJar['mods'][0],
   installedMod: TModpackMod,
   disableActions?: boolean,
   onChange(): void,
@@ -312,7 +303,7 @@ type TModListItemProps = {
 };
 
 function ModListItem(props: TModListItemProps) {
-  const { mod, modpack, installedMod, onChange } = props;
+  const { mod, modpack, modpackVersion, installedMod, onChange } = props;
 
   // TODO: warn for MC version
   // TODO: warn if dependency is missing
@@ -322,15 +313,15 @@ function ModListItem(props: TModListItemProps) {
     [modpack.minecraftVersion, mod.supportedMinecraftVersions],
   );
 
-  const requestedMcVersion = parseMinecraftVersion(modpack.minecraftVersion);
-  const availableMinecraftVersion = parseMinecraftVersion(mostCompatibleMcVersion);
+  const requestedMcVersion = parseMinecraftVersionThrows(modpack.minecraftVersion);
+  const availableMinecraftVersion = parseMinecraftVersionThrows(mostCompatibleMcVersion);
   const isMcProbablyCompatible = requestedMcVersion.major === availableMinecraftVersion.major
     && requestedMcVersion.minor >= availableMinecraftVersion.minor;
 
   const missingDependencies = useMemo(() => {
     const missing = [];
     for (const dependency of mod.dependencies) {
-      if (dependency.type !== DependencyType.depends) {
+      if (dependency.type !== DependencyType.Depends) {
         continue;
       }
 
@@ -340,18 +331,18 @@ function ModListItem(props: TModListItemProps) {
         continue;
       }
 
-      if (modpack.modJars.find(jar => jar.jar.mods.find(mod => mod.modId === modId) != null) == null) {
+      if (modpackVersion.installedJars.find(jar => jar.jar.mods.find(mod => mod.modId === modId) != null) == null) {
         missing.push(modId);
       }
     }
 
     return missing.sort();
-  }, [mod.dependencies, modpack.modJars]);
+  }, [mod.dependencies, modpackVersion.installedJars]);
 
-  const usedBy = useMemo(() => {
-    const ids = new Set();
+  const usedBy: string[] = useMemo(() => {
+    const ids = new Set<string>();
 
-    for (const installedJar of modpack.modJars) {
+    for (const installedJar of modpackVersion.installedJars) {
       for (const installedMod of installedJar.jar.mods) {
         if (installedMod.dependencies.find(dep => dep.modId === mod.modId) != null) {
           ids.add(installedMod.modId);
@@ -360,14 +351,14 @@ function ModListItem(props: TModListItemProps) {
     }
 
     return Array.from(ids).sort();
-  }, [mod.modId, modpack.modJars]);
+  }, [mod.modId, modpackVersion.installedJars]);
 
   const callReplaceModpackJar = useReplaceModpackJarMutation();
   const installUpdatedVersion = useCallback(async () => {
     await callReplaceModpackJar({
-      modpackId: modpack.id,
-      newJarId: mod.updatedVersion.id,
-      oldJarId: installedMod.jar.id,
+      modpackVersion: modpackVersion.id,
+      newJar: mod.updatedVersion!.id,
+      oldJar: installedMod.jar.id,
     });
 
     // TODO error handling
@@ -434,7 +425,7 @@ function ModListItem(props: TModListItemProps) {
         </div>
       </div>
       {!props.disableActions && (
-        <JarActions jar={installedMod} modpack={modpack} onChange={onChange} />
+        <JarActions jar={installedMod} modpackVersion={modpackVersion} onChange={onChange} />
       )}
     </ListItem>
   );
