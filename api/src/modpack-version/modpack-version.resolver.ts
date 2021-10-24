@@ -1,5 +1,5 @@
 import { Args, Field, ID, InputType, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IsBoolean, MinLength } from 'class-validator';
+import { ArrayNotEmpty, IsBoolean, MinLength } from 'class-validator';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
 import { Trim } from '../utils/class-validators';
@@ -55,8 +55,9 @@ class ReplaceModpackJarInput {
   @Field(() => ID)
   oldJar: string;
 
-  @Field(() => ID)
-  newJar: string;
+  @Field(() => [ID])
+  @ArrayNotEmpty()
+  newJars: string[];
 }
 
 enum ReplaceModpackJarErrorCodes {
@@ -154,10 +155,12 @@ export class ModpackVersionResolver {
 
   @Mutation(() => ReplaceModpackJarPayload)
   async replaceModpackJar(@Args('input') input: ReplaceModpackJarInput): Promise<typeof ReplaceModpackJarPayload.T> {
-    const [modpack, oldJar, newJar] = await Promise.all([
+    const [modpack, oldJar, newJars] = await Promise.all([
       this.modpackVersionService.getModpackVersionByEid(input.modpackVersion),
       this.modService.getJar(input.oldJar),
-      this.modService.getJar(input.newJar),
+      Promise.all(
+        input.newJars.map(async id => this.modService.getJar(id)),
+      ),
     ]);
 
     if (modpack == null) {
@@ -168,11 +171,12 @@ export class ModpackVersionResolver {
       return new ReplaceModpackJarPayload().withError(ReplaceModpackJarErrorCodes.JAR_NOT_FOUND, `jar ${input.oldJar} not found`);
     }
 
-    if (newJar == null) {
-      return new ReplaceModpackJarPayload().withError(ReplaceModpackJarErrorCodes.NEW_JAR_NOT_FOUND, `jar ${input.newJar} not found`);
+    if (newJars.includes(null)) {
+      return new ReplaceModpackJarPayload().withError(ReplaceModpackJarErrorCodes.NEW_JAR_NOT_FOUND, `one of the jars ${input.newJars.join(', ')} was not found`);
     }
 
-    await this.modpackVersionService.replaceModpackJar(modpack, oldJar, newJar);
+    // @ts-expect-error
+    await this.modpackVersionService.replaceModpackJar(modpack, oldJar, newJars);
 
     return new ReplaceModpackJarPayload().withNode(modpack);
   }

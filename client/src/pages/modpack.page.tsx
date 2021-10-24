@@ -103,7 +103,7 @@ export default function ModpackRoute() {
       <Helmet>
         <title>Modpack</title>
       </Helmet>
-      <ModpackView modpack={modpack} modpackVersion={modpackVersion} urql={urql} />
+      <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
     </>
   );
 }
@@ -116,11 +116,10 @@ type TJar = TModpackMod['jar'];
 type Props = {
   modpack: TModpack,
   modpackVersion: TModpackVersion,
-  urql: TUseQueryOutput<any, any>,
 };
 
 function ModpackView(props: Props) {
-  const { modpack, modpackVersion, urql } = props;
+  const { modpack, modpackVersion } = props;
 
   const onDrop = useCallback(async _data => {
     // eslint-disable-next-line no-alert
@@ -275,7 +274,7 @@ function UpdateAvailableTag(props: TUpdateAvailableTagProps) {
   const installUpdatedVersion = useCallback(async () => {
     await callReplaceModpackJar({
       modpackVersion: modpackVersion.id,
-      newJar: jar.updatedVersion.map(v => v.id),
+      newJars: jar.updatedVersion.map(v => v.id),
       oldJar: jar.id,
     });
 

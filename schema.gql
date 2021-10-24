@@ -242,7 +242,7 @@ enum ReplaceModpackJarErrorCodes {
 
 input ReplaceModpackJarInput {
   modpackVersion: ID!
-  newJar: ID!
+  newJars: [ID!]!
   oldJar: ID!
 }
 

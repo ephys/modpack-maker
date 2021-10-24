@@ -1,12 +1,63 @@
+import { devtoolsExchange } from '@urql/devtools';
+import type { Cache } from '@urql/exchange-graphcache';
+import { cacheExchange } from '@urql/exchange-graphcache';
+import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage';
 import type { DocumentNode } from 'graphql';
 import { useCallback, useMemo } from 'react';
 import type { OperationContext, UseQueryArgs, UseQueryState } from 'urql';
-import { createClient, useQuery as useUrqlQuery, useMutation as useUrqlMutation } from 'urql';
+import { createClient, useQuery as useUrqlQuery, useMutation as useUrqlMutation, dedupExchange, fetchExchange } from 'urql';
 import { assert } from '../../../common/assert';
 import type { NonUndefined } from '../../../common/types';
+import type {
+  TRemoveJarFromModpackMutation, TRemoveJarFromModpackMutationVariables,
+  TReplaceModpackJarMutation,
+  TReplaceModpackJarMutationVariables,
+} from './graphql.generated';
 
 export const urqlClient = createClient({
   url: 'http://localhost:8080/graphql',
+  requestPolicy: 'cache-and-network',
+  // fetchOptions: () => {
+  // TODO
+  // const token = getAuthToken();
+  //
+  // return {
+  //   headers: { authorization: token ?? '' },
+  // };
+  // },
+  exchanges: [
+    ...(process.env.NODE_ENV === 'production' ? [] : [devtoolsExchange]),
+    dedupExchange,
+    cacheExchange({
+      storage: makeDefaultStorage({ idbName: 'modpack-urql' }),
+      updates: {
+        Mutation: {
+          replaceModpackJar(
+            result: TReplaceModpackJarMutation,
+            args: TReplaceModpackJarMutationVariables,
+            cache: Cache,
+          ) {
+            cache.invalidate({
+              __typename: 'ModpackVersion',
+              id: args.input.modpackVersion,
+            }, 'installedJars');
+          },
+          removeJarFromModpack(
+            result: TRemoveJarFromModpackMutation,
+            args: TRemoveJarFromModpackMutationVariables,
+            cache: Cache,
+          ) {
+            cache.invalidate({
+              __typename: 'ModpackVersion',
+              id: args.input.modpackVersion,
+            }, 'installedJars');
+          },
+          // setModpackJarIsLibrary
+        },
+      },
+    }),
+    fetchExchange,
+  ],
 });
 
 export type TRevalidate = (opts?: Partial<OperationContext>) => void;

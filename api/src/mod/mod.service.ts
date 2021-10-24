@@ -3,7 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Injectable } from '@nestjs/common';
 import * as DataLoader from 'dataloader';
-import { uniq } from 'lodash';
+import * as uniq from 'lodash/uniq';
 import type { Response } from 'node-fetch';
 import fetch from 'node-fetch';
 import type { WhereOptions } from 'sequelize';
@@ -236,11 +236,9 @@ LIMIT ${keys.length};
   });
 
   async findJarUpdates(jar: ModJar, minecraftVersion: string, modLoader: ModLoader): Promise<ModJar[]> {
-    // TODO: DataLoader
     const mods = await this.getModsInJar(jar, { modLoader });
 
-    // foreach modId:
-    // !TODO: it's weird that we find null versions
+    // @ts-expect-error
     const result: ModJar[] = (await Promise.all(
       mods.map(async mod => this.#findJarUpdatesDl.load([mod.modId, jar.projectId, modLoader, minecraftVersion])),
     )).filter(val => val != null);

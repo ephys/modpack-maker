@@ -121,14 +121,13 @@ export class ModpackVersionService {
     return modpackMod;
   }
 
-  async replaceModpackJar(modpack: ModpackVersion, oldJar: ModJar, newJar: ModJar): Promise<void> {
-    return this.sequelize.transaction(async transaction => {
+  async replaceModpackJar(modpack: ModpackVersion, oldJar: ModJar, newJars: ModJar[]): Promise<void> {
+    return this.sequelize.transaction(async () => {
       const oldInstalledJar: ModpackMod | null = await ModpackMod.findOne({
         where: {
           jarId: oldJar.internalId,
           modpackVersionId: modpack.internalId,
         },
-        transaction,
       });
 
       if (!oldInstalledJar) {
@@ -137,13 +136,15 @@ export class ModpackVersionService {
       }
 
       await Promise.all([
-        ModpackMod.create({
-          jarId: newJar.internalId,
-          modpackVersionId: modpack.internalId,
-          createdAt: oldInstalledJar.createdAt,
-          isLibraryDependency: oldInstalledJar.isLibraryDependency,
-        }, { transaction }),
-        oldInstalledJar.destroy({ transaction }),
+        oldInstalledJar.destroy(),
+        ...newJars.map(async jar => {
+          await ModpackMod.create({
+            jarId: jar.internalId,
+            modpackVersionId: modpack.internalId,
+            createdAt: oldInstalledJar.createdAt,
+            isLibraryDependency: oldInstalledJar.isLibraryDependency,
+          });
+        }),
       ]);
     });
   }

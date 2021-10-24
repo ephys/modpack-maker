@@ -312,7 +312,7 @@ export enum ReplaceModpackJarErrorCodes {
 
 export type TReplaceModpackJarInput = {
   modpackVersion: Scalars['ID'],
-  newJar: Scalars['ID'],
+  newJars: Array<Scalars['ID']>,
   oldJar: Scalars['ID'],
 };
 
