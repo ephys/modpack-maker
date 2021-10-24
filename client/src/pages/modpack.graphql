@@ -17,17 +17,17 @@ query ModpackView($modpackId: ID!, $versionIndex: Int!) {
           fileName
           releaseType
           curseForgePage
+          updatedVersion(matchingModpack: $modpackId) {
+            fileName
+            id
+            releaseType
+          }
           mods(matchingModpack: $modpackId) {
             modId
             modVersion
             name
             supportedMinecraftVersions
             supportedModLoader
-            updatedVersion(matchingModpack: $modpackId) {
-              fileName
-              id
-              releaseType
-            }
             dependencies {
               modId
               versionRange

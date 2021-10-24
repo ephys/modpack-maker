@@ -12,9 +12,12 @@ import {
 } from '../../../common/minecraft-utils';
 import type { TModpackViewQuery } from '../api/graphql.generated';
 import {
+  DependencyType,
+  useCreateNewModpackVersionMutation,
   useModpackViewQuery,
-  useRemoveJarFromModpackMutation, useReplaceModpackJarMutation, useSetModpackJarIsLibraryMutation,
-  DependencyType, useCreateNewModpackVersionMutation,
+  useRemoveJarFromModpackMutation,
+  useReplaceModpackJarMutation,
+  useSetModpackJarIsLibraryMutation,
 } from '../api/graphql.generated';
 import type { TUseQueryOutput } from '../api/urql';
 import { isLoadedUrql } from '../api/urql';
@@ -192,7 +195,7 @@ function ModpackView(props: Props) {
           <List>
             {lists.mods.map(mod => {
               return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack}
-                modpackVersion={modpackVersion} onChange={urql.revalidate} />;
+                modpackVersion={modpackVersion} />;
             })}
           </List>
           <h2>Libraries</h2>
@@ -203,7 +206,7 @@ function ModpackView(props: Props) {
           <List>
             {lists.libraries.map(mod => {
               return <JarListItem key={mod.jar.id} installedMod={mod} modpack={modpack}
-                modpackVersion={modpackVersion} onChange={urql.revalidate} />;
+                modpackVersion={modpackVersion} />;
             })}
           </List>
           {lists.incompatible.length > 0 && (
@@ -213,7 +216,7 @@ function ModpackView(props: Props) {
               <List>
                 {lists.incompatible.map(mod => {
                   return <JarListItem key={mod.jar.id} installedMod={mod}
-                    modpack={modpack} modpackVersion={modpackVersion} onChange={urql.revalidate} />;
+                    modpack={modpack} modpackVersion={modpackVersion} />;
                 })}
               </List>
             </>
@@ -224,14 +227,20 @@ function ModpackView(props: Props) {
   );
 }
 
-function JarListItem(props: { installedMod: TModpackMod, modpackVersion: TModpackVersion, modpack: TModpack, onChange(): void }) {
-  const { installedMod, modpackVersion, modpack, onChange } = props;
+type JarListItemProps = {
+  installedMod: TModpackMod,
+  modpackVersion: TModpackVersion,
+  modpack: TModpack,
+};
+
+function JarListItem(props: JarListItemProps) {
+  const { installedMod, modpackVersion, modpack } = props;
 
   const jar = installedMod.jar;
 
   if (jar.mods.length === 1) {
     return <ModListItem mod={jar.mods[0]} installedMod={installedMod} modpackVersion={modpackVersion}
-      modpack={modpack} onChange={onChange} title={jar.fileName} />;
+      modpack={modpack} title={jar.fileName} jar={jar} />;
   }
 
   return (
@@ -240,21 +249,53 @@ function JarListItem(props: { installedMod: TModpackMod, modpackVersion: TModpac
         <div>
           <h3>{jar.fileName}</h3>
           <p>This file contains more than one mod</p>
+          <UpdateAvailableTag jar={jar} modpackVersion={modpackVersion} />
         </div>
-        <JarActions jar={installedMod} modpackVersion={modpackVersion} onChange={onChange} />
+        <JarActions jar={installedMod} modpackVersion={modpackVersion} />
       </div>
       <List>
         {jar.mods.map(mod => {
           return <ModListItem mod={mod} installedMod={installedMod} modpack={modpack}
-            modpackVersion={modpackVersion} onChange={onChange} disableActions />;
+            modpackVersion={modpackVersion} disableActions />;
         })}
       </List>
     </li>
   );
 }
 
-function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion, onChange(): void }) {
-  const { onChange, jar, modpackVersion } = props;
+type TUpdateAvailableTagProps = {
+  modpackVersion: { id: string },
+  jar: TJar,
+};
+
+function UpdateAvailableTag(props: TUpdateAvailableTagProps) {
+  const { modpackVersion, jar } = props;
+
+  const callReplaceModpackJar = useReplaceModpackJarMutation();
+  const installUpdatedVersion = useCallback(async () => {
+    await callReplaceModpackJar({
+      modpackVersion: modpackVersion.id,
+      newJar: jar.updatedVersion.map(v => v.id),
+      oldJar: jar.id,
+    });
+
+    // TODO error handling
+  }, [jar, modpackVersion.id]);
+
+  if (jar.updatedVersion.length === 0) {
+    return null;
+  }
+
+  return (
+    <Tag type="info">
+      update available: {jar.updatedVersion.map(v => v.fileName).join(', ')}
+      <button type="button" onClick={installUpdatedVersion}>install</button>
+    </Tag>
+  );
+}
+
+function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion }) {
+  const { jar, modpackVersion } = props;
 
   const jarId = jar.jar.id;
 
@@ -264,9 +305,7 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion, 
       jar: jarId,
       modpackVersion: modpackVersion.id,
     });
-
-    onChange();
-  }, [onChange, jarId, modpackVersion.id]);
+  }, [jarId, modpackVersion.id]);
 
   const isLibrary = props.jar.isLibraryDependency;
   const callSetModpackJarIsLibrary = useSetModpackJarIsLibraryMutation();
@@ -276,8 +315,6 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion, 
       jar: jarId,
       modpackVersion: modpackVersion.id,
     });
-
-    onChange();
   }, [jarId, modpackVersion.id, isLibrary]);
 
   return (
@@ -317,14 +354,14 @@ type TModListItemProps = {
   modpack: TModpack,
   modpackVersion: TModpackVersion,
   mod: TJar['mods'][0],
+  jar?: TJar,
   installedMod: TModpackMod,
   disableActions?: boolean,
-  onChange(): void,
   title?: string,
 };
 
 function ModListItem(props: TModListItemProps) {
-  const { mod, modpack, modpackVersion, installedMod, onChange } = props;
+  const { mod, jar, modpack, modpackVersion, installedMod } = props;
 
   // TODO: warn for MC version
   // TODO: warn if dependency is missing
@@ -373,19 +410,6 @@ function ModListItem(props: TModListItemProps) {
 
     return Array.from(ids).sort();
   }, [mod.modId, modpackVersion.installedJars]);
-
-  const callReplaceModpackJar = useReplaceModpackJarMutation();
-  const installUpdatedVersion = useCallback(async () => {
-    await callReplaceModpackJar({
-      modpackVersion: modpackVersion.id,
-      newJar: mod.updatedVersion!.id,
-      oldJar: installedMod.jar.id,
-    });
-
-    // TODO error handling
-
-    onChange();
-  }, [mod, installedMod.jar, modpack.id, onChange]);
 
   return (
     <ListItem title={props.title} className={css.modListItem} id={mod.modId} >
@@ -437,16 +461,13 @@ function ModListItem(props: TModListItemProps) {
               <HelpOutlined />
             </Tag>
           ))}
-          {mod.updatedVersion && (
-            <Tag type="info">
-              update available: {mod.updatedVersion.fileName}
-              <button type="button" onClick={installUpdatedVersion}>install</button>
-            </Tag>
+          {jar && (
+            <UpdateAvailableTag jar={jar} modpackVersion={modpackVersion} />
           )}
         </div>
       </div>
       {!props.disableActions && (
-        <JarActions jar={installedMod} modpackVersion={modpackVersion} onChange={onChange} />
+        <JarActions jar={installedMod} modpackVersion={modpackVersion} />
       )}
     </ListItem>
   );

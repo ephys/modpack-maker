@@ -52,6 +52,13 @@ type ModJar {
   id: ID!
   mods(matchingModpack: ID): [ModVersion!]!
   releaseType: ReleaseType!
+
+  """
+  
+        returns the list of jars from the same project that are considered updated versions to this jar.
+      
+  """
+  updatedVersion(matchingModpack: ID!): [ModJar!]!
 }
 
 type ModJarEdge {
@@ -71,7 +78,6 @@ type ModVersion {
   name: String!
   supportedMinecraftVersions: [String!]!
   supportedModLoader: ModLoader!
-  updatedVersion(matchingModpack: ID!): ModJar
 }
 
 type Modpack {

@@ -70,10 +70,16 @@ export type TModJar = {
   id: Scalars['ID'],
   mods: TModVersion[],
   releaseType: ReleaseType,
+  /** returns the list of jars from the same project that are considered updated versions to this jar. */
+  updatedVersion: TModJar[],
 };
 
 export type TModJarModsArgs = {
   matchingModpack?: Maybe<Scalars['ID']>,
+};
+
+export type TModJarUpdatedVersionArgs = {
+  matchingModpack: Scalars['ID'],
 };
 
 export type TModJarEdge = {
@@ -95,11 +101,6 @@ export type TModVersion = {
   name: Scalars['String'],
   supportedMinecraftVersions: Array<Scalars['String']>,
   supportedModLoader: ModLoader,
-  updatedVersion?: Maybe<TModJar>,
-};
-
-export type TModVersionUpdatedVersionArgs = {
-  matchingModpack: Scalars['ID'],
 };
 
 export type TModpack = {
@@ -380,7 +381,7 @@ export type TModpackViewQueryVariables = Exact<{
   versionIndex: Scalars['Int'],
 }>;
 
-export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, curseForgePage: string, mods: Array<{ __typename: 'ModVersion', modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, updatedVersion?: { __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType } | null | undefined, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
+export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, curseForgePage: string, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, mods: Array<{ __typename: 'ModVersion', modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
 
 export type TModpackListViewQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -489,17 +490,17 @@ export const ModpackViewDocument = /* #__PURE__ */ gql`
           fileName
           releaseType
           curseForgePage
+          updatedVersion(matchingModpack: $modpackId) {
+            fileName
+            id
+            releaseType
+          }
           mods(matchingModpack: $modpackId) {
             modId
             modVersion
             name
             supportedMinecraftVersions
             supportedModLoader
-            updatedVersion(matchingModpack: $modpackId) {
-              fileName
-              id
-              releaseType
-            }
             dependencies {
               modId
               versionRange
