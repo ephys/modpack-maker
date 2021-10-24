@@ -1,0 +1,10 @@
+mutation CreateNewModpackVersion($input: CreateNewModpackVersionInput!) {
+  createNewModpackVersion(input: $input) {
+    error {
+      code
+    }
+    node {
+      versionIndex
+    }
+  }
+}

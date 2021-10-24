@@ -1,10 +1,10 @@
 import { HelpOutlined } from '@mui/icons-material';
-import { CircularProgress, List, ListItem } from '@mui/material';
+import { Button, CircularProgress, List, ListItem } from '@mui/material';
 import classnames from 'classnames';
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useParams } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import {
   getMostCompatibleMcVersion,
   isMcVersionLikelyCompatibleWith,
@@ -14,7 +14,7 @@ import type { TModpackViewQuery } from '../api/graphql.generated';
 import {
   useModpackViewQuery,
   useRemoveJarFromModpackMutation, useReplaceModpackJarMutation, useSetModpackJarIsLibraryMutation,
-  DependencyType,
+  DependencyType, useCreateNewModpackVersionMutation,
 } from '../api/graphql.generated';
 import type { TUseQueryOutput } from '../api/urql';
 import { isLoadedUrql } from '../api/urql';
@@ -22,7 +22,10 @@ import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
 import DropZone, { getAsStringAsync } from '../components/dropzone';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
+import { uriTag } from '../utils/url-utils';
 import css from './modpack.module.scss';
+
+// TODO: button "compare with previous version" which displays the list of changelogs
 
 // TODO: if a new version is available but is less stable, display "BETA AVAILABLE" or "ALPHA AVAILABLE" in the "up to date" field
 //  else display "STABLE UPDATE AVAILABLE"
@@ -156,6 +159,22 @@ function ModpackView(props: Props) {
     return output;
   }, [modpack]);
 
+  const history = useHistory();
+  const callCreateNewVersion = useCreateNewModpackVersionMutation();
+  const finalizeVersion = useCallback(async () => {
+
+    // TODO: error handling
+    const res = await callCreateNewVersion({
+      fromModpackVersion: modpackVersion.id,
+      // TODO: popup for new version? or date
+      name: 'test',
+    });
+
+    const newVersion = res.createNewModpackVersion.node;
+
+    history.push(uriTag`/modpacks/${modpack.id}/${newVersion.versionIndex}`);
+  }, []);
+
   return (
     <>
       <DropZone onDrop={onDrop} itemFilter={urlItemFilter} className={css.dropZone}>
@@ -164,8 +183,10 @@ function ModpackView(props: Props) {
           <p>Minecraft {modpack.minecraftVersion}</p>
           <p>{modpack.modLoader}</p>
           <AnyLink to={modpackVersion.downloadUrl}>Download Modpack</AnyLink>
+          {' '}
           <AnyLink to={{ search: 'mod-library' }}>Add Mod</AnyLink>
-          <button>Edit modpack details</button>
+          <Button type="button">Edit modpack details</Button>
+          <Button type="button" onClick={finalizeVersion}>Finalize & Create new version</Button>
 
           <h2>Mod List ({modpackVersion.installedJars.length} mods)</h2>
           <List>

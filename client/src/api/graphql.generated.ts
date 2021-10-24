@@ -26,6 +26,27 @@ export type TCreateModpackPayload = {
   node?: Maybe<TModpack>,
 };
 
+export type TCreateNewModpackVersionError = {
+  __typename: 'CreateNewModpackVersionError',
+  code: CreateNewModpackVersionErrorCodes,
+  message: Scalars['String'],
+};
+
+export enum CreateNewModpackVersionErrorCodes {
+  ModpackNotFound = 'MODPACK_NOT_FOUND',
+}
+
+export type TCreateNewModpackVersionInput = {
+  fromModpackVersion: Scalars['ID'],
+  name: Scalars['String'],
+};
+
+export type TCreateNewModpackVersionPayload = {
+  __typename: 'CreateNewModpackVersionPayload',
+  error?: Maybe<TCreateNewModpackVersionError>,
+  node?: Maybe<TModpackVersion>,
+};
+
 export enum DependencyType {
   Breaks = 'breaks',
   Conflicts = 'conflicts',
@@ -109,11 +130,13 @@ export type TModpackVersion = {
   id: Scalars['ID'],
   installedJars: TModpackMod[],
   name: Scalars['String'],
+  versionIndex: Scalars['Int'],
 };
 
 export type TMutation = {
   __typename: 'Mutation',
   createModpack: TCreateModpackPayload,
+  createNewModpackVersion: TCreateNewModpackVersionPayload,
   removeJarFromModpack: TRemoveJarFromModpackPayload,
   replaceModpackJar: TReplaceModpackJarPayload,
   setModpackJarIsLibrary: TSetModpackJarIsLibraryPayload,
@@ -121,6 +144,10 @@ export type TMutation = {
 
 export type TMutationCreateModpackArgs = {
   input: TCreateModpackInput,
+};
+
+export type TMutationCreateNewModpackVersionArgs = {
+  input: TCreateNewModpackVersionInput,
 };
 
 export type TMutationRemoveJarFromModpackArgs = {
@@ -324,6 +351,12 @@ export type TCreateModpackMutationVariables = Exact<{
 
 export type TCreateModpackMutation = { __typename: 'Mutation', createModpack: { __typename: 'CreateModpackPayload', node?: { __typename: 'Modpack', id: string, lastVersionIndex: number } | null | undefined } };
 
+export type TCreateNewModpackVersionMutationVariables = Exact<{
+  input: TCreateNewModpackVersionInput,
+}>;
+
+export type TCreateNewModpackVersionMutation = { __typename: 'Mutation', createNewModpackVersion: { __typename: 'CreateNewModpackVersionPayload', error?: { __typename: 'CreateNewModpackVersionError', code: CreateNewModpackVersionErrorCodes } | null | undefined, node?: { __typename: 'ModpackVersion', versionIndex: number } | null | undefined } };
+
 export type TRemoveJarFromModpackMutationVariables = Exact<{
   input: TRemoveJarFromModpackInput,
 }>;
@@ -366,6 +399,23 @@ export const CreateModpackDocument = /* #__PURE__ */ gql`
 
 export function useCreateModpackMutation() {
   return Urql.useMutation<TCreateModpackMutation, TCreateModpackMutationVariables>(CreateModpackDocument);
+}
+
+export const CreateNewModpackVersionDocument = /* #__PURE__ */ gql`
+    mutation CreateNewModpackVersion($input: CreateNewModpackVersionInput!) {
+  createNewModpackVersion(input: $input) {
+    error {
+      code
+    }
+    node {
+      versionIndex
+    }
+  }
+}
+    `;
+
+export function useCreateNewModpackVersionMutation() {
+  return Urql.useMutation<TCreateNewModpackVersionMutation, TCreateNewModpackVersionMutationVariables>(CreateNewModpackVersionDocument);
 }
 
 export const RemoveJarFromModpackDocument = /* #__PURE__ */ gql`
