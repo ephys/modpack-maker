@@ -4,7 +4,7 @@ import * as fsCb from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as nodeUtils from 'util';
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import * as rimrafCb from 'rimraf';
 import { QueryTypes, Sequelize } from 'sequelize';
 import {
@@ -37,7 +37,7 @@ type TCreateModpackInput = {
 export class ModpackService {
   constructor(
     @Inject(MODPACK_REPOSITORY) private readonly modpackRepository: typeof Modpack,
-    private readonly modService: ModService,
+    @Inject(forwardRef(() => ModService)) private readonly modService: ModService,
     @InjectSequelize private readonly sequelize: Sequelize,
   ) {
   }

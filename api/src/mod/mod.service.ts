@@ -3,12 +3,21 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Injectable } from '@nestjs/common';
 import * as DataLoader from 'dataloader';
+import { uniq } from 'lodash';
 import type { Response } from 'node-fetch';
 import fetch from 'node-fetch';
+import type { WhereOptions } from 'sequelize';
+import { QueryTypes } from 'sequelize';
+import { Sequelize } from 'sequelize-typescript';
+import * as minecraftVersions from '../../../common/minecraft-versions.json';
 import type { ModLoader } from '../../../common/modloaders';
 import type { TCurseProject } from '../curseforge.api';
 import { getCurseForgeProjects } from '../curseforge.api';
-import { isIn } from '../utils/sequelize-utils';
+import { InjectSequelize } from '../database/database.providers';
+import { getPreferredMinecraftVersions } from '../modpack/modpack.service';
+import { overlaps } from '../utils/generic-utils';
+import { minecraftVersionComparator } from '../utils/minecraft-utils';
+import { and, buildWhereComponent, isIn, or, overlap } from '../utils/sequelize-utils';
 import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
 
@@ -16,6 +25,9 @@ const jarCacheDir = path.join(__dirname, '..', '.jar-files');
 
 @Injectable()
 class ModService {
+
+  constructor(@InjectSequelize private readonly sequelize: Sequelize) {
+  }
 
   #getModsInJarDataLoader = new DataLoader<number, ModVersion[]>(async keys => {
     const versions = await ModVersion.findAll({
@@ -123,6 +135,121 @@ class ModService {
     await fs.rename(`${cachedFilePath}.part`, cachedFilePath);
 
     return cachedFilePath;
+  }
+
+  #findJarUpdatesDl = new DataLoader<
+    [modId: string, projectId: number, modLoader: ModLoader, minecraftVersion: string], ModJar | null
+  >(async keys => {
+    const minecraftVersionFilters: Map<string, string[]> = new Map();
+    const queries: WhereOptions[] = [];
+
+    for (const key of keys) {
+      const acceptedMinecraftVersions = minecraftVersionFilters.get(key[3])
+        ?? getPreferredMinecraftVersions(key[3], minecraftVersions);
+      minecraftVersionFilters.set(key[3], acceptedMinecraftVersions);
+
+      queries.push(and({
+        '$mv.modId$': key[0],
+        '$j.projectId$': key[1],
+        '$mv.supportedModLoader$': key[2],
+      }, Sequelize.where(
+        Sequelize.cast(Sequelize.col('mv.supportedMinecraftVersions'), 'text[]'),
+        // @ts-expect-error
+        overlap(...acceptedMinecraftVersions),
+      )));
+    }
+
+    const allAcceptedMinecraftVersions: string[] = uniq(Array.from(minecraftVersionFilters.values()).flat())
+      .sort(minecraftVersionComparator('DESC'));
+
+    const out = await this.sequelize.query(`
+SELECT rank() OVER (
+  PARTITION BY mv."modId", j."projectId", mv."supportedModLoader",
+    ${Array.from(minecraftVersionFilters.values()).map(minecraftVersionFilter => {
+      const versionArray = minecraftVersionFilter.map(v => `'${v}'`).join(',');
+
+      return `mv."supportedMinecraftVersions"::text[] && ARRAY [${versionArray}]`;
+    }).join(', ')}
+  ORDER BY 
+    ${allAcceptedMinecraftVersions.map((_version, index) => {
+      const versions: string[] = [];
+      for (let i = 0; i <= index; i++) {
+        versions.push(allAcceptedMinecraftVersions[i]);
+      }
+
+      const versionStr = versions.map(v => `'${v}'`).join(',');
+
+      // We generate something that looks like: (modpack is 1.16.5)
+      //   ORDER BY v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5'] DESC,
+      //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4'] DESC,
+      //     v."supportedMinecraftVersions"::text[] && ARRAY ['1.16.5', '1.16.4', '1.16.3'] DESC,
+      // We have to repeat previous version in the overlap, otherwise
+      //  a version that that supports 1.16.5 + 1.16.3 but was released *before*
+      //  a version that only supports 1.16.5 would be selected.
+
+      return `mv."supportedMinecraftVersions"::text[] && ARRAY[${versionStr}] DESC`;
+    }).join(', ')},
+    j."releaseType" = 'STABLE' DESC,
+    j."releaseType" = 'BETA' DESC,
+    j."releaseType" = 'ALPHA' DESC,
+    j."releaseDate" DESC
+) rank, mv."modId",  mv."supportedModLoader", mv."supportedMinecraftVersions", j.*
+FROM "ModJars" j
+  INNER JOIN "ModVersions" mv ON mv."jarId" = j."internalId"
+WHERE ${buildWhereComponent(or(...queries), ModJar, 'j')}
+ORDER BY rank, mv."modId", j."projectId", mv."supportedModLoader", mv."supportedMinecraftVersions"
+LIMIT ${keys.length};
+    `, {
+      type: QueryTypes.SELECT,
+      mapToModel: true,
+      model: ModJar,
+    });
+
+    return keys.map(key => {
+      const [modId, projectId, modLoader, minecraftVersion] = key;
+      const acceptedMinecraftVersions = minecraftVersionFilters.get(minecraftVersion)!;
+
+      return out.find(jar => {
+        if (jar.get('rank') !== '1') {
+          return false;
+        }
+
+        if (jar.get('modId') !== modId) {
+          return false;
+        }
+
+        if (jar.projectId !== projectId) {
+          return false;
+        }
+
+        if (jar.get('supportedModLoader') !== modLoader) {
+          return false;
+        }
+
+        if (!overlaps(jar.get('supportedMinecraftVersions') as string[], acceptedMinecraftVersions)) {
+          return false;
+        }
+
+        return true;
+      }) ?? null;
+    });
+  });
+
+  async findJarUpdates(jar: ModJar, minecraftVersion: string, modLoader: ModLoader): Promise<ModJar[]> {
+    // TODO: DataLoader
+    const mods = await this.getModsInJar(jar, { modLoader });
+
+    // foreach modId:
+    // !TODO: it's weird that we find null versions
+    const result: ModJar[] = (await Promise.all(
+      mods.map(async mod => this.#findJarUpdatesDl.load([mod.modId, jar.projectId, modLoader, minecraftVersion])),
+    )).filter(val => val != null);
+
+    if (result.length === 1 && result[0].internalId === jar.internalId) {
+      return [];
+    }
+
+    return result;
   }
 }
 

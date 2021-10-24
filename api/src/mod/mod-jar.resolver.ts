@@ -44,4 +44,26 @@ export class ModJarResolver {
     // TODO: configurable domain
     return `http://localhost:8080/jars/${jar.externalId}/download`;
   }
+
+  // TODO: move to Jar
+  //  check each modId has an update & which jar(s) to install
+  //  only search in same project
+
+  @ResolveField('updatedVersion', () => [ModJar], {
+    nullable: false,
+    description: `
+      returns the list of jars from the same project that are considered updated versions to this jar.
+    `,
+  })
+  async checkModHasUpdate(
+    @Parent() jar: ModJar,
+    @Args('matchingModpack', { type: () => ID }) matchingModpack: string,
+  ): Promise<ModJar[]> {
+    const modpack = await this.modpackService.getModpackByEid(matchingModpack);
+    if (modpack == null) {
+      return [];
+    }
+
+    return this.modService.findJarUpdates(jar, modpack.minecraftVersion, modpack.modLoader);
+  }
 }
