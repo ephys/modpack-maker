@@ -1,14 +1,17 @@
 import * as assert from 'assert';
-import { Sequelize } from 'sequelize';
+import { QueryTypes, Sequelize } from 'sequelize';
 import { InjectSequelize } from '../database/database.providers';
 import type { ModJar } from '../mod/mod-jar.entity';
 import type { Modpack } from '../modpack/modpack.entity';
+import { ModpackService } from '../modpack/modpack.service';
+import { generateId } from '../utils/generic-utils';
 import ModpackMod from './modpack-mod.entity';
 import { ModpackVersion } from './modpack-version.entity';
 
 export class ModpackVersionService {
   constructor(
     @InjectSequelize private readonly sequelize: Sequelize,
+    private readonly modpackService: ModpackService,
   ) {}
 
   async getModpackVersionByEid(externalId: string): Promise<ModpackVersion | null> {
@@ -43,6 +46,49 @@ export class ModpackVersionService {
         association: ModpackMod.associations.jar,
       }],
       order: [['createdAt', 'ASC']],
+    });
+  }
+
+  async getModpackVersionModpack(modpackVersion: ModpackVersion): Promise<Modpack> {
+    const modpack = await this.modpackService.getModpackByIid(modpackVersion.modpackId);
+    assert(modpack != null);
+
+    return modpack;
+  }
+
+  async createNewVersion(oldVersion: ModpackVersion, name: string): Promise<ModpackVersion> {
+    return this.sequelize.transaction(async () => {
+      const modpack = await this.getModpackVersionModpack(oldVersion);
+
+      modpack.lastVersionIndex += 1;
+
+      const [newVersion] = await Promise.all([
+        ModpackVersion.create({
+          externalId: generateId(),
+          modpackId: modpack.internalId,
+          versionIndex: modpack.lastVersionIndex,
+          name,
+        }),
+        modpack.save(),
+      ]);
+
+      // language=PostgreSQL
+      await this.sequelize.query(`
+        INSERT INTO "ModpackMods" ("modpackVersionId", "jarId", "createdAt", "updatedAt", "isLibraryDependency") 
+          (
+            SELECT :newVersionId, "jarId", "createdAt", now(), "isLibraryDependency" 
+            FROM "ModpackMods"
+            WHERE "modpackVersionId" = :oldVersionId
+          )
+      `, {
+        type: QueryTypes.INSERT,
+        replacements: {
+          newVersionId: newVersion.internalId,
+          oldVersionId: oldVersion.internalId,
+        },
+      });
+
+      return newVersion;
     });
   }
 

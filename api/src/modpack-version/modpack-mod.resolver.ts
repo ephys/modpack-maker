@@ -8,7 +8,11 @@ class ModpackModResolver {
   @ResolveField('jar', () => ModJar)
   async getModpackModJar(@Parent() modpack: ModpackMod) {
     // TODO: DataLoader
-    return modpack.jar || modpack.$get('jar');
+    if (!modpack.jar) {
+      throw new Error('DataLoader NYI');
+    }
+
+    return modpack.jar;
   }
 }
 

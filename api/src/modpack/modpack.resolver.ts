@@ -14,6 +14,7 @@ import { ModLoader } from '../../../common/modloaders';
 import { ReleaseType } from '../mod/mod-jar.entity';
 import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { ModpackVersionService } from '../modpack-version/modpack-version.service';
+import { Trim } from '../utils/class-validators';
 import { Payload } from '../utils/graphql-payload';
 import { Modpack } from './modpack.entity';
 import { ModpackService } from './modpack.service';
@@ -35,6 +36,7 @@ const CreateModpackPayload = Payload('CreateModpack', Modpack, CreateModpackErro
 class CreateModpackInput {
   @MinLength(1)
   @MaxLength(50)
+  @Trim()
   @Field()
   name: string;
 
@@ -59,7 +61,7 @@ export class ModpackResolver {
     nullable: true,
     name: 'modpack',
   })
-  async getModpack(@Args('id', { type: () => ID }) externalId: string) {
+  async getModpack(@Args('id', { type: () => ID }) externalId: string): Promise<Modpack | null> {
     return this.modpackService.getModpackByEid(externalId);
   }
 

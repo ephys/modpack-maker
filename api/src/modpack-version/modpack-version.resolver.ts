@@ -2,6 +2,7 @@ import { Args, Field, ID, InputType, Mutation, Parent, ResolveField, Resolver } 
 import { IsBoolean, MinLength } from 'class-validator';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
+import { Trim } from '../utils/class-validators';
 import { Payload } from '../utils/graphql-payload';
 import ModpackMod from './modpack-mod.entity';
 import { ModpackVersion } from './modpack-version.entity';
@@ -66,20 +67,22 @@ enum ReplaceModpackJarErrorCodes {
 
 const ReplaceModpackJarPayload = Payload('ReplaceModpackJar', ModpackVersion, ReplaceModpackJarErrorCodes);
 
-// @InputType()
-// class AddModpackModInput {
-//   @Field(() => ID)
-//   modpackId: string;
-//
-//   @Field(() => [String])
-//   byUrl: string[];
-// }
+@InputType()
+class CreateNewModpackVersionInput {
+  @Field(() => ID)
+  fromModpackVersion: string;
 
-// enum AddModpackModErrorCodes {
-//   MODPACK_NOT_FOUND = 'MODPACK_NOT_FOUND',
-// }
+  @Field(() => String)
+  @MinLength(1)
+  @Trim()
+  name: string;
+}
 
-// const AddModpackModPayload = Payload('AddModpackMod', Modpack, AddModpackModErrorCodes);
+enum CreateNewModpackVersionErrorCodes {
+  MODPACK_NOT_FOUND = 'MODPACK_NOT_FOUND',
+}
+
+const CreateNewModpackVersionPayload = Payload('CreateNewModpackVersion', ModpackVersion, CreateNewModpackVersionErrorCodes);
 
 @Resolver(() => ModpackVersion)
 export class ModpackVersionResolver {
@@ -88,6 +91,21 @@ export class ModpackVersionResolver {
     private readonly modpackVersionService: ModpackVersionService,
     private readonly modService: ModService,
   ) {
+  }
+
+  @Mutation(() => CreateNewModpackVersionPayload)
+  async createNewModpackVersion(@Args('input') input: CreateNewModpackVersionInput) {
+    const modpackVersion = await this.modpackVersionService.getModpackVersionByEid(input.fromModpackVersion);
+    if (modpackVersion == null) {
+      return new CreateNewModpackVersionPayload().withError(
+        CreateNewModpackVersionErrorCodes.MODPACK_NOT_FOUND,
+        `modpack version ${input.fromModpackVersion} not found`,
+      );
+    }
+
+    const newVersion = await this.modpackVersionService.createNewVersion(modpackVersion, input.name);
+
+    return new CreateNewModpackVersionPayload().withNode(newVersion);
   }
 
   @Mutation(() => SetModpackJarIsLibraryPayload)

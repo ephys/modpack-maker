@@ -261,6 +261,7 @@ export function buildOrder(orders, tableAlias: string, model?: ModelType<any>) {
       const attributeToCol = model ? attributeNameToColumnIfExists(model, column) : column;
       const columnName = attributeToCol ?? column;
 
+      // !TODO: if starts with $, attributeNameToColumnIfExists should throw
       // if attributeName is not part of model, might be a custom column
       if (attributeToCol == null) {
         return `"${columnName}" ${dir}`;
@@ -324,7 +325,7 @@ export function not(condition) {
   return { [Op.not]: condition };
 }
 
-export function isIn(val: any[] | Set<any>) {
+export function isIn(val: readonly any[] | Set<any>) {
   if (!Array.isArray(val)) {
     val = Array.from(val);
   }

@@ -8,19 +8,33 @@ import fetch from 'node-fetch';
 import type { ModLoader } from '../../../common/modloaders';
 import type { TCurseProject } from '../curseforge.api';
 import { getCurseForgeProjects } from '../curseforge.api';
+import { isIn } from '../utils/sequelize-utils';
 import { ModJar } from './mod-jar.entity';
-import type { ModVersion } from './mod-version.entity';
+import { ModVersion } from './mod-version.entity';
 
 const jarCacheDir = path.join(__dirname, '..', '.jar-files');
 
 @Injectable()
 class ModService {
 
+  #getModsInJarDataLoader = new DataLoader<number, ModVersion[]>(async keys => {
+    const versions = await ModVersion.findAll({
+      where: {
+        jarId: isIn(keys),
+      },
+    });
+
+    return keys.map(key => {
+      return versions.filter(version => {
+        return version.jarId === key;
+      });
+    });
+  });
+
   async getModsInJar(jar: ModJar, filters?: { modLoader?: ModLoader }): Promise<ModVersion[]> {
     const modLoader = filters?.modLoader;
 
-    // TODO: use DataLoader
-    const mods: ModVersion[] = await jar.$get('mods');
+    const mods: ModVersion[] = await this.#getModsInJarDataLoader.load(jar.internalId);
 
     if (!modLoader) {
       return mods;

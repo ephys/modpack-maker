@@ -1,10 +1,10 @@
-import { Field as GraphQl, ObjectType as GraphQlObject, ID } from '@nestjs/graphql';
+import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
 import { Modpack } from '../modpack/modpack.entity';
 import ModpackMod from './modpack-mod.entity';
 
 type TModpackVersionCreationAttributes = {
-  externalId?: string,
+  externalId: string,
   createdAt?: Date,
   versionIndex: number,
   name: string,
@@ -30,7 +30,9 @@ export class ModpackVersion extends DB.Model<ModpackVersion, TModpackVersionCrea
   @DB.Column({})
   createdAt: Date;
 
+  @GraphQl(() => Int, { name: 'versionIndex' })
   @DB.AllowNull(false)
+  @DB.Unique('modpackId-versionIndex')
   @DB.Column(DB.DataType.INTEGER)
   versionIndex: number;
 
@@ -47,6 +49,7 @@ export class ModpackVersion extends DB.Model<ModpackVersion, TModpackVersionCrea
 
   @DB.ForeignKey(() => Modpack)
   @DB.AllowNull(false)
+  @DB.Unique('modpackId-versionIndex')
   @DB.Column(DB.DataType.INTEGER)
   modpackId: number;
 }

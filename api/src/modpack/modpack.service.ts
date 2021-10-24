@@ -19,6 +19,7 @@ import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
 import ModpackMod from '../modpack-version/modpack-mod.entity';
 import { ModpackVersion } from '../modpack-version/modpack-version.entity';
+import { getBySinglePropertyDl } from '../utils/dataloader';
 import { generateId } from '../utils/generic-utils';
 import { minecraftVersionComparator } from '../utils/minecraft-utils';
 import { MODPACK_REPOSITORY } from './modpack.constants';
@@ -53,6 +54,7 @@ export class ModpackService {
       });
 
       await ModpackVersion.create({
+        externalId: generateId(),
         modpackId: modpack.internalId,
         name: 'Initial version',
         versionIndex: 0,
@@ -60,13 +62,10 @@ export class ModpackService {
 
       return modpack;
     });
-
   }
 
-  async getModpackByEid(externalId: string) {
-    // TODO: use DataLoader
-    return Modpack.findOne({ where: { externalId } });
-  }
+  getModpackByEid = getBySinglePropertyDl(Modpack, 'externalId');
+  getModpackByIid = getBySinglePropertyDl(Modpack, 'internalId');
 
   async addCurseProjectToModpack(modpack: Modpack, curseProjectId: number): Promise<Modpack> {
     const validMcVersions = getPreferredMinecraftVersions(modpack.minecraftVersion, minecraftVersions);

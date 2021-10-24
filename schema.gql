@@ -12,6 +12,25 @@ type CreateModpackPayload {
   node: Modpack
 }
 
+type CreateNewModpackVersionError {
+  code: CreateNewModpackVersionErrorCodes!
+  message: String!
+}
+
+enum CreateNewModpackVersionErrorCodes {
+  MODPACK_NOT_FOUND
+}
+
+input CreateNewModpackVersionInput {
+  fromModpackVersion: ID!
+  name: String!
+}
+
+type CreateNewModpackVersionPayload {
+  error: CreateNewModpackVersionError
+  node: ModpackVersion
+}
+
 enum DependencyType {
   breaks
   conflicts
@@ -76,10 +95,12 @@ type ModpackVersion {
   id: ID!
   installedJars: [ModpackMod!]!
   name: String!
+  versionIndex: Int!
 }
 
 type Mutation {
   createModpack(input: CreateModpackInput!): CreateModpackPayload!
+  createNewModpackVersion(input: CreateNewModpackVersionInput!): CreateNewModpackVersionPayload!
   removeJarFromModpack(input: RemoveJarFromModpackInput!): RemoveJarFromModpackPayload!
   replaceModpackJar(input: ReplaceModpackJarInput!): ReplaceModpackJarPayload!
   setModpackJarIsLibrary(input: SetModpackJarIsLibraryInput!): SetModpackJarIsLibraryPayload!
