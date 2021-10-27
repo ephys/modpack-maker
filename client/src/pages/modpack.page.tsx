@@ -2,10 +2,11 @@ import { HelpOutlined } from '@mui/icons-material';
 import { Button, CircularProgress, List, ListItem } from '@mui/material';
 import classnames from 'classnames';
 import type { ComponentProps } from 'react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import {
+  getFirstSemverMajorVersion,
   getMostCompatibleMcVersion,
   isMcVersionLikelyCompatibleWith,
   parseMinecraftVersionThrows,
@@ -19,11 +20,11 @@ import {
   useReplaceModpackJarMutation,
   useSetModpackJarIsLibraryMutation,
 } from '../api/graphql.generated';
-import type { TUseQueryOutput } from '../api/urql';
 import { isLoadedUrql } from '../api/urql';
 import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
 import DropZone, { getAsStringAsync } from '../components/dropzone';
+import { ProjectSearchModal } from '../components/project-search';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
 import { uriTag } from '../utils/url-utils';
 import css from './modpack.module.scss';
@@ -63,10 +64,6 @@ type TModpackRouteParams = {
 export default function ModpackRoute() {
   const { modpackId, versionIndex: versionIndexStr } = useParams<TModpackRouteParams>();
 
-  if (modpackId == null || versionIndexStr == null) {
-    return null;
-  }
-
   const versionIndex = Number(versionIndexStr);
 
   useEffect(() => {
@@ -83,6 +80,14 @@ export default function ModpackRoute() {
       versionIndex,
     },
   });
+
+  const location = useLocation();
+  const popupOpen = new URLSearchParams(location.search).get('mod-library') != null;
+  const history = useHistory();
+
+  if (modpackId == null || versionIndexStr == null) {
+    return null;
+  }
 
   if (!isLoadedUrql(urql)) {
     return <CircularProgress />;
@@ -103,7 +108,20 @@ export default function ModpackRoute() {
       <Helmet>
         <title>Modpack</title>
       </Helmet>
-      <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
+      {!popupOpen && (
+        <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
+      )}
+
+      {popupOpen && (
+        <ProjectSearchModal
+          // TODO: onClose should goBack until the search is closed
+          onClose={history.goBack}
+          baseFilters={[
+            `modLoader:${modpack.modLoader}`,
+            `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -424,10 +442,10 @@ function ModListItem(props: TModListItemProps) {
           {usedBy.length > 0 && (
             <><br/>Required by <span className={css.usedByList}>
               {usedBy.map(modId => (
-                <>
+                <Fragment key={modId}>
                   <a href={`#${modId}`}>{modId}</a>
                   {' '}
-                </>
+                </Fragment>
               ))}
             </span></>
           )}
@@ -454,7 +472,7 @@ function ModListItem(props: TModListItemProps) {
             </Tag>
           )}
           {missingDependencies.map(dependency => (
-            <Tag type="error" title={`This mod depends on ${dependency}, but that mod is missing from your modpack.`}>
+            <Tag key={dependency} type="error" title={`This mod depends on ${dependency}, but that mod is missing from your modpack.`}>
               Missing dependency {dependency}
               <button>Add</button>
               <HelpOutlined />

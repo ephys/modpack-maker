@@ -66,6 +66,15 @@ export function parseMinecraftVersionThrows(item: string): TMinecraftVersion {
   return val;
 }
 
+export function getFirstSemverMajorVersion(versionStr: string): string {
+  const version = parseMinecraftVersionThrows(versionStr);
+
+  return serializeMinecraftVersion({
+    ...version,
+    minor: 0,
+  });
+}
+
 export function getMostCompatibleMcVersion(requestedStr: string, availableStr: string[]): string {
   const requested = parseMinecraftVersionThrows(requestedStr);
 

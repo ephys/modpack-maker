@@ -1,0 +1,13 @@
+query ProjectSearch($query: String!, $offset: Int!, $limit: Int!, $order: ProjectSearchSortOrder!, $orderDir: ProjectSearchSortOrderDirection!) {
+  projects(query: $query, offset: $offset, limit: $limit, order: $order, orderDir: $orderDir) {
+    totalCount
+    nodes {
+      id
+      iconUrl
+      name
+      description
+      homepage
+      source
+    }
+  }
+}

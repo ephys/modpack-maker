@@ -176,6 +176,7 @@ export type TProject = {
   description: Scalars['String'],
   homepage: Scalars['String'],
   iconUrl: Scalars['String'],
+  id: Scalars['String'],
   jars: TModJar[],
   name: Scalars['String'],
   source: ProjectSource,
@@ -183,8 +184,8 @@ export type TProject = {
 
 export type TProjectConnection = {
   __typename: 'ProjectConnection',
-  edges?: Maybe<TProjectEdge[]>,
-  nodes?: Maybe<TProject[]>,
+  edges: TProjectEdge[],
+  nodes: TProject[],
   pageInfo: TPageInfo,
   totalCount: Scalars['Int'],
 };
@@ -265,6 +266,8 @@ export type TQueryProjectsArgs = {
   before?: Maybe<Scalars['String']>,
   first?: Maybe<Scalars['Int']>,
   last?: Maybe<Scalars['Int']>,
+  limit?: Maybe<Scalars['Int']>,
+  offset?: Maybe<Scalars['Int']>,
   order?: Maybe<ProjectSearchSortOrder>,
   orderDir?: Maybe<ProjectSearchSortOrderDirection>,
   query?: Maybe<Scalars['String']>,
@@ -376,6 +379,16 @@ export type TSetModpackJarIsLibraryMutationVariables = Exact<{
 
 export type TSetModpackJarIsLibraryMutation = { __typename: 'Mutation', setModpackJarIsLibrary: { __typename: 'SetModpackJarIsLibraryPayload', node?: { __typename: 'ModpackMod', isLibraryDependency: boolean } | null | undefined, error?: { __typename: 'SetModpackJarIsLibraryError', code: SetModpackJarIsLibraryErrorCodes } | null | undefined } };
 
+export type TProjectSearchQueryVariables = Exact<{
+  query: Scalars['String'],
+  offset: Scalars['Int'],
+  limit: Scalars['Int'],
+  order: ProjectSearchSortOrder,
+  orderDir: ProjectSearchSortOrderDirection,
+}>;
+
+export type TProjectSearchQuery = { __typename: 'Query', projects: { __typename: 'ProjectConnection', totalCount: number, nodes: Array<{ __typename: 'Project', id: string, iconUrl: string, name: string, description: string, homepage: string, source: ProjectSource }> } };
+
 export type TModpackViewQueryVariables = Exact<{
   modpackId: Scalars['ID'],
   versionIndex: Scalars['Int'],
@@ -468,6 +481,32 @@ export const SetModpackJarIsLibraryDocument = /* #__PURE__ */ gql`
 
 export function useSetModpackJarIsLibraryMutation() {
   return Urql.useMutation<TSetModpackJarIsLibraryMutation, TSetModpackJarIsLibraryMutationVariables>(SetModpackJarIsLibraryDocument);
+}
+
+export const ProjectSearchDocument = /* #__PURE__ */ gql`
+    query ProjectSearch($query: String!, $offset: Int!, $limit: Int!, $order: ProjectSearchSortOrder!, $orderDir: ProjectSearchSortOrderDirection!) {
+  projects(
+    query: $query
+    offset: $offset
+    limit: $limit
+    order: $order
+    orderDir: $orderDir
+  ) {
+    totalCount
+    nodes {
+      id
+      iconUrl
+      name
+      description
+      homepage
+      source
+    }
+  }
+}
+    `;
+
+export function useProjectSearchQuery(options: Omit<Urql.UseQueryArgs<TProjectSearchQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<TProjectSearchQuery>({ query: ProjectSearchDocument, ...options });
 }
 
 export const ModpackViewDocument = /* #__PURE__ */ gql`
