@@ -25,6 +25,7 @@ export type TProjectCreationAttributes = {
 @DB.Table
 @ObjectType()
 class Project extends DB.Model<Project, TProjectCreationAttributes> {
+  @Field(() => String, { name: 'id' })
   @DB.AllowNull(false)
   @DB.PrimaryKey
   @DB.AutoIncrement

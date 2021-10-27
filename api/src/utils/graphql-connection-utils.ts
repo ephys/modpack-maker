@@ -32,28 +32,45 @@ interface IConnectionType<T> {
   pageInfo: MaybePromise<PageInfo>;
 }
 
-type IPagination = {
+type ICursorPagination = {
   first?: number | null,
   last?: number | null,
   before?: string | null,
   after?: string | null,
 };
 
-export type ICursorPagination = {
+export type INormalizedCursorPagination = {
   first: number | null,
   last: number | null,
   before: object | null,
   after: object | null,
 };
 
-export function normalizeRelayPagination(pagination: IPagination, maxReturnCount: number = 20): ICursorPagination {
-  const first = pagination.first ?? (pagination.last == null ? maxReturnCount : null);
+export function isCursorPagination(arg: any): arg is ICursorPagination {
+  return 'first' in arg || 'last' in arg || 'before' in arg || 'after' in arg;
+}
 
+export function normalizePagination(pagination: ICursorPagination, maxReturnCount: number): INormalizedCursorPagination;
+export function normalizePagination(pagination: IOffsetPagination, maxReturnCount: number): INormalizedOffsetPagination;
+export function normalizePagination(
+  pagination: ICursorPagination | IOffsetPagination,
+  maxReturnCount: number,
+): INormalizedCursorPagination | INormalizedOffsetPagination {
+  if (isCursorPagination(pagination)) {
+    const first = pagination.first ?? (pagination.last == null ? maxReturnCount : null);
+
+    return {
+      before: pagination.before ? defaultDecodeCursor(pagination.before) : null,
+      after: pagination.after ? defaultDecodeCursor(pagination.after) : null,
+      last: pagination.last ? clamp(1, pagination.last, maxReturnCount) : null,
+      first: first ? clamp(1, first, maxReturnCount) : null,
+    };
+  }
+
+  // offset pagination
   return {
-    before: pagination.before ? defaultDecodeCursor(pagination.before) : null,
-    after: pagination.after ? defaultDecodeCursor(pagination.after) : null,
-    last: pagination.last ? clamp(1, pagination.last, maxReturnCount) : null,
-    first: first ? clamp(1, first, maxReturnCount) : null,
+    limit: pagination.limit ?? maxReturnCount,
+    offset: pagination.offset ?? 0,
   };
 }
 
@@ -69,10 +86,10 @@ function Connection<T>(classRef: Type<T>): Type<IConnectionType<T>> {
 
   @ObjectType(`${classRef.name}Connection`)
   abstract class PaginatedType implements IConnectionType<T> {
-    @Field(() => [EdgeType], { nullable: true })
+    @Field(() => [EdgeType])
     edges: EdgeType[];
 
-    @Field(() => [classRef], { nullable: true })
+    @Field(() => [classRef])
     nodes: T[];
 
     @Field(() => Int)
@@ -86,7 +103,7 @@ function Connection<T>(classRef: Type<T>): Type<IConnectionType<T>> {
 }
 
 @ArgsType()
-class PaginationArgs implements IPagination {
+class CursorPaginationArgs implements ICursorPagination {
   @Field(() => Int, { nullable: true })
   first: number | null;
 
@@ -98,6 +115,33 @@ class PaginationArgs implements IPagination {
 
   @Field(() => String, { nullable: true })
   before: string | null;
+
+  isEmpty() {
+    return this.first == null && this.last == null && this.after == null && this.before == null;
+  }
+}
+
+type INormalizedOffsetPagination = {
+  limit: number,
+  offset: number,
+};
+
+type IOffsetPagination = {
+  limit: number | null,
+  offset: number | null,
+};
+
+@ArgsType()
+class OffsetPaginationArgs implements IOffsetPagination {
+  @Field(() => Int, { nullable: true })
+  limit: number | null;
+
+  @Field(() => Int, { nullable: true })
+  offset: number | null;
+
+  isEmpty() {
+    return this.limit == null && this.offset == null;
+  }
 }
 
 type TOpts<T> = {
@@ -210,4 +254,13 @@ export const EMPTY_CONNECTION: IConnectionType<any> = Object.freeze({
   totalCount: 0,
 });
 
-export { Connection, IConnectionType, IEdgeType, PageInfo, IPagination, PaginationArgs };
+export {
+  Connection,
+  IConnectionType,
+  IEdgeType,
+  PageInfo,
+  ICursorPagination,
+  CursorPaginationArgs,
+  IOffsetPagination,
+  OffsetPaginationArgs,
+};

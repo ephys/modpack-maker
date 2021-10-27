@@ -309,6 +309,10 @@ export function iLike(val) {
   return { [Op.iLike]: val };
 }
 
+export function like(val) {
+  return { [Op.like]: val };
+}
+
 export function equals<T>(val: T): { [Op.eq]: T } {
   return { [Op.eq]: val };
 }

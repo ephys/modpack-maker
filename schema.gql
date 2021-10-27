@@ -123,14 +123,15 @@ type Project {
   description: String!
   homepage: String!
   iconUrl: String!
+  id: String!
   jars: [ModJar!]!
   name: String!
   source: ProjectSource!
 }
 
 type ProjectConnection {
-  edges: [ProjectEdge!]
-  nodes: [Project!]
+  edges: [ProjectEdge!]!
+  nodes: [Project!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
@@ -200,7 +201,7 @@ type Query {
      This can be used for eg. "sort by the date on which the projects last published an update compatible with this minecraft version".
   
   """
-  projects(after: String, before: String, first: Int, last: Int, order: ProjectSearchSortOrder = ProjectName, orderDir: ProjectSearchSortOrderDirection = ASC, query: String): ProjectConnection!
+  projects(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int, order: ProjectSearchSortOrder = ProjectName, orderDir: ProjectSearchSortOrderDirection = ASC, query: String = ""): ProjectConnection!
 }
 
 enum ReleaseType {

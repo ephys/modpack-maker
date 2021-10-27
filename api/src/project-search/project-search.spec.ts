@@ -328,4 +328,58 @@ describe('internalProcessSearchProjectsLucene', () => {
       ),
     );
   });
+
+  it('supports "NOT field:x"', () => {
+    expect(internalProcessSearchProjectsLucene(`NOT displayName:z`, LuceneConfig)).toEqual(
+      not(
+        Sequelize.where(
+          Sequelize.cast(Sequelize.col('displayName'), 'text'),
+          iLike(Sequelize.literal(`E'z'`)),
+        ),
+      ),
+    );
+  });
+
+  it('supports "field:(NOT x)"', () => {
+    expect(internalProcessSearchProjectsLucene(`displayName:(NOT z)`, LuceneConfig)).toEqual(
+      Sequelize.where(
+        Sequelize.cast(Sequelize.col('displayName'), 'text'),
+        { [Op.not]: iLike(Sequelize.literal(`E'z'`)) },
+      ),
+    );
+  });
+
+  it('supports "NOT (field:x OR field:y)"', () => {
+    expect(internalProcessSearchProjectsLucene(`NOT (displayName:x OR displayName:y)`, LuceneConfig)).toEqual(
+      not(
+        or(
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('displayName'), 'text'),
+            iLike(Sequelize.literal(`E'x'`)),
+          ),
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('displayName'), 'text'),
+            iLike(Sequelize.literal(`E'y'`)),
+          ),
+        ),
+      ),
+    );
+  });
+
+  it('supports "NOT (field:x OR field:y OR NOT(field:a AND field:b))"', () => {
+    expect(internalProcessSearchProjectsLucene(`NOT (displayName:x OR displayName:y OR NOT(displayName:a AND displayName:b))`, LuceneConfig)).toEqual(
+      not(
+        or(
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('displayName'), 'text'),
+            iLike(Sequelize.literal(`E'x'`)),
+          ),
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('displayName'), 'text'),
+            iLike(Sequelize.literal(`E'y'`)),
+          ),
+        ),
+      ),
+    );
+  });
 });

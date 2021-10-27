@@ -3,19 +3,29 @@ import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Inject } from '@nestjs/common';
 import * as Lucene from 'lucene';
-import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm, NodeField } from 'lucene';
+import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm, NodeField, Operator } from 'lucene';
 import type { AndOperator, OrOperator, WhereOperators, WhereOptions } from 'sequelize';
 import { Op, QueryTypes, Sequelize } from 'sequelize';
 import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '../../../common/minecraft-utils';
 import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import { EMPTY_ARRAY } from '../../../common/utils';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { ModJar } from '../mod/mod-jar.entity';
 import { Project } from '../mod/project.entity';
-import { EMPTY_ARRAY, lastItem } from '../utils/generic-utils';
-import type { IPagination } from '../utils/graphql-connection-utils';
-import { normalizeRelayPagination } from '../utils/graphql-connection-utils';
+import { lastItem } from '../utils/generic-utils';
+import type { ICursorPagination, IOffsetPagination } from '../utils/graphql-connection-utils';
+import { isCursorPagination, normalizePagination } from '../utils/graphql-connection-utils';
 import { getMinecraftVersionsInRange } from '../utils/minecraft-utils';
-import { andWhere, buildOrder, buildWhereComponent, contains, iLike, overlap } from '../utils/sequelize-utils';
+import {
+  and,
+  andWhere,
+  buildOrder,
+  buildWhereComponent,
+  contains,
+  iLike,
+  not, notEqual,
+  overlap,
+} from '../utils/sequelize-utils';
 
 export enum ProjectSearchSortOrderDirection {
   DESC = 'DESC',
@@ -83,12 +93,20 @@ class ProjectSearchService {
     private readonly sequelize: Sequelize,
   ) {}
 
-  async countProjects(userQuery: string | null): Promise<number> {
-    userQuery = userQuery ? userQuery.trim() : userQuery;
+  async countProjects(luceneQuery: string): Promise<number> {
+    luceneQuery = luceneQuery.trim();
 
     return Project.count({
       distinct: true,
-      where: userQuery ? internalProcessSearchProjectsLucene(userQuery, ProjectSearchLuceneConfig) : undefined,
+      where: and(
+        luceneQuery ? internalProcessSearchProjectsLucene(luceneQuery, ProjectSearchLuceneConfig) : true,
+        { sourceSlug: notEqual(null) },
+        Sequelize.where(
+          Sequelize.fn('char_length', Sequelize.col('name')),
+          Op.gt,
+          `0`,
+        ),
+      ),
       include: [{
         association: Project.associations.jars,
         required: true,
@@ -101,23 +119,26 @@ class ProjectSearchService {
   }
 
   async searchProjects(
-    luceneQuery: string | null,
-    strPagination: IPagination,
+    luceneQuery: string,
+    paginationArg: ICursorPagination | IOffsetPagination,
     order: ProjectSearchSortOrder,
     orderDir: ProjectSearchSortOrderDirection,
   ): Promise<FindByCursorResult<Project>> {
-    luceneQuery = luceneQuery ? luceneQuery.trim() : luceneQuery;
-    const pagination = normalizeRelayPagination(strPagination);
+    luceneQuery = luceneQuery.trim();
+    // @ts-expect-error to fix
+    const pagination = normalizePagination(paginationArg, 20);
 
     const orderKey = order === ProjectSearchSortOrder.ProjectName ? 'name'
       : order === ProjectSearchSortOrder.LastFileUpload ? 'lastFileUploadedAt'
       : 'firstFileUploadedAt';
 
+    // TODO: support detecting MCCreator mods
+
     return sequelizeFindByCursor({
       // @ts-expect-error
       model: Project,
       order: [[orderKey, orderDir]],
-      ...pagination,
+      ...(isCursorPagination(pagination) ? pagination : { first: pagination.limit }),
       findAll: async query => {
         // convert Lucene query to SQL query
         const luceneQueryWhere = !luceneQuery
@@ -136,13 +157,13 @@ class ProjectSearchService {
             FROM "Projects" p2
               INNER JOIN "ModJars" AS "jars" ON p2."internalId" = "jars"."projectId"
               INNER JOIN "ModVersions" AS "jars->mods" ON "jars"."internalId" = "jars->mods"."jarId"
-            WHERE p2."sourceSlug" IS NOT NULL
+            WHERE p2."sourceSlug" IS NOT NULL AND char_length(p2."name") > 0
               ${luceneQueryWhere ? andWhere(luceneQueryWhere, Project, 'p2') : ''}
             GROUP BY p2."internalId"
           ) p1
           WHERE ${buildWhereComponent(paginationWhere, Project, 'p1')}
           ORDER BY ${buildOrder(query.order, 'p1', Project)}
-          LIMIT ${query.limit};
+          LIMIT ${query.limit} ${!isCursorPagination(pagination) ? `OFFSET ${pagination.offset}` : ''};
         `, {
           type: QueryTypes.SELECT,
           mapToModel: true,
@@ -187,17 +208,24 @@ export function isNodeTerm(val: any): val is NodeTerm {
   return isNode(val) && 'term' in val;
 }
 
-function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig): WhereOptions {
+function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig, inverse = false): WhereOptions {
   if (isNode(node)) {
-    return processNamedLuceneNode(node, config);
+    return processNamedLuceneNode(node, config, inverse);
   }
 
   if (isLeftOnlyAst(node)) {
-    if (node.start) {
-      throw new Error('Do not know how to handle node.start');
+    if (node.start === 'NOT') {
+      return processLuceneAst({
+        ...node.left,
+        start: node.start,
+      }, config, !inverse);
     }
 
-    return processLuceneAst(node.left, config);
+    if (node.start) {
+      throw new Error(`Do not know how to handle node.start ${node.start}`);
+    }
+
+    return processLuceneAst(node.left, config, inverse);
   }
 
   const op = node.operator;
@@ -206,15 +234,15 @@ function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig): WhereOp
     case 'AND':
     case '<implicit>':
       return {
-        [Op.and]: [
-          processLuceneAst(node.left, config),
-          processLuceneAst(node.right, config),
+        [inverse ? Op.or : Op.and]: [
+          processLuceneAst(node.left, config, inverse),
+          processLuceneAst(node.right, config, inverse),
         ],
       };
 
     case 'OR':
       return {
-        [Op.or]: [
+        [inverse ? Op.and : Op.or]: [
           processLuceneAst(node.left, config),
           processLuceneAst(node.right, config),
         ],
@@ -223,17 +251,17 @@ function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig): WhereOp
     case 'NOT': // <implicit> NOT
     case 'AND NOT':
       return {
-        [Op.and]: [
-          processLuceneAst(node.left, config),
-          { [Op.not]: processLuceneAst(node.right, config) },
+        [inverse ? Op.or : Op.and]: [
+          processLuceneAst(node.left, config, inverse),
+          processLuceneAst(node.right, config, !inverse),
         ],
       };
 
     case 'OR NOT':
       return {
-        [Op.or]: [
-          processLuceneAst(node.left, config),
-          { [Op.not]: processLuceneAst(node.right, config) },
+        [inverse ? Op.and : Op.or]: [
+          processLuceneAst(node.left, config, inverse),
+          processLuceneAst(node.right, config, !inverse),
         ],
       };
 
@@ -242,7 +270,7 @@ function processLuceneAst(node: AST | Node, config: TLuceneToSqlConfig): WhereOp
   }
 }
 
-function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOptions {
+function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig, inverse: boolean): WhereOptions {
 
   if (node.field === '<implicit>') {
     node.field = config.implicitField;
@@ -254,10 +282,16 @@ function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOp
   const sqlField = config.fieldMap?.[node.field] ?? node.field;
   const castAs = config.cast?.[node.field] ?? 'text';
 
-  return Sequelize.where(
+  const out = Sequelize.where(
     Sequelize.cast(Sequelize.col(sqlField), castAs),
     processLuceneNodePart(node, node.field, config),
   );
+
+  if (inverse) {
+    return not(out);
+  }
+
+  return out;
 }
 
 interface OperatorNodeField extends NodeField {
@@ -269,6 +303,7 @@ interface OperatorNodeField extends NodeField {
 interface ParenthesizedNodeField extends NodeField {
   parenthesized: true;
   left: Node;
+  start?: Operator | undefined;
 }
 
 function isOperatorNode(val: any): val is OperatorNodeField {
@@ -308,6 +343,14 @@ function processLuceneNodePart(
   }
 
   if (isParenthesizedNode(node)) {
+    if (node.start === 'NOT') {
+      return not(processLuceneNodePart(node.left, fieldName, config));
+    }
+
+    if (node.start) {
+      throw new Error(`Do not know how to handle node.start ${node.start}`);
+    }
+
     return processLuceneNodePart(node.left, fieldName, config);
   }
 

@@ -1,6 +1,6 @@
 import { Args, Query, registerEnumType, Resolver } from '@nestjs/graphql';
 import { ProjectConnection } from '../mod/project.resolver';
-import { PaginationArgs, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
+import { CursorPaginationArgs, OffsetPaginationArgs, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
 import { ProjectSearchService, ProjectSearchSortOrder, ProjectSearchSortOrderDirection } from './project-search.service';
 
 registerEnumType(ProjectSearchSortOrderDirection, {
@@ -59,11 +59,18 @@ The sort-order is query-aware. Meaning that if the query specifies a \`minecraft
 `,
   })
   async searchProjects(
-    @Args() pagination: PaginationArgs,
-    @Args('query', { nullable: true, type: () => String }) query: string | null,
+    @Args() cursorPagination: CursorPaginationArgs,
+    @Args() pagePagination: OffsetPaginationArgs,
+    @Args('query', { nullable: true, type: () => String, defaultValue: '' }) query: string,
     @Args('order', { type: () => ProjectSearchSortOrder, defaultValue: ProjectSearchSortOrder.ProjectName }) order: ProjectSearchSortOrder,
     @Args('orderDir', { type: () => ProjectSearchSortOrderDirection, defaultValue: ProjectSearchSortOrderDirection.ASC }) orderDir: ProjectSearchSortOrderDirection,
   ) {
+    if (!cursorPagination.isEmpty() && !pagePagination.isEmpty()) {
+      // TODO: expose
+      throw new Error('Choose between cursor pagination or offset pagination');
+    }
+
+    const pagination = pagePagination.isEmpty() ? cursorPagination : pagePagination;
 
     return sequelizeCursorToConnection(
       async () => this.projectSearchService.searchProjects(query, pagination, order, orderDir),
