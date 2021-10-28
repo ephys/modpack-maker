@@ -126,8 +126,10 @@ type Project {
   iconUrl: String!
   id: String!
   jars: [ModJar!]!
+  longDescription: String!
   name: String!
   source: ProjectSource!
+  sourceId: String!
 }
 
 type ProjectConnection {

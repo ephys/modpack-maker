@@ -146,3 +146,19 @@ export function getModrinthReleaseType(releaseTypeId: TModrinthProjectVersion['v
     default: throw new Error(`Unknown Modrinth version_type ${releaseTypeId}`);
   }
 }
+
+export async function getModrinthProjectDescription(sourceId: string): Promise<string> {
+  // eslint-disable-next-line camelcase
+  const response = await fetchModrinthApi<TModrinthProject & { body: string, body_url: string }>(`/mod/${encodeURIComponent(sourceId)}`);
+  if (response.body) {
+    return response.body;
+  }
+
+  if (response.body_url) {
+    const res = await fetch(response.body_url);
+
+    return res.text();
+  }
+
+  return '';
+}

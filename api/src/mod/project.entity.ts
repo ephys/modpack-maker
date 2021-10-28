@@ -32,6 +32,7 @@ class Project extends DB.Model<Project, TProjectCreationAttributes> {
   @DB.Column(DB.DataType.INTEGER)
   internalId: number;
 
+  @Field(() => String)
   @DB.AllowNull(false)
   @DB.Unique('source-id')
   @DB.Column(DB.DataType.TEXT)

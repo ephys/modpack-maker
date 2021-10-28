@@ -1,5 +1,8 @@
-import { Parent, registerEnumType, ResolveProperty, Resolver } from '@nestjs/graphql';
+import { Parent, registerEnumType, ResolveField, Resolver } from '@nestjs/graphql';
+import { fetchCurseProjectDescription } from '../curseforge.api';
+import { getModrinthProjectDescription } from '../modrinth.api';
 import { Connection } from '../utils/graphql-connection-utils';
+import { parseProjectMarkdown } from '../utils/markdown';
 import { ModJar } from './mod-jar.entity';
 import { Project, ProjectSource } from './project.entity';
 
@@ -9,7 +12,7 @@ registerEnumType(ProjectSource, { name: 'ProjectSource' });
 
 @Resolver(Project)
 class ProjectResolver {
-  @ResolveProperty('homepage', () => String)
+  @ResolveField('homepage', () => String)
   getProjectHomepage(@Parent() project: Project): string {
     switch (project.sourceType) {
       case ProjectSource.CURSEFORGE:
@@ -23,14 +26,30 @@ class ProjectResolver {
     }
   }
 
-  @ResolveProperty('jars', () => [ModJar])
+  @ResolveField('jars', () => [ModJar])
   async getProjectJars(@Parent() project: Project): Promise<ModJar[]> {
     return project.$get('jars');
   }
 
-  @ResolveProperty('source', () => ProjectSource)
+  @ResolveField('source', () => ProjectSource)
   getProjectSource(@Parent() project: Project): ProjectSource {
     return project.sourceType;
+  }
+
+  // TODO: cache
+  @ResolveField('longDescription', () => String)
+  async getProjectLongDescription(@Parent() project: Project) {
+    const { sourceId, sourceType } = project;
+
+    if (sourceType === ProjectSource.MODRINTH) {
+      // TODO: handle errors
+      const data = await getModrinthProjectDescription(sourceId);
+
+      return parseProjectMarkdown(data);
+    }
+
+    // TODO: handle errors
+    return fetchCurseProjectDescription(sourceId);
   }
 }
 

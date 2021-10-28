@@ -1,5 +1,6 @@
 import type { RequestInit } from 'node-fetch';
 import fetch from 'node-fetch';
+import { uriTag } from '../../client/src/utils/url-utils';
 import { ReleaseType } from './mod/mod-jar.entity';
 
 // https://twitchappapi.docs.apiary.io/#/reference/0/
@@ -153,14 +154,22 @@ export async function getCurseForgeProjects(ids: number[]): Promise<TCurseProjec
   });
 }
 
-async function fetchCurseForge<T>(path, options?: RequestInit): Promise<T> {
+async function fetchCurseForge<T>(path, options?: RequestInit, text?: boolean): Promise<T> {
   const res = await fetch(`https://addons-ecs.forgesvc.net/api/v2${path}`, options);
 
   if (!res.ok) {
     throw new Error(`Could not fetch curseforge ${path}: ${res.status} - ${res.statusText} ${await res.text()}`);
   }
 
+  if (text) {
+    return res.text() as unknown as T;
+  }
+
   return res.json() as unknown as T;
+}
+
+export async function fetchCurseProjectDescription(sourceId: string | number) {
+  return fetchCurseForge(uriTag`/addon/${sourceId}/description`, undefined, true);
 }
 
 export function getCurseReleaseType(releaseTypeId: number): ReleaseType {
