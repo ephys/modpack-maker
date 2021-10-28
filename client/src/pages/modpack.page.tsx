@@ -24,7 +24,8 @@ import { isLoadedUrql } from '../api/urql';
 import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
 import DropZone, { getAsStringAsync } from '../components/dropzone';
-import { ProjectSearchModal, URL_KEY_MOD_LIBRARY_PAGE } from '../components/project-search';
+import { ProjectPageModal, URL_KEY_PROJECT_PAGE } from '../components/project-page';
+import { ProjectSearchModal, URL_KEY_PROJECT_LIBRARY_PAGE } from '../components/project-search';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
 import { uriTag } from '../utils/url-utils';
 import { useSearchParams } from '../utils/use-search-params';
@@ -83,7 +84,8 @@ export default function ModpackRoute() {
   });
 
   const searchParams = useSearchParams();
-  const projectSearchOpen = searchParams.get(URL_KEY_MOD_LIBRARY_PAGE) != null;
+  const projectSearchOpen = searchParams.get(URL_KEY_PROJECT_LIBRARY_PAGE) != null;
+  const projectPageOpen = searchParams.get(URL_KEY_PROJECT_PAGE) != null;
   const history = useHistory();
 
   if (modpackId == null || versionIndexStr == null) {
@@ -109,7 +111,8 @@ export default function ModpackRoute() {
       <Helmet>
         <title>Modpack</title>
       </Helmet>
-      {!projectSearchOpen && (
+      {/* TODO: display blurred version of modpack (image to reduce load) */}
+      {!projectSearchOpen && !projectPageOpen && (
         <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
       )}
 
@@ -122,6 +125,10 @@ export default function ModpackRoute() {
             `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
           ]}
         />
+      )}
+      {projectPageOpen && (
+        // TODO: go back until modal is actually closed
+        <ProjectPageModal onClose={history.goBack} />
       )}
     </>
   );
@@ -205,7 +212,7 @@ function ModpackView(props: Props) {
           <p>{modpack.modLoader}</p>
           <AnyLink to={modpackVersion.downloadUrl}>Download Modpack</AnyLink>
           {' '}
-          <AnyLink to={{ search: 'mod-library' }}>Add Mod</AnyLink>
+          <AnyLink to={{ search: URL_KEY_PROJECT_LIBRARY_PAGE }}>Add Mod</AnyLink>
           <Button type="button" onClick={() => alert('nyi')}>Edit modpack details</Button>
           <Button type="button" onClick={finalizeVersion}>Finalize & Create new version</Button>
 

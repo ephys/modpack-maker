@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Chip,
   CircularProgress,
   FormControl,
@@ -17,12 +16,11 @@ import {
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect } from 'react';
 import { useIntl } from 'react-intl';
-import { Link, useHistory } from 'react-router-dom';
+import { Link, useHistory, useLocation } from 'react-router-dom';
 import { EMPTY_ARRAY, EMPTY_OBJECT } from '../../../common/utils';
 import {
   ProjectSearchSortOrder,
   ProjectSearchSortOrderDirection,
-  ProjectSource,
   useProjectSearchQuery,
 } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
@@ -30,6 +28,9 @@ import useDebounce from '../utils/use-debounce';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
 import { LinearProgress } from './linear-progress';
 import { PageModal, usePageModalContext } from './page-modal';
+import { ProjectAvatar } from './project-avatar';
+import { URL_KEY_PROJECT_PAGE } from './project-page';
+import { SourceIcon } from './source-icon';
 import { UrqlErrorDisplay } from './urql-error-display';
 
 type Props = {
@@ -50,13 +51,13 @@ type ProjectSearchProps = {
 
 const URL_KEY_ORDER = 'o';
 const URL_KEY_QUERY = 'q';
-export const URL_KEY_MOD_LIBRARY_PAGE = 'mod-library';
+export const URL_KEY_PROJECT_LIBRARY_PAGE = 'project-library';
 
 export function ProjectSearch(props: ProjectSearchProps) {
   const { baseFilters = EMPTY_ARRAY } = props;
   const search = useSearchParams();
   const history = useHistory();
-  const page = Math.max(Number(search.get(URL_KEY_MOD_LIBRARY_PAGE) || 1), 1);
+  const page = Math.max(Number(search.get(URL_KEY_PROJECT_LIBRARY_PAGE) || 1), 1);
 
   // @ts-expect-error
   const sortOrder = ProjectSearchSortOrder[search.get(URL_KEY_ORDER)] ?? ProjectSearchSortOrder.FirstFileUpload;
@@ -65,7 +66,7 @@ export function ProjectSearch(props: ProjectSearchProps) {
     history.replace({
       search: modifySearch(search, {
         [URL_KEY_ORDER]: e.target.value,
-        [URL_KEY_MOD_LIBRARY_PAGE]: 1, // TODO: go back in history until all pages are removed
+        [URL_KEY_PROJECT_LIBRARY_PAGE]: 1, // TODO: go back in history until all pages are removed
       }).toString(),
     });
   }, [history, search]);
@@ -75,7 +76,7 @@ export function ProjectSearch(props: ProjectSearchProps) {
     history.replace({
       search: modifySearch(search, {
         [URL_KEY_QUERY]: e.target.value,
-        [URL_KEY_MOD_LIBRARY_PAGE]: 1, // TODO: go back in history until all pages are removed
+        [URL_KEY_PROJECT_LIBRARY_PAGE]: 1, // TODO: go back in history until all pages are removed
       }).toString(),
     });
   }, []);
@@ -101,6 +102,8 @@ export function ProjectSearch(props: ProjectSearchProps) {
   const modalContext = usePageModalContext();
   useEffect(modalContext.resetScroll, [page, sortOrder]);
   const intl = useIntl();
+
+  const location = useLocation();
 
   return (
     <>
@@ -146,9 +149,12 @@ export function ProjectSearch(props: ProjectSearchProps) {
 
               return (
                 <ListItem key={project.id} disablePadding>
-                  <ListItemButton component="a" href={project.homepage} target="_blank">
+                  <ListItemButton component={Link} to={{
+                    ...location,
+                    search: `${URL_KEY_PROJECT_PAGE}=${encodeURIComponent(project.id)}`,
+                  }}>
                     <ListItemAvatar sx={{ marginRight: '16px' }}>
-                      <Avatar variant="square" alt="" src={project.iconUrl} sx={{ width: 96, height: 96 }} />
+                      <ProjectAvatar src={project.iconUrl} />
                     </ListItemAvatar>
                     <ListItemText
                       primary={project.name}
@@ -171,11 +177,7 @@ export function ProjectSearch(props: ProjectSearchProps) {
                       )}
                     />
 
-                    {project.source === ProjectSource.Curseforge ? (
-                      <img src="/curse.svg" height="32" />
-                    ) : (
-                      <img src="/modrinth.svg" height="32" width="32" />
-                    )}
+                    <SourceIcon source={project.source} />
                   </ListItemButton>
                 </ListItem>
               );
@@ -189,7 +191,7 @@ export function ProjectSearch(props: ProjectSearchProps) {
                 component={Link}
                 to={{
                   search: modifySearch(search, {
-                    [URL_KEY_MOD_LIBRARY_PAGE]: item.page,
+                    [URL_KEY_PROJECT_LIBRARY_PAGE]: item.page,
                   }).toString(),
                 }}
                 {...item}

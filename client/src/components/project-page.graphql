@@ -1,0 +1,12 @@
+query ProjectPage($id: ID!) {
+  project(id: $id) {
+    id
+    iconUrl
+    description
+    longDescription
+    homepage
+    source
+    name
+    sourceId
+  }
+}

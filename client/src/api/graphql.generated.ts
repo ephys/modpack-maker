@@ -179,8 +179,10 @@ export type TProject = {
   iconUrl: Scalars['String'],
   id: Scalars['String'],
   jars: TModJar[],
+  longDescription: Scalars['String'],
   name: Scalars['String'],
   source: ProjectSource,
+  sourceId: Scalars['String'],
 };
 
 export type TProjectConnection = {
@@ -385,6 +387,12 @@ export type TSetModpackJarIsLibraryMutationVariables = Exact<{
 
 export type TSetModpackJarIsLibraryMutation = { __typename: 'Mutation', setModpackJarIsLibrary: { __typename: 'SetModpackJarIsLibraryPayload', node?: { __typename: 'ModpackMod', isLibraryDependency: boolean } | null | undefined, error?: { __typename: 'SetModpackJarIsLibraryError', code: SetModpackJarIsLibraryErrorCodes } | null | undefined } };
 
+export type TProjectPageQueryVariables = Exact<{
+  id: Scalars['ID'],
+}>;
+
+export type TProjectPageQuery = { __typename: 'Query', project?: { __typename: 'Project', id: string, iconUrl: string, description: string, longDescription: string, homepage: string, source: ProjectSource, name: string, sourceId: string } | null | undefined };
+
 export type TProjectSearchQueryVariables = Exact<{
   query: Scalars['String'],
   offset: Scalars['Int'],
@@ -487,6 +495,25 @@ export const SetModpackJarIsLibraryDocument = /* #__PURE__ */ gql`
 
 export function useSetModpackJarIsLibraryMutation() {
   return Urql.useMutation<TSetModpackJarIsLibraryMutation, TSetModpackJarIsLibraryMutationVariables>(SetModpackJarIsLibraryDocument);
+}
+
+export const ProjectPageDocument = /* #__PURE__ */ gql`
+    query ProjectPage($id: ID!) {
+  project(id: $id) {
+    id
+    iconUrl
+    description
+    longDescription
+    homepage
+    source
+    name
+    sourceId
+  }
+}
+    `;
+
+export function useProjectPageQuery(options: Omit<Urql.UseQueryArgs<TProjectPageQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<TProjectPageQuery>({ query: ProjectPageDocument, ...options });
 }
 
 export const ProjectSearchDocument = /* #__PURE__ */ gql`
