@@ -4,7 +4,7 @@ import classnames from 'classnames';
 import type { ComponentProps } from 'react';
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useHistory, useLocation, useParams } from 'react-router-dom';
+import { useHistory, useParams } from 'react-router-dom';
 import {
   getFirstSemverMajorVersion,
   getMostCompatibleMcVersion,
@@ -24,9 +24,10 @@ import { isLoadedUrql } from '../api/urql';
 import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
 import DropZone, { getAsStringAsync } from '../components/dropzone';
-import { ProjectSearchModal } from '../components/project-search';
+import { ProjectSearchModal, URL_KEY_MOD_LIBRARY_PAGE } from '../components/project-search';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
 import { uriTag } from '../utils/url-utils';
+import { useSearchParams } from '../utils/use-search-params';
 import css from './modpack.module.scss';
 
 // TODO: button "compare with previous version" which displays the list of changelogs
@@ -81,8 +82,8 @@ export default function ModpackRoute() {
     },
   });
 
-  const location = useLocation();
-  const popupOpen = new URLSearchParams(location.search).get('mod-library') != null;
+  const searchParams = useSearchParams();
+  const projectSearchOpen = searchParams.get(URL_KEY_MOD_LIBRARY_PAGE) != null;
   const history = useHistory();
 
   if (modpackId == null || versionIndexStr == null) {
@@ -108,11 +109,11 @@ export default function ModpackRoute() {
       <Helmet>
         <title>Modpack</title>
       </Helmet>
-      {!popupOpen && (
+      {!projectSearchOpen && (
         <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
       )}
 
-      {popupOpen && (
+      {projectSearchOpen && (
         <ProjectSearchModal
           // TODO: onClose should goBack until the search is closed
           onClose={history.goBack}
@@ -205,7 +206,7 @@ function ModpackView(props: Props) {
           <AnyLink to={modpackVersion.downloadUrl}>Download Modpack</AnyLink>
           {' '}
           <AnyLink to={{ search: 'mod-library' }}>Add Mod</AnyLink>
-          <Button type="button">Edit modpack details</Button>
+          <Button type="button" onClick={() => alert('nyi')}>Edit modpack details</Button>
           <Button type="button" onClick={finalizeVersion}>Finalize & Create new version</Button>
 
           <h2>Mod List ({modpackVersion.installedJars.length} mods)</h2>

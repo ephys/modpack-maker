@@ -14,6 +14,8 @@ import type {
   TReplaceModpackJarMutationVariables,
 } from './graphql.generated';
 
+export type { UseQueryArgs };
+
 export const urqlClient = createClient({
   url: 'http://localhost:8080/graphql',
   requestPolicy: 'cache-and-network',
@@ -29,6 +31,10 @@ export const urqlClient = createClient({
     ...(process.env.NODE_ENV === 'production' ? [] : [devtoolsExchange]),
     dedupExchange,
     cacheExchange({
+      keys: {
+        GqlModDependency: () => null,
+        ModpackMod: () => null,
+      },
       storage: makeDefaultStorage({ idbName: 'modpack-urql' }),
       updates: {
         Mutation: {

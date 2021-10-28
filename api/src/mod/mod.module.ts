@@ -6,6 +6,7 @@ import { CurseforgeJarCrawlerProcessor } from './curseforge-jar-crawler.processo
 import { CurseforgeProjectListCrawler } from './curseforge-project-list-crawler';
 import { ModDiscoveryService } from './mod-discovery.service';
 import { ModJarResolver } from './mod-jar.resolver';
+import { ModVersionResolver } from './mod-version.resolver';
 import { FETCH_CURSE_JARS_QUEUE, FETCH_MODRINTH_JARS_QUEUE, ModVersionRepository } from './mod.constants';
 import { ModController } from './mod.controller';
 import { ModService } from './mod.service';
@@ -36,6 +37,7 @@ import { ProjectResolver } from './project.resolver';
     ModrinthJarCrawlerProcessor,
     ModDiscoveryService,
     ModJarResolver,
+    ModVersionResolver,
     ModService,
     CurseforgeProjectListCrawler,
     ModrinthProjectListCrawler,

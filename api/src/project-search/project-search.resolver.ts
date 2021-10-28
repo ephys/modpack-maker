@@ -1,4 +1,5 @@
-import { Args, Query, registerEnumType, Resolver } from '@nestjs/graphql';
+import { Args, ID, Query, registerEnumType, Resolver } from '@nestjs/graphql';
+import { Project } from '../mod/project.entity';
 import { ProjectConnection } from '../mod/project.resolver';
 import { CursorPaginationArgs, OffsetPaginationArgs, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
 import { ProjectSearchService, ProjectSearchSortOrder, ProjectSearchSortOrderDirection } from './project-search.service';
@@ -16,6 +17,11 @@ class ProjectSearchResolver {
   constructor(
     private readonly projectSearchService: ProjectSearchService,
   ) {
+  }
+
+  @Query(() => Project, { name: 'project', nullable: true })
+  async getProject(@Args('id', { type: () => ID }) id: string): Promise<Project | null> {
+    return this.projectSearchService.getProjectByInternalId(Number(id));
   }
 
   @Query(() => ProjectConnection, {

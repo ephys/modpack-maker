@@ -23,6 +23,7 @@ query ModpackView($modpackId: ID!, $versionIndex: Int!) {
             releaseType
           }
           mods(matchingModpack: $modpackId) {
+            id
             modId
             modVersion
             name

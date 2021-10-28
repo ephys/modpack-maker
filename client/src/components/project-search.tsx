@@ -1,25 +1,24 @@
 import {
   Avatar,
-  Box,
   Chip,
   CircularProgress,
   FormControl,
-  InputLabel, LinearProgress,
+  InputLabel,
   List,
   ListItem,
   ListItemAvatar, ListItemButton,
   ListItemText,
   MenuItem,
-  Modal,
   Pagination,
   PaginationItem,
   Select,
   TextField,
 } from '@mui/material';
 import type { ComponentProps } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useIntl } from 'react-intl';
 import { Link, useHistory } from 'react-router-dom';
-import { EMPTY_ARRAY } from '../../../common/utils';
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '../../../common/utils';
 import {
   ProjectSearchSortOrder,
   ProjectSearchSortOrderDirection,
@@ -29,39 +28,29 @@ import {
 import { isLoadedUrql } from '../api/urql';
 import useDebounce from '../utils/use-debounce';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
-import css from './project-search.module.scss';
+import { LinearProgress } from './linear-progress';
+import { PageModal, usePageModalContext } from './page-modal';
 import { UrqlErrorDisplay } from './urql-error-display';
 
 type Props = {
-  onClose: ComponentProps<typeof Modal>['onClose'],
+  onClose: ComponentProps<typeof PageModal>['onClose'],
 } & Pick<ProjectSearchProps, 'baseFilters'>;
 
 export function ProjectSearchModal(props: Props) {
-  const modalRef = useRef<HTMLDivElement | null>(null);
-
-  const onPageChange = useCallback(() => {
-    modalRef.current?.scrollTo({
-      top: 0,
-    });
-  }, []);
-
   return (
-    <Modal open className={css.modal} onClose={props.onClose}>
-      <Box className={css.modalBox} ref={modalRef}>
-        <ProjectSearch baseFilters={props.baseFilters} onPageChange={onPageChange}/>
-      </Box>
-    </Modal>
+    <PageModal onClose={props.onClose}>
+      <ProjectSearch baseFilters={props.baseFilters}/>
+    </PageModal>
   );
 }
 
 type ProjectSearchProps = {
   baseFilters?: string[],
-  onPageChange?(): any,
 };
 
 const URL_KEY_ORDER = 'o';
 const URL_KEY_QUERY = 'q';
-const URL_KEY_MOD_LIBRARY_PAGE = 'mod-library';
+export const URL_KEY_MOD_LIBRARY_PAGE = 'mod-library';
 
 export function ProjectSearch(props: ProjectSearchProps) {
   const { baseFilters = EMPTY_ARRAY } = props;
@@ -105,17 +94,20 @@ export function ProjectSearch(props: ProjectSearchProps) {
     },
   });
 
-  useEffect(() => {
-    props.onPageChange?.();
-  }, [page, sortOrder]);
-
   const pageCount = searchUrql.data
     ? Math.ceil((searchUrql.data.projects.totalCount ?? 0) / elementsPerPage)
   : null;
 
+  const modalContext = usePageModalContext();
+  useEffect(modalContext.resetScroll, [page, sortOrder]);
+  const intl = useIntl();
+
   return (
-    <div className={css.projectSearch}>
-      <h1>Mod Projects</h1>
+    <>
+      {searchUrql.fetching && (
+        <LinearProgress />
+      )}
+      <h1 style={{ marginTop: '16px' }}>Mod Projects</h1>
       <div style={{ display: 'flex' }}>
         <TextField label="Search" name="query" style={{ width: '100%' }} onChange={onUserQueryChange} defaultValue={userQuery}/>
         <FormControl fullWidth>
@@ -133,8 +125,10 @@ export function ProjectSearch(props: ProjectSearchProps) {
           </Select>
         </FormControl>
       </div>
-      {baseFilters.map((filter, i) => <Chip key={i} label={filter} />)}
-      {searchUrql.data && `${searchUrql.data.projects.totalCount} compatible mods`}
+      <div>
+        {baseFilters.map((filter, i) => <Chip key={i} label={filter} />)}
+        {searchUrql.data && `${searchUrql.data.projects.totalCount} compatible mods`}
+      </div>
       {!isLoadedUrql(searchUrql) ? (
         <CircularProgress />
       ) : searchUrql.error ? (
@@ -144,26 +138,48 @@ export function ProjectSearch(props: ProjectSearchProps) {
           {/* TODO: on hover: view quick actions (view files / add to modpack, view curse/modrinth page) */}
           {/* TODO: add "hide this mod" action */}
           {/* TODO: open project in new page */}
-          {searchUrql.fetching && (
-            <LinearProgress />
-          )}
           <List>
-            {searchUrql.data.projects.nodes.map(project => (
-              <ListItem key={project.id} disablePadding>
-                <ListItemButton component="a" href={project.homepage} target="_blank">
-                  <ListItemAvatar sx={{ marginRight: '16px' }}>
-                    <Avatar variant="square" alt="" src={project.iconUrl} sx={{ width: 96, height: 96 }} />
-                  </ListItemAvatar>
-                  <ListItemText primary={project.name} secondary={project.description}/>
+            {searchUrql.data.projects.edges.map(edge => {
+              const project = edge.node;
 
-                  {project.source === ProjectSource.Curseforge ? (
-                    <img src="/curse.svg" height="32"/>
-                  ) : (
-                    <img src="/modrinth.svg" height="32" width="32"/>
-                  )}
-                </ListItemButton>
-              </ListItem>
-            ))}
+              const { firstFileUploadedAt, lastFileUploadedAt } = decodeCursor(edge.cursor);
+
+              return (
+                <ListItem key={project.id} disablePadding>
+                  <ListItemButton component="a" href={project.homepage} target="_blank">
+                    <ListItemAvatar sx={{ marginRight: '16px' }}>
+                      <Avatar variant="square" alt="" src={project.iconUrl} sx={{ width: 96, height: 96 }} />
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={project.name}
+                      secondary={(
+                        <>
+                          {project.description}
+                          {firstFileUploadedAt && (
+                            <>
+                              <br />
+                              Compatible since {intl.formatDate(firstFileUploadedAt, { dateStyle: 'medium', timeStyle: 'medium' })}
+                            </>
+                          )}
+                          {lastFileUploadedAt && (
+                            <>
+                              <br />
+                              Last update on {intl.formatDate(lastFileUploadedAt, { dateStyle: 'medium', timeStyle: 'medium' })}
+                            </>
+                          )}
+                        </>
+                      )}
+                    />
+
+                    {project.source === ProjectSource.Curseforge ? (
+                      <img src="/curse.svg" height="32" />
+                    ) : (
+                      <img src="/modrinth.svg" height="32" width="32" />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
           </List>
           <Pagination
             count={pageCount!}
@@ -182,6 +198,15 @@ export function ProjectSearch(props: ProjectSearchProps) {
           />
         </>
       )}
-    </div>
+    </>
   );
+}
+
+function decodeCursor(cursor: string) {
+  try {
+    // should really not be doing this, cursor are opaque and could be anything
+    return JSON.parse(atob(cursor));
+  } catch (e) {
+    return EMPTY_OBJECT;
+  }
 }

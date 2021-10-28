@@ -96,6 +96,7 @@ export enum ModLoader {
 export type TModVersion = {
   __typename: 'ModVersion',
   dependencies: TGqlModDependency[],
+  id: Scalars['ID'],
   modId: Scalars['String'],
   modVersion: Scalars['String'],
   name: Scalars['String'],
@@ -216,6 +217,7 @@ export type TQuery = {
   __typename: 'Query',
   modpack?: Maybe<TModpack>,
   modpacks: TModpack[],
+  project?: Maybe<TProject>,
   /**
    * *Returns project matching the search query.*
    * Uses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)
@@ -258,6 +260,10 @@ export type TQuery = {
 };
 
 export type TQueryModpackArgs = {
+  id: Scalars['ID'],
+};
+
+export type TQueryProjectArgs = {
   id: Scalars['ID'],
 };
 
@@ -387,14 +393,14 @@ export type TProjectSearchQueryVariables = Exact<{
   orderDir: ProjectSearchSortOrderDirection,
 }>;
 
-export type TProjectSearchQuery = { __typename: 'Query', projects: { __typename: 'ProjectConnection', totalCount: number, nodes: Array<{ __typename: 'Project', id: string, iconUrl: string, name: string, description: string, homepage: string, source: ProjectSource }> } };
+export type TProjectSearchQuery = { __typename: 'Query', projects: { __typename: 'ProjectConnection', totalCount: number, edges: Array<{ __typename: 'ProjectEdge', cursor: string, node: { __typename: 'Project', id: string, iconUrl: string, name: string, description: string, homepage: string, source: ProjectSource } }> } };
 
 export type TModpackViewQueryVariables = Exact<{
   modpackId: Scalars['ID'],
   versionIndex: Scalars['Int'],
 }>;
 
-export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, curseForgePage: string, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, mods: Array<{ __typename: 'ModVersion', modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
+export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, curseForgePage: string, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
 
 export type TModpackListViewQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -493,13 +499,16 @@ export const ProjectSearchDocument = /* #__PURE__ */ gql`
     orderDir: $orderDir
   ) {
     totalCount
-    nodes {
-      id
-      iconUrl
-      name
-      description
-      homepage
-      source
+    edges {
+      cursor
+      node {
+        id
+        iconUrl
+        name
+        description
+        homepage
+        source
+      }
     }
   }
 }
@@ -535,6 +544,7 @@ export const ModpackViewDocument = /* #__PURE__ */ gql`
             releaseType
           }
           mods(matchingModpack: $modpackId) {
+            id
             modId
             modVersion
             name

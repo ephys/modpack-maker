@@ -73,6 +73,7 @@ enum ModLoader {
 
 type ModVersion {
   dependencies: [GqlModDependency!]!
+  id: ID!
   modId: String!
   modVersion: String!
   name: String!
@@ -160,6 +161,7 @@ enum ProjectSource {
 type Query {
   modpack(id: ID!): Modpack
   modpacks: [Modpack!]!
+  project(id: ID!): Project
 
   """
   

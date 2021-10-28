@@ -1,0 +1,22 @@
+.modal {
+  display: flex;
+}
+
+.modalBox {
+  max-height: 100%;
+  overflow: auto;
+
+  margin: auto;
+  background: #2a2d3e;
+  max-width: 1200px;
+  width: 100%;
+  border-radius: 4px; // TODO: remove border-radius if its height = pageHeight
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+
+  > :global(.full-bleed) {
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+}
