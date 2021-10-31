@@ -1,20 +1,21 @@
-import * as assert from 'assert';
-import * as childProcess from 'child_process';
-import * as fsCb from 'fs';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as nodeUtils from 'util';
+import assert from 'assert';
+import childProcess from 'child_process';
+import fsCb from 'fs';
+import fs from 'fs/promises';
+import path from 'path';
+import nodeUtils from 'util';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import * as rimrafCb from 'rimraf';
-import { QueryTypes, Sequelize } from 'sequelize';
+import rimrafCb from 'rimraf';
+import SequelizePkg from 'sequelize';
 import {
   getMostCompatibleMcVersion,
   isMcVersionLikelyCompatibleWith,
   parseMinecraftVersionThrows,
 } from '../../../common/minecraft-utils';
-import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import minecraftVersions from '../../../common/minecraft-versions.json';
 import type { ModLoader } from '../../../common/modloaders';
 import { InjectSequelize } from '../database/database.providers';
+import { QueryTypes, Sequelize } from '../esm-compat/sequelize-esm';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
 import ModpackMod from '../modpack-version/modpack-mod.entity';
@@ -22,6 +23,7 @@ import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { getBySinglePropertyDl } from '../utils/dataloader';
 import { generateId } from '../utils/generic-utils';
 import { minecraftVersionComparator } from '../utils/minecraft-utils';
+import { NoEmitDecoratorMetadata } from '../utils/ts-metadata-issue';
 import { MODPACK_REPOSITORY } from './modpack.constants';
 import { Modpack } from './modpack.entity';
 
@@ -37,7 +39,7 @@ type TCreateModpackInput = {
 export class ModpackService {
   constructor(
     @Inject(MODPACK_REPOSITORY) private readonly modpackRepository: typeof Modpack,
-    @Inject(forwardRef(() => ModService)) private readonly modService: ModService,
+    @Inject(forwardRef(() => ModService)) private readonly modService: NoEmitDecoratorMetadata<ModService>,
     @InjectSequelize private readonly sequelize: Sequelize,
   ) {
   }
@@ -180,7 +182,7 @@ export class ModpackService {
           modId,
         },
       }],
-      order: Sequelize.literal(`
+      order: SequelizePkg.literal(`
         ${validMcVersions.map((_mcVersion, index) => {
     // See #addCurseProjectToModpack for info about this
     const versions: string[] = [];

@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import * as cls from 'cls-hooked';
+import cls from 'cls-hooked';
 import { Sequelize } from 'sequelize-typescript';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModVersion } from '../mod/mod-version.entity';

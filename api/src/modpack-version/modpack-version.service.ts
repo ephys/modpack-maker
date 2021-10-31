@@ -1,6 +1,6 @@
-import * as assert from 'assert';
-import { QueryTypes, Sequelize } from 'sequelize';
+import assert from 'assert';
 import { InjectSequelize } from '../database/database.providers';
+import { QueryTypes, Sequelize } from '../esm-compat/sequelize-esm';
 import type { ModJar } from '../mod/mod-jar.entity';
 import type { Modpack } from '../modpack/modpack.entity';
 import { ModpackService } from '../modpack/modpack.service';

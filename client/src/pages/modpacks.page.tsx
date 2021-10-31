@@ -3,12 +3,12 @@ import { useCallback } from 'react';
 import { useHistory, Link } from 'react-router-dom';
 import minecraftVersions from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
+import { uriTag } from '../../../common/url-utils';
 import { useCreateModpackMutation, useModpackListViewQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
 import Actions from '../components/actions';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
 import { getFormValues } from '../utils/dom-utils';
-import { uriTag } from '../utils/url-utils';
 import css from './modpacks.module.scss';
 
 export default function Home() {

@@ -1,4 +1,4 @@
-import { Args, ID, Parent, registerEnumType, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, ID, Parent, registerEnumType, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
 import { ModpackService } from '../modpack/modpack.service';
 import { Connection } from '../utils/graphql-connection-utils';
 import { DependencyType } from './dependency-type';

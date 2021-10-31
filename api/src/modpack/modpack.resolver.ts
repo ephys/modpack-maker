@@ -1,3 +1,6 @@
+import { MinLength, MaxLength, IsEnum, IsIn } from 'class-validator';
+import minecraftVersions from '../../../common/minecraft-versions.json';
+import { ModLoader } from '../../../common/modloaders';
 import {
   Mutation,
   Resolver,
@@ -7,10 +10,7 @@ import {
   InputType,
   ID,
   registerEnumType, ResolveField, Parent, Int,
-} from '@nestjs/graphql';
-import { MinLength, MaxLength, IsEnum, IsIn } from 'class-validator';
-import * as minecraftVersions from '../../../common/minecraft-versions.json';
-import { ModLoader } from '../../../common/modloaders';
+} from '../esm-compat/nest-graphql-esm';
 import { ReleaseType } from '../mod/mod-jar.entity';
 import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { ModpackVersionService } from '../modpack-version/modpack-version.service';

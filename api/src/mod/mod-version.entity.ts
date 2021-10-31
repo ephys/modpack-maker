@@ -1,13 +1,14 @@
+import * as DB from 'sequelize-typescript';
+import minecraftVersion from '../../../common/minecraft-versions.json';
+import { ModLoader } from '../../../common/modloaders';
 import {
   Field,
   Field as GraphQl,
   ObjectType,
   ObjectType as GraphQlObject,
-} from '@nestjs/graphql';
-import * as DB from 'sequelize-typescript';
-import * as minecraftVersion from '../../../common/minecraft-versions.json';
-import { ModLoader } from '../../../common/modloaders';
+} from '../esm-compat/nest-graphql-esm';
 import { tsEnum } from '../utils/sequelize-utils';
+import { NoEmitDecoratorMetadata } from '../utils/ts-metadata-issue';
 import { DependencyType } from './dependency-type';
 import { ModJar } from './mod-jar.entity';
 
@@ -113,7 +114,7 @@ export class ModVersion extends DB.Model<ModVersion, TModVersionCreationAttribut
   supportedModLoader: ModLoader;
 
   @DB.BelongsTo(() => ModJar)
-  jar: ModJar;
+  jar: NoEmitDecoratorMetadata<ModJar>;
 
   @DB.ForeignKey(() => ModJar)
   @DB.Column(DB.DataType.INTEGER)

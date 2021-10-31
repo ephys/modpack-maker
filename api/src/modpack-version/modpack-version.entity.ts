@@ -1,5 +1,5 @@
-import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
+import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '../esm-compat/nest-graphql-esm';
 import { Modpack } from '../modpack/modpack.entity';
 import ModpackMod from './modpack-mod.entity';
 
@@ -27,7 +27,7 @@ export class ModpackVersion extends DB.Model<ModpackVersion, TModpackVersionCrea
   externalId: string;
 
   @DB.CreatedAt
-  @DB.Column({})
+  @DB.Column(DB.DataType.DATE)
   createdAt: Date;
 
   @GraphQl(() => Int, { name: 'versionIndex' })

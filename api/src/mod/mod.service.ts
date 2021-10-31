@@ -1,19 +1,20 @@
-import * as fsCb from 'fs';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import fsCb from 'fs';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Injectable } from '@nestjs/common';
-import * as DataLoader from 'dataloader';
-import * as uniq from 'lodash/uniq';
+import DataLoader from 'dataloader';
+import uniq from 'lodash/uniq.js';
 import type { Response } from 'node-fetch';
 import fetch from 'node-fetch';
 import type { WhereOptions } from 'sequelize';
-import { QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import minecraftVersions from '../../../common/minecraft-versions.json';
 import type { ModLoader } from '../../../common/modloaders';
 import type { TCurseProject } from '../curseforge.api';
 import { getCurseForgeProjects } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
+import { QueryTypes } from '../esm-compat/sequelize-esm';
 import { getPreferredMinecraftVersions } from '../modpack/modpack.service';
 import { overlaps } from '../utils/generic-utils';
 import { minecraftVersionComparator } from '../utils/minecraft-utils';
@@ -21,6 +22,7 @@ import { and, buildWhereComponent, isIn, or, overlap } from '../utils/sequelize-
 import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const jarCacheDir = path.join(__dirname, '..', '.jar-files');
 
 @Injectable()
@@ -125,6 +127,12 @@ class ModService {
     const cachedFilePath = path.join(jarCacheDir, `${jar.externalId}.jar`);
 
     await new Promise<void>((resolve, reject) => {
+      if (!fileRes.body) {
+        reject(new Error('fileRes has no body'));
+
+        return;
+      }
+
       fileRes.body.pipe(fsCb.createWriteStream(`${cachedFilePath}.part`))
         .on('finish', () => {
           resolve();

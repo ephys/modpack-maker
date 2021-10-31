@@ -1,10 +1,10 @@
-import * as assert from 'assert';
+import assert from 'assert';
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
-import { Sequelize, Op } from 'sequelize';
-import * as minecraftVersion from '../../../common/minecraft-versions.json';
+import minecraftVersion from '../../../common/minecraft-versions.json';
 import { InjectSequelize } from '../database/database.providers';
+import { Sequelize, Op } from '../esm-compat/sequelize-esm';
 import type { TModrinthProjectVersion } from '../modrinth.api';
 import { getModrinthModFiles, getModrinthReleaseType } from '../modrinth.api';
 import { generateId } from '../utils/generic-utils';

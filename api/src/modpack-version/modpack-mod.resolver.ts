@@ -1,4 +1,4 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
 import { ModJar } from '../mod/mod-jar.entity';
 import ModpackMod from './modpack-mod.entity';
 

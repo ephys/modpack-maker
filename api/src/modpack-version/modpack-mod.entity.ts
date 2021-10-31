@@ -1,6 +1,7 @@
-import { Field as GraphQl, ObjectType as GraphQlObject } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
+import { Field as GraphQl, ObjectType as GraphQlObject } from '../esm-compat/nest-graphql-esm';
 import { ModJar } from '../mod/mod-jar.entity';
+import { NoEmitDecoratorMetadata } from '../utils/ts-metadata-issue';
 import { ModpackVersion } from './modpack-version.entity';
 
 type TModpackModCreationAttributes = {
@@ -23,7 +24,7 @@ export default class ModpackMod extends DB.Model<ModpackMod, TModpackModCreation
   modpackVersionId: number;
 
   @DB.BelongsTo(() => ModJar)
-  jar: ModJar;
+  jar: NoEmitDecoratorMetadata<ModJar>;
 
   @DB.ForeignKey(() => ModJar)
   @DB.PrimaryKey

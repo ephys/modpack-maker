@@ -1,4 +1,4 @@
-import { Args, ID, Query, registerEnumType, Resolver } from '@nestjs/graphql';
+import { Args, ID, Query, registerEnumType, Resolver } from '../esm-compat/nest-graphql-esm';
 import { Project } from '../mod/project.entity';
 import { ProjectConnection } from '../mod/project.resolver';
 import { CursorPaginationArgs, OffsetPaginationArgs, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';

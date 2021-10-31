@@ -1,5 +1,5 @@
-import { Parent, registerEnumType, ResolveField, Resolver } from '@nestjs/graphql';
 import { fetchCurseProjectDescription } from '../curseforge.api';
+import { Parent, registerEnumType, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
 import { getModrinthProjectDescription } from '../modrinth.api';
 import { Connection } from '../utils/graphql-connection-utils';
 import { parseProjectMarkdown } from '../utils/markdown';

@@ -1,15 +1,15 @@
-import 'core-js/es/string/replace-all';
 import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Inject } from '@nestjs/common';
 import * as Lucene from 'lucene';
 import type { AST, LeftOnlyAST, Node, NodeRangedTerm, NodeTerm, NodeField, Operator } from 'lucene';
 import type { AndOperator, OrOperator, WhereOperators, WhereOptions } from 'sequelize';
-import { Op, QueryTypes, Sequelize } from 'sequelize';
+import SequelizePkg from 'sequelize';
 import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '../../../common/minecraft-utils';
-import * as minecraftVersions from '../../../common/minecraft-versions.json';
+import minecraftVersions from '../../../common/minecraft-versions.json';
 import { EMPTY_ARRAY } from '../../../common/utils';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
+import { Op, QueryTypes, Sequelize } from '../esm-compat/sequelize-esm';
 import { ModJar } from '../mod/mod-jar.entity';
 import { Project } from '../mod/project.entity';
 import { getBySinglePropertyDl } from '../utils/dataloader';
@@ -104,8 +104,8 @@ class ProjectSearchService {
       where: and(
         luceneQuery ? internalProcessSearchProjectsLucene(luceneQuery, ProjectSearchLuceneConfig) : true,
         { sourceSlug: notEqual(null) },
-        Sequelize.where(
-          Sequelize.fn('char_length', Sequelize.col('name')),
+        SequelizePkg.where(
+          SequelizePkg.fn('char_length', SequelizePkg.col('name')),
           Op.gt,
           `0`,
         ),
@@ -285,8 +285,8 @@ function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig, inverse:
   const sqlField = config.fieldMap?.[node.field] ?? node.field;
   const castAs = config.cast?.[node.field] ?? 'text';
 
-  const out = Sequelize.where(
-    Sequelize.cast(Sequelize.col(sqlField), castAs),
+  const out = SequelizePkg.where(
+    SequelizePkg.cast(SequelizePkg.col(sqlField), castAs),
     processLuceneNodePart(node, node.field, config),
   );
 
@@ -480,7 +480,7 @@ function luceneTermToSqlLike(node: NodeTerm): TNodePartWhere {
 
   out += term.substring(lastIndex, term.length);
 
-  return iLike(Sequelize.literal(`E'${out}'`));
+  return iLike(SequelizePkg.literal(`E'${out}'`));
 }
 
 export { ProjectSearchService };

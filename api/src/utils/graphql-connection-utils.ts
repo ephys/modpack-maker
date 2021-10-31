@@ -1,8 +1,8 @@
 import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import type { Type } from '@nestjs/common';
-import { Field, ObjectType, Int, ArgsType } from '@nestjs/graphql';
 import { Model } from 'sequelize-typescript';
 import { MaybePromise } from '../../../common/typing-utils';
+import { Field, ObjectType, Int, ArgsType } from '../esm-compat/nest-graphql-esm';
 import { clamp, lastItem } from './generic-utils';
 
 interface IEdgeType<T> {

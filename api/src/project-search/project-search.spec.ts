@@ -1,5 +1,6 @@
 import type { Node } from 'lucene';
-import { Op, Sequelize } from 'sequelize';
+import Sequelize from 'sequelize';
+import { Op } from '../esm-compat/sequelize-esm';
 import { and, contains, iLike, not, or } from '../utils/sequelize-utils';
 import type { TLuceneToSqlConfig } from './project-search.service';
 import { internalProcessSearchProjectsLucene, isNodeTerm } from './project-search.service';

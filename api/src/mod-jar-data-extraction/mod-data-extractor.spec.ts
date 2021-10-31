@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import groupBy from 'lodash/groupBy';
+import groupBy from 'lodash/groupBy.js';
 import { getModMetasFromJar } from './mod-data-extractor';
 
 const dir = path.join(__dirname, '__test-mods__');

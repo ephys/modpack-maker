@@ -1,5 +1,5 @@
 import type { Type as Type2 } from '@nestjs/common';
-import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ObjectType, registerEnumType } from '../esm-compat/nest-graphql-esm';
 
 interface IPayloadError<ErrorCodes> {
   message: string;

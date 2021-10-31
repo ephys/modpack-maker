@@ -1,5 +1,5 @@
-import * as assert from 'assert';
-import toArray from 'lodash/toArray';
+import assert from 'assert';
+import toArray from 'lodash/toArray.js';
 import type {
   DestroyOptions,
   ModelCtor as SequelizeModelCtor,
@@ -8,11 +8,14 @@ import type {
   WhereOptions,
   UniqueConstraintError,
 } from 'sequelize';
-import { Op, DataTypes, Sequelize } from 'sequelize';
+import SequelizePkg from 'sequelize';
 import type { ModelCtor as STModelCtor, Model as STModel } from 'sequelize-typescript';
-import { mapWhereFieldNames } from 'sequelize/lib/utils.js';
+import * as SequelizeUtilPkg from 'sequelize/lib/utils.js';
 import type { ModelAttributeColumnOptions } from 'sequelize/types/lib/model';
 import type { Col } from 'sequelize/types/lib/utils';
+import { Op, DataTypes } from '../esm-compat/sequelize-esm';
+
+const { mapWhereFieldNames } = SequelizeUtilPkg;
 
 type Model = SequelizeModel | STModel;
 type ModelType<T extends SequelizeModel | STModel> = T extends STModel ? STModelCtor<T> : SequelizeModelCtor<T>;
@@ -350,7 +353,7 @@ export function greaterThan(val) {
 }
 
 export function col(entity: ModelType<any>, column: string): Col {
-  return Sequelize.col(attributeNameToColumn(entity, column));
+  return SequelizePkg.col(attributeNameToColumn(entity, column));
 }
 
 export const POSTGRE_SMALLINT_MAX_VALUE = 32767;

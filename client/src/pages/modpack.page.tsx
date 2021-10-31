@@ -11,6 +11,7 @@ import {
   isMcVersionLikelyCompatibleWith,
   parseMinecraftVersionThrows,
 } from '../../../common/minecraft-utils';
+import { uriTag } from '../../../common/url-utils';
 import type { TModpackViewQuery } from '../api/graphql.generated';
 import {
   DependencyType,
@@ -27,7 +28,6 @@ import DropZone, { getAsStringAsync } from '../components/dropzone';
 import { ProjectPageModal, URL_KEY_PROJECT_PAGE } from '../components/project-page';
 import { ProjectSearchModal, URL_KEY_PROJECT_LIBRARY_PAGE } from '../components/project-search';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
-import { uriTag } from '../utils/url-utils';
 import { useSearchParams } from '../utils/use-search-params';
 import css from './modpack.module.scss';
 

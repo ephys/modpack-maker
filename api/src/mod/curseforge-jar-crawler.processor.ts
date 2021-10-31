@@ -1,14 +1,14 @@
-import * as assert from 'assert';
+import assert from 'assert';
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import fetch from 'node-fetch';
-import { Sequelize, Op } from 'sequelize';
-import * as minecraftVersion from '../../../common/minecraft-versions.json';
+import minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
 import { getCurseForgeModFiles, getCurseReleaseType } from '../curseforge.api';
 import type { TCurseFile } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
+import { Sequelize, Op } from '../esm-compat/sequelize-esm';
 import { getModMetasFromJar } from '../mod-jar-data-extraction/mod-data-extractor';
 import { generateId } from '../utils/generic-utils';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler';

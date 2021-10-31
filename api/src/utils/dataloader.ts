@@ -1,4 +1,4 @@
-import * as DataLoader from 'dataloader';
+import DataLoader from 'dataloader';
 import type { Model, ModelCtor } from 'sequelize-typescript';
 import { isIn } from './sequelize-utils';
 

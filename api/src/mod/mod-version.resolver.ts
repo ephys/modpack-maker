@@ -1,4 +1,4 @@
-import { ID, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { ID, Parent, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
 import { ModVersion } from './mod-version.entity';
 
 @Resolver(() => ModVersion)

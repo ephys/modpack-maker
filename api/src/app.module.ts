@@ -1,8 +1,8 @@
 import { join } from 'path';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
-import { GraphQLModule } from '@nestjs/graphql';
 import { DatabaseModule } from './database/database.module';
+import { GraphQLModule } from './esm-compat/nest-graphql-esm';
 import { ModModule } from './mod/mod.module';
 import { ModpackVersionModule } from './modpack-version/modpack-version.module';
 import { ModpackModule } from './modpack/modpack.module';

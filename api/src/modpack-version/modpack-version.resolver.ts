@@ -1,5 +1,5 @@
-import { Args, Field, ID, InputType, Mutation, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ArrayNotEmpty, IsBoolean, MinLength } from 'class-validator';
+import { Args, Field, ID, InputType, Mutation, Parent, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModService } from '../mod/mod.service';
 import { Trim } from '../utils/class-validators';

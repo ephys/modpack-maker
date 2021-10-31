@@ -1,6 +1,6 @@
 import type { RequestInit } from 'node-fetch';
 import fetch from 'node-fetch';
-import { uriTag } from '../../client/src/utils/url-utils';
+import { uriTag } from '../../common/url-utils';
 import { ReleaseType } from './mod/mod-jar.entity';
 
 // https://twitchappapi.docs.apiary.io/#/reference/0/

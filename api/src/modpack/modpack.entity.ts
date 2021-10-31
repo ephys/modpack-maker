@@ -1,7 +1,7 @@
-import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '@nestjs/graphql';
 import * as DB from 'sequelize-typescript';
-import * as minecraftVersion from '../../../common/minecraft-versions.json';
+import minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
+import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '../esm-compat/nest-graphql-esm';
 import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { tsEnum } from '../utils/sequelize-utils';
 
@@ -29,7 +29,7 @@ export class Modpack extends DB.Model<Modpack, TModpackCreationAttributes> {
   externalId: string;
 
   @DB.CreatedAt
-  @DB.Column({})
+  @DB.Column(DB.DataType.DATE)
   createdAt: Date;
 
   @GraphQl(() => String)

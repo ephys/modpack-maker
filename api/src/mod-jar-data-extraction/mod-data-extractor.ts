@@ -1,4 +1,3 @@
-import 'core-js/features/string/replace-all';
 import * as Toml from '@iarna/toml';
 import * as Zip from 'jszip';
 import { ModLoader } from '../../../common/modloaders';
