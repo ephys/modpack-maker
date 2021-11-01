@@ -28,6 +28,11 @@ export class ModJarResolver {
     private readonly modpackService: ModpackService,
   ) {}
 
+  @Query(() => ModJar, { name: 'jar', nullable: true })
+  async getJar(@Args('id', { type: () => ID }) id: string) {
+    return this.modService.getJarByExternalId(id);
+  }
+
   @Query(() => ModJarConnection, { name: 'jars' })
   async searchJars(
     @Args() pagination: FuzzyPagination,

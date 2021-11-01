@@ -92,6 +92,20 @@ export class ModpackVersionService {
     });
   }
 
+  async addJarToModpack(modpack: ModpackVersion, jar: ModJar) {
+    return ModpackMod.findOrCreate({
+      where: {
+        jarId: jar.internalId,
+        modpackVersionId: modpack.internalId,
+      },
+      defaults: {
+        jarId: jar.internalId,
+        modpackVersionId: modpack.internalId,
+        isLibraryDependency: false,
+      },
+    });
+  }
+
   async removeJarFromModpack(modpack: ModpackVersion, jar: ModJar) {
     return ModpackMod.destroy({
       where: {

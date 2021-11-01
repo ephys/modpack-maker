@@ -22,7 +22,7 @@ export class ModController {
     @Param('jarId') jarId: string,
     @Res() res: Response,
   ): Promise<void> {
-    const jar = await this.modService.getJar(jarId);
+    const jar = await this.modService.getJarByExternalId(jarId);
     if (!jar) {
       res.status(404).send();
 

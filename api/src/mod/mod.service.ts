@@ -17,6 +17,7 @@ import { InjectSequelize } from '../database/database.providers';
 import { QueryTypes } from '../esm-compat/sequelize-esm';
 import { getPreferredMinecraftVersions } from '../modpack/modpack.service';
 import type { Project } from '../project/project.entity';
+import { getBySinglePropertyDl } from '../utils/dataloader';
 import { overlaps } from '../utils/generic-utils';
 import type { ICursorPagination, IOffsetPagination } from '../utils/graphql-connection-utils';
 import { isCursorPagination, normalizePagination } from '../utils/graphql-connection-utils';
@@ -64,13 +65,7 @@ class ModService {
     return mods;
   }
 
-  async getJar(jarId: string): Promise<ModJar | null> {
-    return ModJar.findOne({
-      where: {
-        externalId: jarId,
-      },
-    });
-  }
+  getJarByExternalId = getBySinglePropertyDl(ModJar, 'externalId');
 
   async downloadJarToFileStream(jar: ModJar): Promise<NodeJS.ReadableStream> {
     let cachedFilePath = await this.getCachedJarPath(jar);

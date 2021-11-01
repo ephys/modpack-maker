@@ -2,6 +2,26 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AddJarToModpackError {
+  code: AddJarToModpackErrorCodes!
+  message: String!
+}
+
+enum AddJarToModpackErrorCodes {
+  JAR_NOT_FOUND
+  MODPACK_NOT_FOUND
+}
+
+input AddJarToModpackInput {
+  jar: ID!
+  modpackVersion: ID!
+}
+
+type AddJarToModpackPayload {
+  error: AddJarToModpackError
+  node: ModpackVersion
+}
+
 input CreateModpackInput {
   minecraftVersion: String!
   modLoader: ModLoader!
@@ -113,6 +133,7 @@ type ModpackVersion {
 }
 
 type Mutation {
+  addJarToModpack(input: AddJarToModpackInput!): AddJarToModpackPayload!
   createModpack(input: CreateModpackInput!): CreateModpackPayload!
   createNewModpackVersion(input: CreateNewModpackVersionInput!): CreateNewModpackVersionPayload!
   removeJarFromModpack(input: RemoveJarFromModpackInput!): RemoveJarFromModpackPayload!
@@ -168,6 +189,7 @@ enum ProjectSource {
 }
 
 type Query {
+  jar(id: ID!): ModJar
   jars(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int, project: ID!): ModJarConnection!
   modpack(id: ID!): Modpack
   modpacks: [Modpack!]!

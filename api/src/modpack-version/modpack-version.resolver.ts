@@ -31,6 +31,26 @@ enum SetModpackJarIsLibraryErrorCode {
 
 const SetModpackJarIsLibraryPayload = Payload('SetModpackJarIsLibrary', ModpackMod, SetModpackJarIsLibraryErrorCode);
 
+// ============================
+
+@InputType()
+class AddJarToModpackInput {
+  @Field(() => ID)
+  modpackVersion: string;
+
+  @Field(() => ID)
+  jar: string;
+}
+
+enum AddJarToModpackErrorCodes {
+  MODPACK_NOT_FOUND = 'MODPACK_NOT_FOUND',
+  JAR_NOT_FOUND = 'JAR_NOT_FOUND',
+}
+
+const AddJarToModpackPayload = Payload('AddJarToModpack', ModpackVersion, AddJarToModpackErrorCodes);
+
+// ============================
+
 @InputType()
 class RemoveJarFromModpackInput {
   @Field(() => ID)
@@ -112,7 +132,7 @@ export class ModpackVersionResolver {
   @Mutation(() => SetModpackJarIsLibraryPayload)
   async setModpackJarIsLibrary(@Args('input') input: SetModpackJarIsLibraryInput) {
     const [jar, modpack] = await Promise.all([
-      this.modService.getJar(input.jar),
+      this.modService.getJarByExternalId(input.jar),
       // TODO: nodeService
       this.modpackVersionService.getModpackVersionByEid(input.modpackVersion),
     ]);
@@ -133,11 +153,31 @@ export class ModpackVersionResolver {
     return new SetModpackJarIsLibraryPayload().withNode(modpackMod);
   }
 
+  @Mutation(() => AddJarToModpackPayload)
+  async addJarToModpack(@Args('input') input: AddJarToModpackInput): Promise<typeof AddJarToModpackPayload.T> {
+    const [modpack, jar] = await Promise.all([
+      this.modpackVersionService.getModpackVersionByEid(input.modpackVersion),
+      this.modService.getJarByExternalId(input.jar),
+    ]);
+
+    if (modpack == null) {
+      return new RemoveJarFromModpackPayload().withError(RemoveJarFromModpackErrorCodes.MODPACK_NOT_FOUND, `modpack version ${input.modpackVersion} not found`);
+    }
+
+    if (jar == null) {
+      return new RemoveJarFromModpackPayload().withError(RemoveJarFromModpackErrorCodes.JAR_NOT_FOUND, `jar ${input.jar} not found`);
+    }
+
+    await this.modpackVersionService.addJarToModpack(modpack, jar);
+
+    return new RemoveJarFromModpackPayload().withNode(modpack);
+  }
+
   @Mutation(() => RemoveJarFromModpackPayload)
   async removeJarFromModpack(@Args('input') input: RemoveJarFromModpackInput): Promise<typeof RemoveJarFromModpackPayload.T> {
     const [modpack, jar] = await Promise.all([
       this.modpackVersionService.getModpackVersionByEid(input.modpackVersion),
-      this.modService.getJar(input.jar),
+      this.modService.getJarByExternalId(input.jar),
     ]);
 
     if (modpack == null) {
@@ -157,9 +197,9 @@ export class ModpackVersionResolver {
   async replaceModpackJar(@Args('input') input: ReplaceModpackJarInput): Promise<typeof ReplaceModpackJarPayload.T> {
     const [modpack, oldJar, newJars] = await Promise.all([
       this.modpackVersionService.getModpackVersionByEid(input.modpackVersion),
-      this.modService.getJar(input.oldJar),
+      this.modService.getJarByExternalId(input.oldJar),
       Promise.all(
-        input.newJars.map(async id => this.modService.getJar(id)),
+        input.newJars.map(async id => this.modService.getJarByExternalId(id)),
       ),
     ]);
 
