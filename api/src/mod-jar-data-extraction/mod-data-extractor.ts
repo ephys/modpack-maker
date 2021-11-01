@@ -32,24 +32,27 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<TModMeta[]> {
   }
 
   if (hasNewForge) {
-    const modMeta = {};
+    const modMetas: Array<Partial<TModMeta>> = [];
 
     if (data.files['META-INF/mods.toml']) {
-      const newMeta = getMetaFromModsToml(await data.file('META-INF/mods.toml')!.async('string'));
-      if (newMeta) {
-        mergeModMeta(modMeta, newMeta);
-      }
+      const newMetas = getMetaFromModsToml(await data.file('META-INF/mods.toml')!.async('string'));
+      modMetas.push(...newMetas);
     }
 
     // NEW FORGE META
-    if (!isMetaComplete(modMeta) && data.files['META-INF/MANIFEST.MF']) {
-      const newMeta = getMetaFromJarManifest(await data.file('META-INF/MANIFEST.MF')!.async('string'));
-      if (newMeta) {
-        mergeModMeta(modMeta, newMeta);
+    if (data.files['META-INF/MANIFEST.MF']) {
+      const versionFromManifest = getVersionFromJarManifest(await data.file('META-INF/MANIFEST.MF')!.async('string'));
+      if (versionFromManifest) {
+        for (const modMeta of modMetas) {
+          // eslint-disable-next-line max-depth
+          if (!modMeta.version) {
+            modMeta.version = versionFromManifest;
+          }
+        }
       }
     }
 
-    mods.push(modMeta);
+    mods.push(...modMetas);
   } else if (data.files['mcmod.info']) {
     // LEGACY FORGE MOD
     mods.push(...getMetaFromLegacyMcModInfo(await data.file('mcmod.info')!.async('string')));
@@ -155,17 +158,14 @@ function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
   });
 }
 
-export function getMetaFromJarManifest(fileContents: string): Partial<TModMeta> | null {
+export function getVersionFromJarManifest(fileContents: string): string | null {
   const manifest = parseJarManifest(fileContents);
 
   if (!manifest || !manifest.main) {
     return null;
   }
 
-  return omitFalsy({
-    version: manifest.main['Implementation-Version'],
-    modId: manifest.main['Specification-Title'],
-  });
+  return manifest.main['Implementation-Version'] || null;
 }
 
 /*
@@ -176,71 +176,63 @@ mods.x.displayURL
 mods.x.description
 mods.x.logoFile
  */
-export function getMetaFromModsToml(fileContents): Partial<TModMeta> | null {
+export function getMetaFromModsToml(fileContents): Array<Partial<TModMeta>> {
   const manifest = Toml.parse(fileContents);
 
   if (!manifest || !Array.isArray(manifest.mods)) {
-    return null;
+    return [];
   }
 
-  // TODO: what if there is more than one mod in the package?
-  if (manifest.mods.length !== 1) {
-    throw new Error('Found a mods.toml mod with more than one mod declaration. What do we do?');
-  }
+  return manifest.mods.map(manifestMod => {
+    let version = manifestMod.version;
 
-  const firstMod = manifest.mods[0];
+    // starting with ${ means there was some attempt at substituting a var but it failed
+    // eg. version="${file.jarVersion}"
+    // we'll fallback to the next possible source of version
+    if (typeof version !== 'string' || version.startsWith('${')) {
+      version = null;
+    }
 
-  // @ts-expect-error
-  let version = firstMod.version;
+    const modId = manifestMod.modId;
 
-  // starting with ${ means there was some attempt at substituting a var but it failed
-  // eg. version="${file.jarVersion}"
-  // we'll fallback to the next possible source of version
-  if (typeof version !== 'string' || version.startsWith('${')) {
-    version = null;
-  }
+    const dependencies: TModDependency[] = [];
+    let minecraftVersionRange;
 
-  // @ts-expect-error
-  const modId = firstMod.modId;
+    if (modId && manifest.dependencies?.[modId]) {
+      const manifestDependencies = manifest.dependencies[modId];
+      for (const manifestDep of manifestDependencies) {
+        if (manifestDep.modId.toLowerCase() === 'minecraft') {
+          if (manifestDep.versionRange) {
+            minecraftVersionRange = mavenVersionRangeToSemver(manifestDep.versionRange);
+          }
 
-  const dependencies: TModDependency[] = [];
-  let minecraftVersionRange;
-
-  if (modId && manifest.dependencies?.[modId]) {
-    const manifestDependencies = manifest.dependencies[modId];
-    for (const manifestDep of manifestDependencies) {
-      if (manifestDep.modId.toLowerCase() === 'minecraft') {
-        if (manifestDep.versionRange) {
-          minecraftVersionRange = mavenVersionRangeToSemver(manifestDep.versionRange);
+          continue;
         }
 
-        continue;
+        const dep: TModDependency = {
+          modId: manifestDep.modId,
+          versionRange: manifestDep.versionRange ? mavenVersionRangeToSemver(manifestDep.versionRange) : undefined,
+          type: manifestDep.mandatory ? DependencyType.depends : DependencyType.suggests,
+        };
+
+        dependencies.push(dep);
       }
-
-      const dep: TModDependency = {
-        modId: manifestDep.modId,
-        versionRange: manifestDep.versionRange ? mavenVersionRangeToSemver(manifestDep.versionRange) : undefined,
-        type: manifestDep.mandatory ? DependencyType.depends : DependencyType.suggests,
-      };
-
-      dependencies.push(dep);
     }
-  }
 
-  dependencies.sort((a, b) => a.modId.localeCompare(b.modId));
+    dependencies.sort((a, b) => a.modId.localeCompare(b.modId));
 
-  const meta: Partial<TModMeta> = omitFalsy({
-    version,
-    // @ts-expect-error
-    name: firstMod.displayName || null,
-    modId: modId || null,
-    // only forge uses TOML
-    loader: manifest.modLoader === 'javafml' ? ModLoader.FORGE : null,
-    dependencies,
-    minecraftVersionRange,
+    const meta: Partial<TModMeta> = omitFalsy({
+      version,
+      name: manifestMod.displayName || null,
+      modId: modId || null,
+      // only forge uses TOML
+      loader: manifest.modLoader === 'javafml' ? ModLoader.FORGE : null,
+      dependencies,
+      minecraftVersionRange,
+    });
+
+    return meta;
   });
-
-  return meta;
 }
 
 function permissivelyParseJson(fileContents) {
