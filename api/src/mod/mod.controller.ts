@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { ModDiscoveryService } from './mod-discovery.service';
 import { ModService } from './mod.service';
@@ -10,9 +10,9 @@ export class ModController {
     private readonly modService: ModService,
   ) {}
 
-  @Get('/curseforge/retry-crawl')
-  async retryCrawl(): Promise<object> {
-    await this.modDiscoveryService.retryFailedFiles();
+  @Get('/projects/retry-crawl')
+  async retryCrawl(@Query('filter') filter: string): Promise<object> {
+    await this.modDiscoveryService.retryFailedFiles(filter);
 
     return { status: 200 };
   }
