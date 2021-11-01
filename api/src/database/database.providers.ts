@@ -3,10 +3,10 @@ import cls from 'cls-hooked';
 import { Sequelize } from 'sequelize-typescript';
 import { ModJar } from '../mod/mod-jar.entity';
 import { ModVersion } from '../mod/mod-version.entity';
-import { Project } from '../mod/project.entity';
 import ModpackMod from '../modpack-version/modpack-mod.entity';
 import { ModpackVersion } from '../modpack-version/modpack-version.entity';
 import { Modpack } from '../modpack/modpack.entity';
+import { Project } from '../project/project.entity';
 
 export const SEQUELIZE_PROVIDER = 'SEQUELIZE';
 

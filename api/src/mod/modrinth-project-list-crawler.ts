@@ -5,10 +5,10 @@ import { Queue } from 'bull';
 import { Sequelize } from 'sequelize-typescript';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { iterateModrinthModList } from '../modrinth.api';
+import type { TProjectCreationAttributes } from '../project/project.entity';
+import { Project, ProjectSource } from '../project/project.entity';
 import { refreshStaleJarLists, upsertUpdatedProjects } from './curseforge-project-list-crawler';
 import { FETCH_MODRINTH_JARS_QUEUE } from './mod.constants';
-import type { TProjectCreationAttributes } from './project.entity';
-import { Project, ProjectSource } from './project.entity';
 
 const PAGE_SIZE = 100;
 

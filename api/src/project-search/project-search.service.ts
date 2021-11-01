@@ -11,8 +11,7 @@ import { EMPTY_ARRAY } from '../../../common/utils';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { Op, QueryTypes, Sequelize } from '../esm-compat/sequelize-esm';
 import { ModJar } from '../mod/mod-jar.entity';
-import { Project } from '../mod/project.entity';
-import { getBySinglePropertyDl } from '../utils/dataloader';
+import { Project } from '../project/project.entity';
 import { lastItem } from '../utils/generic-utils';
 import type { ICursorPagination, IOffsetPagination } from '../utils/graphql-connection-utils';
 import { isCursorPagination, normalizePagination } from '../utils/graphql-connection-utils';
@@ -93,8 +92,6 @@ class ProjectSearchService {
     @Inject(SEQUELIZE_PROVIDER)
     private readonly sequelize: Sequelize,
   ) {}
-
-  getProjectByInternalId = getBySinglePropertyDl(Project, 'internalId');
 
   async countProjects(luceneQuery: string): Promise<number> {
     luceneQuery = luceneQuery.trim();

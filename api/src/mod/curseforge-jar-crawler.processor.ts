@@ -10,12 +10,12 @@ import type { TCurseFile } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
 import { Sequelize, Op } from '../esm-compat/sequelize-esm';
 import { getModMetasFromJar } from '../mod-jar-data-extraction/mod-data-extractor';
+import { Project, ProjectSource } from '../project/project.entity';
 import { generateId } from '../utils/generic-utils';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler';
 import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
-import { Project, ProjectSource } from './project.entity';
 
 @Processor(FETCH_CURSE_JARS_QUEUE)
 export class CurseforgeJarCrawlerProcessor {

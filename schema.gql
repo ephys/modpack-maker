@@ -46,11 +46,11 @@ type GqlModDependency {
 }
 
 type ModJar {
-  curseForgePage: String!
   downloadUrl: String!
   fileName: String!
   id: ID!
   mods(matchingModpack: ID): [ModVersion!]!
+  project: Project!
   releaseType: ReleaseType!
 
   """
@@ -59,6 +59,13 @@ type ModJar {
       
   """
   updatedVersion(matchingModpack: ID!): [ModJar!]!
+}
+
+type ModJarConnection {
+  edges: [ModJarEdge!]!
+  nodes: [ModJar!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
 }
 
 type ModJarEdge {
@@ -125,7 +132,7 @@ type Project {
   homepage: String!
   iconUrl: String!
   id: String!
-  jars: [ModJar!]!
+  jars(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int): [ModJarConnection!]!
   longDescription: String!
   name: String!
   source: ProjectSource!
@@ -161,6 +168,7 @@ enum ProjectSource {
 }
 
 type Query {
+  jars(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int, project: ID!): ModJarConnection!
   modpack(id: ID!): Modpack
   modpacks: [Modpack!]!
   project(id: ID!): Project

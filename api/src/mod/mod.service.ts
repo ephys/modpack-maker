@@ -2,6 +2,8 @@ import fsCb from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
+import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
 import uniq from 'lodash/uniq.js';
@@ -11,12 +13,13 @@ import type { WhereOptions } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import minecraftVersions from '../../../common/minecraft-versions.json';
 import type { ModLoader } from '../../../common/modloaders';
-import type { TCurseProject } from '../curseforge.api';
-import { getCurseForgeProjects } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
 import { QueryTypes } from '../esm-compat/sequelize-esm';
 import { getPreferredMinecraftVersions } from '../modpack/modpack.service';
+import type { Project } from '../project/project.entity';
 import { overlaps } from '../utils/generic-utils';
+import type { ICursorPagination, IOffsetPagination } from '../utils/graphql-connection-utils';
+import { isCursorPagination, normalizePagination } from '../utils/graphql-connection-utils';
 import { minecraftVersionComparator } from '../utils/minecraft-utils';
 import { and, buildWhereComponent, isIn, or, overlap } from '../utils/sequelize-utils';
 import { ModJar } from './mod-jar.entity';
@@ -67,18 +70,6 @@ class ModService {
         externalId: jarId,
       },
     });
-  }
-
-  #getCurseForgeProjectDataLoader = new DataLoader<number, TCurseProject | null>(async (curseProjectIds: number[]) => {
-    const projects = await getCurseForgeProjects(curseProjectIds);
-
-    return curseProjectIds.map(id => {
-      return projects.find(project => project.id === id) ?? null;
-    });
-  });
-
-  async getCurseForgeProjectUrl(curseProjectId: number): Promise<string> {
-    return (await this.#getCurseForgeProjectDataLoader.load(curseProjectId))?.websiteUrl ?? '';
   }
 
   async downloadJarToFileStream(jar: ModJar): Promise<NodeJS.ReadableStream> {
@@ -256,6 +247,34 @@ LIMIT ${keys.length};
     }
 
     return result;
+  }
+
+  async getProjectJars(
+    project: Project,
+    pagination: ICursorPagination | IOffsetPagination,
+  ): Promise<FindByCursorResult<ModJar>> {
+    // @ts-expect-error to fix
+    pagination = normalizePagination(pagination, 20);
+
+    return sequelizeFindByCursor({
+      // @ts-expect-error
+      model: ModJar,
+      order: [['releaseDate', 'DESC']],
+      ...(isCursorPagination(pagination) ? pagination : { first: pagination.limit }),
+      where: {
+        projectId: project.internalId,
+      },
+      findAll: async query => {
+        return ModJar.findAll({
+          ...query,
+          offset: isCursorPagination(pagination) ? 0 : pagination.offset,
+        });
+      },
+    });
+  }
+
+  async countProjectJars(project: Project): Promise<number> {
+    return ModJar.count({ where: { projectId: project.internalId } });
   }
 }
 

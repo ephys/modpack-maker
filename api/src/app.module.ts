@@ -7,12 +7,14 @@ import { ModModule } from './mod/mod.module';
 import { ModpackVersionModule } from './modpack-version/modpack-version.module';
 import { ModpackModule } from './modpack/modpack.module';
 import { ProjectSearchModule } from './project-search/project-search.module';
+import { ProjectModule } from './project/project.module';
 
 @Module({
   imports: [
     DatabaseModule,
     ModpackModule,
     ModModule,
+    ProjectModule,
     ProjectSearchModule,
     ModpackVersionModule,
     GraphQLModule.forRoot({

@@ -47,7 +47,8 @@ export type INormalizedCursorPagination = {
 };
 
 export function isCursorPagination(arg: any): arg is ICursorPagination {
-  return 'first' in arg || 'last' in arg || 'before' in arg || 'after' in arg;
+  return arg != null && typeof arg === 'object'
+    && (arg.first != null || arg.last != null || arg.before != null || arg.after != null);
 }
 
 export function normalizePagination(pagination: ICursorPagination, maxReturnCount: number): INormalizedCursorPagination;
@@ -119,6 +120,31 @@ class CursorPaginationArgs implements ICursorPagination {
   isEmpty() {
     return this.first == null && this.last == null && this.after == null && this.before == null;
   }
+}
+
+@ArgsType()
+export class FuzzyPagination implements ICursorPagination, IOffsetPagination {
+  // cursor
+
+  @Field(() => Int, { nullable: true })
+  first: number | null;
+
+  @Field(() => Int, { nullable: true })
+  last: number | null;
+
+  @Field(() => String, { nullable: true })
+  after: string | null;
+
+  @Field(() => String, { nullable: true })
+  before: string | null;
+
+  // offset
+
+  @Field(() => Int, { nullable: true })
+  limit: number | null;
+
+  @Field(() => Int, { nullable: true })
+  offset: number | null;
 }
 
 type INormalizedOffsetPagination = {

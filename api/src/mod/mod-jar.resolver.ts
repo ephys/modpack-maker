@@ -1,6 +1,13 @@
-import { Args, ID, Parent, registerEnumType, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
+import { Args, ID, Parent, Query, registerEnumType, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
 import { ModpackService } from '../modpack/modpack.service';
-import { Connection } from '../utils/graphql-connection-utils';
+import { Project } from '../project/project.entity';
+import { ProjectService } from '../project/project.service';
+import type { IConnectionType } from '../utils/graphql-connection-utils';
+import {
+  Connection, EMPTY_CONNECTION,
+  FuzzyPagination,
+  sequelizeCursorToConnection,
+} from '../utils/graphql-connection-utils';
 import { DependencyType } from './dependency-type';
 import { ModJar } from './mod-jar.entity';
 import { ModVersion } from './mod-version.entity';
@@ -16,9 +23,33 @@ export const ModJarConnection = Connection(ModJar);
 export class ModJarResolver {
 
   constructor(
+    private readonly projectService: ProjectService,
     private readonly modService: ModService,
     private readonly modpackService: ModpackService,
   ) {}
+
+  @Query(() => ModJarConnection, { name: 'jars' })
+  async searchJars(
+    @Args() pagination: FuzzyPagination,
+    @Args('project', { type: () => ID }) projectId: string,
+  ): Promise<IConnectionType<ModJar>> {
+    const project = await this.projectService.getProjectByInternalId(Number(projectId));
+    if (project == null) {
+      return EMPTY_CONNECTION;
+    }
+
+    return sequelizeCursorToConnection(
+      async () => this.modService.getProjectJars(project, pagination),
+      {
+        totalCount: async () => this.modService.countProjectJars(project),
+      },
+    );
+  }
+
+  @ResolveField('project', () => Project)
+  async getJarProject(@Parent() jar: ModJar) {
+    return this.projectService.getProjectByInternalId(jar.projectId);
+  }
 
   // TODO: Pagination
   @ResolveField('mods', () => [ModVersion])
@@ -31,11 +62,6 @@ export class ModJarResolver {
     return this.modService.getModsInJar(jar, {
       modLoader: modpack?.modLoader,
     });
-  }
-
-  @ResolveField('curseForgePage', () => String)
-  async getCurseForgePageUrl(@Parent() jar: ModJar): Promise<string> {
-    return this.modService.getCurseForgeProjectUrl(jar.projectId);
   }
 
   @ResolveField('downloadUrl', () => String)

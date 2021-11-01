@@ -3,9 +3,9 @@ import { Injectable } from '@nestjs/common';
 import { Queue } from 'bull';
 import Sequelize from 'sequelize';
 import { Op } from '../esm-compat/sequelize-esm';
+import type { ProjectSource } from '../project/project.entity';
+import { Project } from '../project/project.entity';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
-import type { ProjectSource } from './project.entity';
-import { Project } from './project.entity';
 
 @Injectable()
 class ModDiscoveryService {

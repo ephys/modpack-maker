@@ -1,6 +1,6 @@
 import * as DB from 'sequelize-typescript';
 import { Field, ObjectType } from '../esm-compat/nest-graphql-esm';
-import { ModJar } from './mod-jar.entity';
+import { ModJar } from '../mod/mod-jar.entity';
 
 export enum ProjectSource {
   MODRINTH = 'MODRINTH',

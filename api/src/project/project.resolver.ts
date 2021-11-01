@@ -1,10 +1,14 @@
 import { fetchCurseProjectDescription } from '../curseforge.api';
-import { Parent, registerEnumType, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
+import { Args, ID, Parent, Query, registerEnumType, ResolveField, Resolver } from '../esm-compat/nest-graphql-esm';
+import type { ModJar } from '../mod/mod-jar.entity';
+import { ModJarConnection } from '../mod/mod-jar.resolver';
+import { ModService } from '../mod/mod.service';
 import { getModrinthProjectDescription } from '../modrinth.api';
-import { Connection } from '../utils/graphql-connection-utils';
+import type { IConnectionType } from '../utils/graphql-connection-utils';
+import { Connection, FuzzyPagination, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
 import { parseProjectMarkdown } from '../utils/markdown';
-import { ModJar } from './mod-jar.entity';
 import { Project, ProjectSource } from './project.entity';
+import { ProjectService } from './project.service';
 
 const ProjectConnection = Connection(Project);
 
@@ -12,6 +16,16 @@ registerEnumType(ProjectSource, { name: 'ProjectSource' });
 
 @Resolver(Project)
 class ProjectResolver {
+  constructor(
+    private readonly modService: ModService,
+    private readonly projectService: ProjectService,
+  ) {}
+
+  @Query(() => Project, { name: 'project', nullable: true })
+  async getProject(@Args('id', { type: () => ID }) id: string): Promise<Project | null> {
+    return this.projectService.getProjectByInternalId(Number(id));
+  }
+
   @ResolveField('homepage', () => String)
   getProjectHomepage(@Parent() project: Project): string {
     switch (project.sourceType) {
@@ -26,9 +40,17 @@ class ProjectResolver {
     }
   }
 
-  @ResolveField('jars', () => [ModJar])
-  async getProjectJars(@Parent() project: Project): Promise<ModJar[]> {
-    return project.$get('jars');
+  @ResolveField('jars', () => [ModJarConnection])
+  async getProjectJars(
+    @Parent() project: Project,
+    @Args() pagination: FuzzyPagination,
+  ): Promise<IConnectionType<ModJar>> {
+    return sequelizeCursorToConnection(
+      async () => this.modService.getProjectJars(project, pagination),
+      {
+        totalCount: async () => this.modService.countProjectJars(project),
+      },
+    );
   }
 
   @ResolveField('source', () => ProjectSource)

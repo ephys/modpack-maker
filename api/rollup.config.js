@@ -18,9 +18,6 @@ export default {
   external: external(),
   plugins: [
     nodeResolve(),
-    // autoExternal({
-    //   packagePath: path.resolve('./package.json'),
-    // }),
     commonjs({
       defaultIsModuleExports: true,
     }),

@@ -1,9 +1,9 @@
 import * as DB from 'sequelize-typescript';
 import { Field as GraphQl, ID, ObjectType as GraphQlObject } from '../esm-compat/nest-graphql-esm';
 import ModpackMod from '../modpack-version/modpack-mod.entity';
+import { Project } from '../project/project.entity';
 import { tsEnum } from '../utils/sequelize-utils';
 import { ModVersion } from './mod-version.entity';
-import { Project } from './project.entity';
 
 export enum ReleaseType {
   STABLE = 'STABLE',

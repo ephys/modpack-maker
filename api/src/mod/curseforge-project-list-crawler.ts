@@ -6,10 +6,10 @@ import { Sequelize } from 'sequelize-typescript';
 import { getCurseForgeModCategories, iterateCurseForgeModList } from '../curseforge.api';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { Op, QueryTypes } from '../esm-compat/sequelize-esm';
+import type { TProjectCreationAttributes } from '../project/project.entity';
+import { Project, ProjectSource } from '../project/project.entity';
 import { lastItem } from '../utils/generic-utils';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
-import type { TProjectCreationAttributes } from './project.entity';
-import { Project, ProjectSource } from './project.entity';
 
 const PAGE_SIZE = 50;
 

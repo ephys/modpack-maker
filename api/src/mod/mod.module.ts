@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { forwardRef, Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { ModpackModule } from '../modpack/modpack.module';
+import { ProjectModule } from '../project/project.module';
 import { CurseforgeJarCrawlerProcessor } from './curseforge-jar-crawler.processor';
 import { CurseforgeProjectListCrawler } from './curseforge-project-list-crawler';
 import { ModDiscoveryService } from './mod-discovery.service';
@@ -12,7 +13,6 @@ import { ModController } from './mod.controller';
 import { ModService } from './mod.service';
 import { ModrinthJarCrawlerProcessor } from './modrinth-jar-crawler.processor';
 import { ModrinthProjectListCrawler } from './modrinth-project-list-crawler';
-import { ProjectResolver } from './project.resolver';
 
 @Module({
   imports: [
@@ -24,6 +24,7 @@ import { ProjectResolver } from './project.resolver';
     BullModule.registerQueue({
       name: FETCH_MODRINTH_JARS_QUEUE,
     }),
+    forwardRef(() => ProjectModule),
   ],
   exports: [
     ModDiscoveryService,
@@ -42,7 +43,6 @@ import { ProjectResolver } from './project.resolver';
     CurseforgeProjectListCrawler,
     ModrinthProjectListCrawler,
     ModVersionRepository,
-    ProjectResolver,
   ],
 })
 export class ModModule {}

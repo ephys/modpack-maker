@@ -7,13 +7,13 @@ import { InjectSequelize } from '../database/database.providers';
 import { Sequelize, Op } from '../esm-compat/sequelize-esm';
 import type { TModrinthProjectVersion } from '../modrinth.api';
 import { getModrinthModFiles, getModrinthReleaseType } from '../modrinth.api';
+import { Project, ProjectSource } from '../project/project.entity';
 import { generateId } from '../utils/generic-utils';
 import { getModVersionsFromJar } from './curseforge-jar-crawler.processor';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler';
 import { ModJar } from './mod-jar.entity';
 import type { ModVersion } from './mod-version.entity';
 import { FETCH_MODRINTH_JARS_QUEUE } from './mod.constants';
-import { Project, ProjectSource } from './project.entity';
 
 @Processor(FETCH_MODRINTH_JARS_QUEUE)
 export class ModrinthJarCrawlerProcessor {

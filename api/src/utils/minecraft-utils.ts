@@ -1,4 +1,4 @@
-import * as semver from 'semver';
+import semver from 'semver';
 import { parseMinecraftVersionThrows, parseMinecraftVersion } from '../../../common/minecraft-utils';
 import minecraftVersion from '../../../common/minecraft-versions.json';
 
