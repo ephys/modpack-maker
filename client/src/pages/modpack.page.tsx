@@ -56,9 +56,8 @@ import css from './modpack.module.scss';
 //  also display what changed since previous version using colored bullets
 // TODO: display sticky info bar at top:
 //  - modpack name
-//  - how many mods
+//  - how many mods (excl. incompatible)
 //  - how many libs
-//  - how many processing
 //  - how many incompatible mods
 //  Clicking them jumps to section
 

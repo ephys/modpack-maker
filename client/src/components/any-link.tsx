@@ -1,8 +1,9 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 type TAnyLinkProps = Pick<ComponentProps<'a'>, 'rel' | 'target'> & {
   to: ComponentProps<typeof Link>['to'],
+  children: ReactNode,
 };
 
 const BASE_REL = 'noopener noreferrer';

@@ -467,6 +467,8 @@ export type TProjectPageQuery = { __typename: 'Query', project?: { __typename: '
 
 export type TProjectPageJarsQueryVariables = Exact<{
   id: Scalars['ID'],
+  offset: Scalars['Int'],
+  limit: Scalars['Int'],
 }>;
 
 export type TProjectPageJarsQuery = { __typename: 'Query', jars: { __typename: 'ModJarConnection', totalCount: number, nodes: Array<{ __typename: 'ModJar', id: string, fileName: string, releaseType: ReleaseType, downloadUrl: string, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader }> }> } };
@@ -640,8 +642,8 @@ export function useProjectPageQuery(options: Omit<Urql.UseQueryArgs<TProjectPage
 }
 
 export const ProjectPageJarsDocument = /* #__PURE__ */ gql`
-    query ProjectPageJars($id: ID!) {
-  jars(project: $id) {
+    query ProjectPageJars($id: ID!, $offset: Int!, $limit: Int!) {
+  jars(project: $id, offset: $offset, limit: $limit) {
     nodes {
       id
       fileName

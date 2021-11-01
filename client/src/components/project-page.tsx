@@ -4,6 +4,8 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
+import Pagination from '@mui/material/Pagination';
+import PaginationItem from '@mui/material/PaginationItem';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import type { ComponentProps, ReactNode } from 'react';
@@ -81,7 +83,7 @@ export function ProjectPage(props: ProjectPageProps) {
         </a>
       </div>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }} className="full-bleed">
+      <Box className="full-bleed">
         <Tabs value={activeTab} aria-label="basic tabs example">
           <Tab
             label="Description"
@@ -147,9 +149,14 @@ type FilesPanelProps = {
 // TODO: when viewed from modpack, set default filters to match modpack (clearable)
 function FilesPanel(props: FilesPanelProps) {
   const search = useSearchParams();
+  const page = Math.max(Number(search.get('page') || 1), 1);
+
+  const elementsPerPage = 20;
   const filesUrql = useProjectPageJarsQuery({
     variables: {
       id: props.project.id,
+      limit: elementsPerPage,
+      offset: (page - 1) * elementsPerPage,
     },
   });
 
@@ -162,29 +169,47 @@ function FilesPanel(props: FilesPanelProps) {
   }
 
   const jars = filesUrql.data.jars.nodes;
+  const pageCount = Math.ceil(filesUrql.data.jars.totalCount / elementsPerPage);
 
   return (
-    <List>
-      {jars.map(jar => {
-        return (
-          <ListItem
-            key={jar.id}
-            disablePadding
-          >
-            <ListItemButton
-              component={Link}
-              to={{ search: modifySearch(search, { [URL_KEY_FILE_MODAL]: jar.id }).toString() }}
+    <>
+      <List>
+        {jars.map(jar => {
+          return (
+            <ListItem
+              key={jar.id}
+              disablePadding
             >
-              <ListItemText
-                primary={jar.mods.map(mod => {
-                  return `${mod.name} (${mod.modId}) ${mod.modVersion} - MC ${mod.supportedMinecraftVersions.join(', ')}, ${mod.supportedModLoader}`;
-                }).join(', ')}
-                secondary={`${jar.releaseType} ${jar.fileName}`}
-              />
-            </ListItemButton>
-          </ListItem>
-        );
-      })}
-    </List>
+              <ListItemButton
+                component={Link}
+                to={{ search: modifySearch(search, { [URL_KEY_FILE_MODAL]: jar.id }).toString() }}
+              >
+                <ListItemText
+                  primary={jar.mods.map(mod => {
+                    return `${mod.name} (${mod.modId}) ${mod.modVersion} - MC ${mod.supportedMinecraftVersions.join(', ')}, ${mod.supportedModLoader}`;
+                  }).join(', ')}
+                  secondary={`${jar.releaseType} ${jar.fileName}`}
+                />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+      </List>
+      <Pagination
+        count={pageCount}
+        page={Math.min(page, pageCount)}
+        renderItem={item => (
+          <PaginationItem
+            component={Link}
+            to={{
+              search: modifySearch(search, {
+                page: item.page,
+              }).toString(),
+            }}
+            {...item}
+          />
+        )}
+      />
+    </>
   );
 }
