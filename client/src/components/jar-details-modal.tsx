@@ -1,4 +1,5 @@
-import { Button, CircularProgress } from '@mui/material';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import type { ComponentProps } from 'react';
 import { useCallback } from 'react';
 import type { TJarModalQuery } from '../api/graphql.generated';

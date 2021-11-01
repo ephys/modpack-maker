@@ -1,4 +1,4 @@
-import { Chip } from '@mui/material';
+import Chip from '@mui/material/Chip';
 import type { ReactNode } from 'react';
 import type { ReleaseType } from '../api/graphql.generated';
 

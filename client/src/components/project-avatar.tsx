@@ -1,4 +1,4 @@
-import { Avatar } from '@mui/material';
+import Avatar from '@mui/material/Avatar';
 import type { ComponentProps } from 'react';
 
 type Props = Pick<ComponentProps<typeof Avatar>, 'src'>;

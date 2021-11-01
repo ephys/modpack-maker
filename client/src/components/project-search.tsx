@@ -1,18 +1,17 @@
-import {
-  Chip,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  List,
-  ListItem,
-  ListItemAvatar, ListItemButton,
-  ListItemText,
-  MenuItem,
-  Pagination,
-  PaginationItem,
-  Select,
-  TextField,
-} from '@mui/material';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemAvatar from '@mui/material/ListItemAvatar';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import MenuItem from '@mui/material/MenuItem';
+import Pagination from '@mui/material/Pagination';
+import PaginationItem from '@mui/material/PaginationItem';
+import Select from '@mui/material/Select';
+import TextField from '@mui/material/TextField';
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect } from 'react';
 import { useIntl } from 'react-intl';

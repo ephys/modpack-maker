@@ -1,4 +1,11 @@
-import { Box, CircularProgress, List, ListItem, ListItemButton, ListItemText, Tab, Tabs } from '@mui/material';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import type { ComponentProps, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { TProject } from '../api/graphql.generated';
