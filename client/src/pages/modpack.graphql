@@ -16,7 +16,9 @@ query ModpackView($modpackId: ID!, $versionIndex: Int!) {
           downloadUrl
           fileName
           releaseType
-          curseForgePage
+          project {
+            id
+          }
           updatedVersion(matchingModpack: $modpackId) {
             fileName
             id

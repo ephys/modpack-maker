@@ -4,7 +4,7 @@ import classnames from 'classnames';
 import type { ComponentProps } from 'react';
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useHistory, useParams } from 'react-router-dom';
+import { Link, useHistory, useParams } from 'react-router-dom';
 import {
   getFirstSemverMajorVersion,
   getMostCompatibleMcVersion,
@@ -63,6 +63,7 @@ type TModpackRouteParams = {
   versionIndex: string,
 };
 
+// TODO: don't render ModpackRoute if subpage is open
 export default function ModpackRoute() {
   const { modpackId, versionIndex: versionIndexStr } = useParams<TModpackRouteParams>();
 
@@ -344,7 +345,9 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion }
 
   return (
     <div className={css.actions}>
-      <a href={jar.jar.curseForgePage} target="_blank">Store Page</a>
+      <AnyLink to={{ search: `${URL_KEY_PROJECT_PAGE}=${encodeURIComponent(jar.jar.project.id)}` }}>
+        Store Page
+      </AnyLink>
       <MoreMenu
         actions={[
           {
@@ -480,9 +483,9 @@ function ModListItem(props: TModListItemProps) {
             </Tag>
           )}
           {missingDependencies.map(dependency => (
-            <Tag key={dependency} type="error" title={`This mod depends on ${dependency}, but that mod is missing from your modpack.`}>
+            <Tag key={dependency} type="error" title={`${mod.name} depends on ${dependency}, but that mod is missing from your modpack.`}>
               Missing dependency {dependency}
-              <button>Add</button>
+              <Link to={{ search: `${URL_KEY_PROJECT_LIBRARY_PAGE}&q=${encodeURIComponent(`modId:lollipop`)}` }}>Add</Link>
               <HelpOutlined />
             </Tag>
           ))}

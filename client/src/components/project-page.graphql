@@ -10,3 +10,23 @@ query ProjectPage($id: ID!) {
     sourceId
   }
 }
+
+query ProjectPageJars($id: ID!) {
+  jars(project: $id) {
+    nodes {
+      id
+      fileName
+      releaseType
+      downloadUrl
+      mods {
+        id
+        modId
+        modVersion
+        name
+        supportedMinecraftVersions
+        supportedModLoader
+      }
+    }
+    totalCount
+  }
+}

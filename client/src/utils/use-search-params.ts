@@ -9,11 +9,15 @@ export function useSearchParams() {
   }, [location.search]);
 }
 
-export function modifySearch(search: URLSearchParams, newData: { [key: string]: string | number }): URLSearchParams {
+export function modifySearch(search: URLSearchParams, newData: { [key: string]: string | number | null }): URLSearchParams {
   search = new URLSearchParams(search);
 
   for (const key of Object.keys(newData)) {
-    search.set(key, String(newData[key]));
+    if (newData[key] == null) {
+      search.delete(key);
+    } else {
+      search.set(key, String(newData[key]));
+    }
   }
 
   return search;

@@ -1,13 +1,14 @@
-import { Box, CircularProgress, Tab, Tabs } from '@mui/material';
+import { Box, CircularProgress, List, ListItem, ListItemText, Tab, Tabs } from '@mui/material';
 import type { ComponentProps, ReactNode } from 'react';
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { TProject } from '../api/graphql.generated';
-import { useProjectPageQuery } from '../api/graphql.generated';
+import { useProjectPageJarsQuery, useProjectPageQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
-import { useSearchParams } from '../utils/use-search-params';
+import { modifySearch, useSearchParams } from '../utils/use-search-params';
 import { NotFoundErrorDisplay } from './not-found-error-display';
 import { PageModal } from './page-modal';
 import { ProjectAvatar } from './project-avatar';
+import { ProjectDescription } from './project-description';
 import { SourceIcon } from './source-icon';
 import { UrqlErrorDisplay } from './urql-error-display';
 
@@ -28,20 +29,18 @@ export function ProjectPageModal(props: Props) {
 // TODO: add source, issues, wiki, discord, donation_urls?
 // TODO: license
 
+const URL_KEY_PROJECT_PAGE_TAB = 'project-tab';
+
 export function ProjectPage() {
-  const id = useSearchParams().get(URL_KEY_PROJECT_PAGE) ?? '';
+  const search = useSearchParams();
+  const id = search.get(URL_KEY_PROJECT_PAGE) ?? '';
+  const activeTab = search.get(URL_KEY_PROJECT_PAGE_TAB) === 'files' ? 1 : 0;
 
   const projectUrql = useProjectPageQuery({
     variables: {
       id,
     },
   });
-
-  const [value, setValue] = useState(0);
-
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
 
   if (!isLoadedUrql(projectUrql)) {
     return <CircularProgress />;
@@ -71,17 +70,29 @@ export function ProjectPage() {
       </div>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }} className="full-bleed">
-        <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
-          <Tab label="Description" {...a11yProps(0)} />
-          <Tab label="Files" {...a11yProps(1)} />
+        <Tabs value={activeTab} aria-label="basic tabs example">
+          <Tab
+            label="Description"
+            {...a11yProps(0)}
+            // TODO: cancel navigation if already on page
+            component={Link}
+            to={{ search: modifySearch(search, { [URL_KEY_PROJECT_PAGE_TAB]: null }).toString() }}
+          />
+          <Tab
+            label="Files"
+            {...a11yProps(1)}
+            // TODO: cancel navigation if already on page
+            component={Link}
+            to={{ search: modifySearch(search, { [URL_KEY_PROJECT_PAGE_TAB]: 'files' }).toString() }}
+          />
         </Tabs>
 
-        <TabPanel activeTab={value} tab={0}>
-          {() => <DescriptionPanel project={project} />}
+        <TabPanel activeTab={activeTab} tab={0}>
+          {() => <ProjectDescription project={project} />}
         </TabPanel>
 
-        <TabPanel activeTab={value} tab={1}>
-          {() => <FilesPanel />}
+        <TabPanel activeTab={activeTab} tab={1}>
+          {() => <FilesPanel project={project} />}
         </TabPanel>
       </Box>
     </>
@@ -117,31 +128,41 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-type DescriptionPanelProps = {
-  project: Pick<TProject, 'source' | 'homepage' | 'longDescription'>,
-};
-
-function DescriptionPanel(props: DescriptionPanelProps) {
-  const { project } = props;
-
-  // TODO: use XML-to-JSX
-  // TODO: redirect links to curseforge and modrinth projects
-  //  - add endpoint to view project based on modrinth/curseforge ID or slug
-  // TODO: external links use _target:blank
-  // TODO: transforms urls like /linkout?remoteUrl=http%253a%252f%252fae-mod.info%252f
-  // TODO: relative links should be relative to homepageUrl
-  // TODO: max height on images
-  // TODO: whitelist css
-  return (
-    <div dangerouslySetInnerHTML={{ __html: project.longDescription }} />
-  );
-}
-
 type FilesPanelProps = {
-
+  project: { id: TProject['id'] },
 };
 
 function FilesPanel(props: FilesPanelProps) {
+  const filesUrql = useProjectPageJarsQuery({
+    variables: {
+      id: props.project.id,
+    },
+  });
 
-  return 'files';
+  if (!isLoadedUrql(filesUrql)) {
+    return <CircularProgress />;
+  }
+
+  if (filesUrql.error) {
+    return <UrqlErrorDisplay urql={filesUrql} />;
+  }
+
+  const jars = filesUrql.data.jars.nodes;
+
+  return (
+    <List>
+      {jars.map(jar => {
+        return (
+          <ListItem key={jar.id}>
+            <ListItemText
+              primary={jar.mods.map(mod => {
+                return `${mod.name} (${mod.modId}) ${mod.modVersion} - MC ${mod.supportedMinecraftVersions.join(', ')}, ${mod.supportedModLoader}`;
+              }).join(', ')}
+              secondary={`${jar.releaseType} ${jar.fileName}`}
+            />
+          </ListItem>
+        );
+      })}
+    </List>
+  );
 }

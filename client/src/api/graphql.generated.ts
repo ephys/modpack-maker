@@ -64,11 +64,11 @@ export type TGqlModDependency = {
 
 export type TModJar = {
   __typename: 'ModJar',
-  curseForgePage: Scalars['String'],
   downloadUrl: Scalars['String'],
   fileName: Scalars['String'],
   id: Scalars['ID'],
   mods: TModVersion[],
+  project: TProject,
   releaseType: ReleaseType,
   /** returns the list of jars from the same project that are considered updated versions to this jar. */
   updatedVersion: TModJar[],
@@ -80,6 +80,14 @@ export type TModJarModsArgs = {
 
 export type TModJarUpdatedVersionArgs = {
   matchingModpack: Scalars['ID'],
+};
+
+export type TModJarConnection = {
+  __typename: 'ModJarConnection',
+  edges: TModJarEdge[],
+  nodes: TModJar[],
+  pageInfo: TPageInfo,
+  totalCount: Scalars['Int'],
 };
 
 export type TModJarEdge = {
@@ -178,11 +186,20 @@ export type TProject = {
   homepage: Scalars['String'],
   iconUrl: Scalars['String'],
   id: Scalars['String'],
-  jars: TModJar[],
+  jars: TModJarConnection[],
   longDescription: Scalars['String'],
   name: Scalars['String'],
   source: ProjectSource,
   sourceId: Scalars['String'],
+};
+
+export type TProjectJarsArgs = {
+  after?: Maybe<Scalars['String']>,
+  before?: Maybe<Scalars['String']>,
+  first?: Maybe<Scalars['Int']>,
+  last?: Maybe<Scalars['Int']>,
+  limit?: Maybe<Scalars['Int']>,
+  offset?: Maybe<Scalars['Int']>,
 };
 
 export type TProjectConnection = {
@@ -217,6 +234,7 @@ export enum ProjectSource {
 
 export type TQuery = {
   __typename: 'Query',
+  jars: TModJarConnection,
   modpack?: Maybe<TModpack>,
   modpacks: TModpack[],
   project?: Maybe<TProject>,
@@ -259,6 +277,16 @@ export type TQuery = {
    *    This can be used for eg. "sort by the date on which the projects last published an update compatible with this minecraft version".
    */
   projects: TProjectConnection,
+};
+
+export type TQueryJarsArgs = {
+  after?: Maybe<Scalars['String']>,
+  before?: Maybe<Scalars['String']>,
+  first?: Maybe<Scalars['Int']>,
+  last?: Maybe<Scalars['Int']>,
+  limit?: Maybe<Scalars['Int']>,
+  offset?: Maybe<Scalars['Int']>,
+  project: Scalars['ID'],
 };
 
 export type TQueryModpackArgs = {
@@ -393,6 +421,12 @@ export type TProjectPageQueryVariables = Exact<{
 
 export type TProjectPageQuery = { __typename: 'Query', project?: { __typename: 'Project', id: string, iconUrl: string, description: string, longDescription: string, homepage: string, source: ProjectSource, name: string, sourceId: string } | null | undefined };
 
+export type TProjectPageJarsQueryVariables = Exact<{
+  id: Scalars['ID'],
+}>;
+
+export type TProjectPageJarsQuery = { __typename: 'Query', jars: { __typename: 'ModJarConnection', totalCount: number, nodes: Array<{ __typename: 'ModJar', id: string, fileName: string, releaseType: ReleaseType, downloadUrl: string, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, type: DependencyType, versionRange?: string | null | undefined }> }> }> } };
+
 export type TProjectSearchQueryVariables = Exact<{
   query: Scalars['String'],
   offset: Scalars['Int'],
@@ -408,7 +442,7 @@ export type TModpackViewQueryVariables = Exact<{
   versionIndex: Scalars['Int'],
 }>;
 
-export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, curseForgePage: string, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
+export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, project: { __typename: 'Project', id: string }, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
 
 export type TModpackListViewQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -516,6 +550,37 @@ export function useProjectPageQuery(options: Omit<Urql.UseQueryArgs<TProjectPage
   return Urql.useQuery<TProjectPageQuery>({ query: ProjectPageDocument, ...options });
 }
 
+export const ProjectPageJarsDocument = /* #__PURE__ */ gql`
+    query ProjectPageJars($id: ID!) {
+  jars(project: $id) {
+    nodes {
+      id
+      fileName
+      releaseType
+      downloadUrl
+      mods {
+        id
+        modId
+        modVersion
+        name
+        supportedMinecraftVersions
+        supportedModLoader
+        dependencies {
+          modId
+          type
+          versionRange
+        }
+      }
+    }
+    totalCount
+  }
+}
+    `;
+
+export function useProjectPageJarsQuery(options: Omit<Urql.UseQueryArgs<TProjectPageJarsQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<TProjectPageJarsQuery>({ query: ProjectPageJarsDocument, ...options });
+}
+
 export const ProjectSearchDocument = /* #__PURE__ */ gql`
     query ProjectSearch($query: String!, $offset: Int!, $limit: Int!, $order: ProjectSearchSortOrder!, $orderDir: ProjectSearchSortOrderDirection!) {
   projects(
@@ -564,7 +629,9 @@ export const ModpackViewDocument = /* #__PURE__ */ gql`
           downloadUrl
           fileName
           releaseType
-          curseForgePage
+          project {
+            id
+          }
           updatedVersion(matchingModpack: $modpackId) {
             fileName
             id
