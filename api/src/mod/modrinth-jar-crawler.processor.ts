@@ -80,7 +80,7 @@ export class ModrinthJarCrawlerProcessor {
 
         // someone needs to clear this error before we try again
         if (project.failedFiles[file.id] != null) {
-          return;
+          continue;
         }
 
         this.logger.log(`Processing ${projectSourceType} file ${file.id} (${file.name})`);

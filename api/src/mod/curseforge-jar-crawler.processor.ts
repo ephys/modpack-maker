@@ -83,7 +83,7 @@ export class CurseforgeJarCrawlerProcessor {
 
         // someone needs to clear this error before we try again
         if (cfProject.failedFiles[fileId] != null) {
-          return;
+          continue;
         }
 
         this.logger.log(`Processing CURSEFORGE file ${fileId} (${file.displayName})`);
@@ -108,14 +108,10 @@ export class CurseforgeJarCrawlerProcessor {
         }
       }
 
-      await Project.update({
-        versionListUpToDate: true,
-      }, {
-        where: {
-          sourceType: projectSourceType,
-          sourceId: sourceProjectId,
-        },
-      });
+      cfProject.versionListUpToDate = true;
+      await cfProject.save();
+
+      this.logger.log(`Processed ${projectSourceType} mod ${sourceProjectId}`);
     } catch (e) {
       this.logger.error(`Error while processing ${job.data}`);
       this.logger.error(e);
