@@ -1,10 +1,11 @@
-import { Box, CircularProgress, List, ListItem, ListItemText, Tab, Tabs } from '@mui/material';
+import { Box, CircularProgress, List, ListItem, ListItemButton, ListItemText, Tab, Tabs } from '@mui/material';
 import type { ComponentProps, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { TProject } from '../api/graphql.generated';
 import { useProjectPageJarsQuery, useProjectPageQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
+import { URL_KEY_FILE_MODAL } from './jar-details-modal';
 import { NotFoundErrorDisplay } from './not-found-error-display';
 import { PageModal } from './page-modal';
 import { ProjectAvatar } from './project-avatar';
@@ -14,14 +15,14 @@ import { UrqlErrorDisplay } from './urql-error-display';
 
 type Props = {
   onClose: ComponentProps<typeof PageModal>['onClose'],
-};
+} & ProjectPageProps;
 
 export const URL_KEY_PROJECT_PAGE = 'project';
 
 export function ProjectPageModal(props: Props) {
   return (
     <PageModal onClose={props.onClose}>
-      <ProjectPage />
+      <ProjectPage projectId={props.projectId} />
     </PageModal>
   );
 }
@@ -31,9 +32,13 @@ export function ProjectPageModal(props: Props) {
 
 const URL_KEY_PROJECT_PAGE_TAB = 'project-tab';
 
-export function ProjectPage() {
+type ProjectPageProps = {
+  projectId: string,
+};
+
+export function ProjectPage(props: ProjectPageProps) {
   const search = useSearchParams();
-  const id = search.get(URL_KEY_PROJECT_PAGE) ?? '';
+  const id = props.projectId;
   const activeTab = search.get(URL_KEY_PROJECT_PAGE_TAB) === 'files' ? 1 : 0;
 
   const projectUrql = useProjectPageQuery({
@@ -132,7 +137,9 @@ type FilesPanelProps = {
   project: { id: TProject['id'] },
 };
 
+// TODO: when viewed from modpack, set default filters to match modpack (clearable)
 function FilesPanel(props: FilesPanelProps) {
+  const search = useSearchParams();
   const filesUrql = useProjectPageJarsQuery({
     variables: {
       id: props.project.id,
@@ -153,13 +160,21 @@ function FilesPanel(props: FilesPanelProps) {
     <List>
       {jars.map(jar => {
         return (
-          <ListItem key={jar.id}>
-            <ListItemText
-              primary={jar.mods.map(mod => {
-                return `${mod.name} (${mod.modId}) ${mod.modVersion} - MC ${mod.supportedMinecraftVersions.join(', ')}, ${mod.supportedModLoader}`;
-              }).join(', ')}
-              secondary={`${jar.releaseType} ${jar.fileName}`}
-            />
+          <ListItem
+            key={jar.id}
+            disablePadding
+          >
+            <ListItemButton
+              component={Link}
+              to={{ search: modifySearch(search, { [URL_KEY_FILE_MODAL]: jar.id }).toString() }}
+            >
+              <ListItemText
+                primary={jar.mods.map(mod => {
+                  return `${mod.name} (${mod.modId}) ${mod.modVersion} - MC ${mod.supportedMinecraftVersions.join(', ')}, ${mod.supportedModLoader}`;
+                }).join(', ')}
+                secondary={`${jar.releaseType} ${jar.fileName}`}
+              />
+            </ListItemButton>
           </ListItem>
         );
       })}

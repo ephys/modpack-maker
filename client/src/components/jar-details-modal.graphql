@@ -1,0 +1,21 @@
+query JarModal($id: ID!) {
+  jar(id: $id) {
+    id
+    downloadUrl
+    fileName
+    releaseType
+    mods {
+      id
+      modId
+      modVersion
+      name
+      supportedMinecraftVersions
+      supportedModLoader
+      dependencies {
+        modId
+        type
+        versionRange
+      }
+    }
+  }
+}

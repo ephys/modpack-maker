@@ -1,16 +1,16 @@
 .modal {
   display: flex;
+  margin: 16px 8px;
+  overflow: auto;
 }
 
 .modalBox {
-  height: 100%;
-  overflow: auto;
-
   margin: auto;
   background: #2a2d3e;
-  max-width: 1200px;
+  max-width: 720px;
   width: 100%;
-  padding: 0 16px;
+  border-radius: 4px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
 

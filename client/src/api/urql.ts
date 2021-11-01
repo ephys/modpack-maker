@@ -9,6 +9,7 @@ import { createClient, useQuery as useUrqlQuery, useMutation as useUrqlMutation,
 import { assert } from '../../../common/assert';
 import type { NonUndefined } from '../../../common/types';
 import type {
+  TAddJarToModpackMutation, TAddJarToModpackMutationVariables,
   TRemoveJarFromModpackMutation, TRemoveJarFromModpackMutationVariables,
   TReplaceModpackJarMutation,
   TReplaceModpackJarMutationVariables,
@@ -53,6 +54,12 @@ export const urqlClient = createClient({
             args: TRemoveJarFromModpackMutationVariables,
             cache: Cache,
           ) {
+            cache.invalidate({
+              __typename: 'ModpackVersion',
+              id: args.input.modpackVersion,
+            }, 'installedJars');
+          },
+          addJarToModpack(result: TAddJarToModpackMutation, args: TAddJarToModpackMutationVariables, cache: Cache) {
             cache.invalidate({
               __typename: 'ModpackVersion',
               id: args.input.modpackVersion,

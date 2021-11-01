@@ -25,6 +25,7 @@ import { isLoadedUrql } from '../api/urql';
 import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
 import DropZone, { getAsStringAsync } from '../components/dropzone';
+import { JarDetailsModal, URL_KEY_FILE_MODAL } from '../components/jar-details-modal';
 import { ProjectPageModal, URL_KEY_PROJECT_PAGE } from '../components/project-page';
 import { ProjectSearchModal, URL_KEY_PROJECT_LIBRARY_PAGE } from '../components/project-search';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
@@ -86,7 +87,8 @@ export default function ModpackRoute() {
 
   const searchParams = useSearchParams();
   const projectSearchOpen = searchParams.get(URL_KEY_PROJECT_LIBRARY_PAGE) != null;
-  const projectPageOpen = searchParams.get(URL_KEY_PROJECT_PAGE) != null;
+  const projectId = searchParams.get(URL_KEY_PROJECT_PAGE) ?? '';
+  const fileModal = searchParams.get(URL_KEY_FILE_MODAL) ?? '';
   const history = useHistory();
 
   if (modpackId == null || versionIndexStr == null) {
@@ -113,7 +115,7 @@ export default function ModpackRoute() {
         <title>Modpack</title>
       </Helmet>
       {/* TODO: display blurred version of modpack (image to reduce load) */}
-      {!projectSearchOpen && !projectPageOpen && (
+      {!projectSearchOpen && !projectId && (
         <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
       )}
 
@@ -127,9 +129,19 @@ export default function ModpackRoute() {
           ]}
         />
       )}
-      {projectPageOpen && (
+
+      {projectId && (
         // TODO: go back until modal is actually closed
-        <ProjectPageModal onClose={history.goBack} />
+        <ProjectPageModal projectId={projectId} onClose={history.goBack} />
+      )}
+
+      {fileModal && (
+        // TODO: go back until modal is actually closed
+        <JarDetailsModal
+          jarId={fileModal}
+          onClose={history.goBack}
+          modpackId={modpackVersion.id}
+        />
       )}
     </>
   );
@@ -485,7 +497,7 @@ function ModListItem(props: TModListItemProps) {
           {missingDependencies.map(dependency => (
             <Tag key={dependency} type="error" title={`${mod.name} depends on ${dependency}, but that mod is missing from your modpack.`}>
               Missing dependency {dependency}
-              <Link to={{ search: `${URL_KEY_PROJECT_LIBRARY_PAGE}&q=${encodeURIComponent(`modId:lollipop`)}` }}>Add</Link>
+              <Link to={{ search: `${URL_KEY_PROJECT_LIBRARY_PAGE}&q=${encodeURIComponent(`modId:${dependency}`)}` }}>Add</Link>
               <HelpOutlined />
             </Tag>
           ))}

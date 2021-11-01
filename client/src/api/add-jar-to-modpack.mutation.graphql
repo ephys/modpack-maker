@@ -1,0 +1,10 @@
+mutation AddJarToModpack($input: AddJarToModpackInput!) {
+  addJarToModpack(input: $input) {
+    error {
+      code
+    }
+    node {
+      id
+    }
+  }
+}
