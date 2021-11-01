@@ -33,10 +33,39 @@ export class ModJarResolver {
     return this.modService.getJarByExternalId(id);
   }
 
-  @Query(() => ModJarConnection, { name: 'jars' })
+  @Query(() => ModJarConnection, {
+    name: 'jars', description: `
+*Returns the jars of a project matching the search query.*  
+Uses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)
+
+### Supported fields (mods):
+
+Mods fields combinations \`(modLoader AND minecraftVersion)\` are checked per-mod instead of per-jar.
+this means that if a jar includes two mods, one that supports modLoader and one that supports minecraftVersion, but not
+both at the same time, it will not be returned. A single mod needs to support both to be returned.
+
+- **modId** - returns only projects that have at least one jar containing this modId.
+- **modName** - returns only projects that have at least one jar containing one mod that matches modName.
+- **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion.
+- **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader.
+
+### Supported fields (jars):
+Project fields combinations are checked per-projects.
+
+- **fileName** - returns only jars whose fileName matches this.
+
+---
+
+If no field is provided (Example 2), it'll be interpreted as a wildcard search on the fileName field.
+
+Example 1: \`modLoader:FORGE minecraftVersion:(1.16.4 OR 1.16.5)\`  
+Example 2: \`Quark-r2.4-315\` (interpreted as \`fileName:"*Quark-r2.4-315*"\`).
+`,
+  })
   async searchJars(
     @Args() pagination: FuzzyPagination,
     @Args('project', { type: () => ID }) projectId: string,
+    @Args('query', { type: () => String, defaultValue: '' }) query: string,
   ): Promise<IConnectionType<ModJar>> {
     const project = await this.projectService.getProjectByInternalId(Number(projectId));
     if (project == null) {
@@ -44,9 +73,9 @@ export class ModJarResolver {
     }
 
     return sequelizeCursorToConnection(
-      async () => this.modService.getProjectJars(project, pagination),
+      async () => this.modService.getProjectJars(project, query, pagination),
       {
-        totalCount: async () => this.modService.countProjectJars(project),
+        totalCount: async () => this.modService.countProjectJars(project, query),
       },
     );
   }
