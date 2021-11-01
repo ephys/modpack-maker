@@ -3,6 +3,8 @@ import { DatabaseModule } from '../database/database.module';
 import { ModModule } from '../mod/mod.module';
 import { ModpackModule } from '../modpack/modpack.module';
 import { ModpackModResolver } from './modpack-mod.resolver';
+import { ModpackVersionDownloaderController } from './modpack-version-downloader.controller';
+import { ModpackVersionDownloaderService } from './modpack-version-downloader.service';
 import { MODPACK_VERSION_REPOSITORY } from './modpack-version.constants';
 import { ModpackVersion } from './modpack-version.entity';
 import { ModpackVersionResolver } from './modpack-version.resolver';
@@ -14,11 +16,16 @@ import { ModpackVersionService } from './modpack-version.service';
     forwardRef(() => ModpackModule),
     forwardRef(() => ModModule),
   ],
-  exports: [ModpackVersionService],
+  exports: [
+    ModpackVersionService,
+    ModpackVersionDownloaderService,
+  ],
+  controllers: [ModpackVersionDownloaderController],
   providers: [
     ModpackVersionService,
     ModpackVersionResolver,
     ModpackModResolver,
+    ModpackVersionDownloaderService,
     {
       provide: MODPACK_VERSION_REPOSITORY,
       useValue: ModpackVersion,

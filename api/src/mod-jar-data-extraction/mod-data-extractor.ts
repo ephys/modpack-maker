@@ -1,5 +1,5 @@
-import * as Toml from '@iarna/toml';
-import * as Zip from 'jszip';
+import Toml from '@iarna/toml';
+import Zip from 'jszip';
 import { ModLoader } from '../../../common/modloaders';
 import { assertIsString } from '../../../common/typing-utils';
 import { DependencyType } from '../mod/dependency-type';

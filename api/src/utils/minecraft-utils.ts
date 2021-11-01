@@ -1,5 +1,5 @@
 import semver from 'semver';
-import { parseMinecraftVersionThrows, parseMinecraftVersion } from '../../../common/minecraft-utils';
+import { parseMinecraftVersion, parseMinecraftVersionThrows } from '../../../common/minecraft-utils';
 import minecraftVersion from '../../../common/minecraft-versions.json';
 
 export { parseMinecraftVersion };
@@ -35,4 +35,21 @@ export function getMinecraftVersionsInRange(range: string): string[] {
   valid.sort(minecraftVersionComparator('DESC'));
 
   return valid;
+}
+
+export function getPreferredMinecraftVersions(mainVersionStr: string, existingMcVersions: string[]) {
+  const validMcVersions = [mainVersionStr];
+  const mainVersion = parseMinecraftVersionThrows(mainVersionStr);
+
+  for (const versionStr of existingMcVersions) {
+    const version = parseMinecraftVersionThrows(versionStr);
+
+    if (version.major === mainVersion.major && version.minor <= mainVersion.minor) {
+      validMcVersions.push(versionStr);
+    }
+  }
+
+  validMcVersions.sort(minecraftVersionComparator('DESC'));
+
+  return validMcVersions;
 }

@@ -1,4 +1,4 @@
-import { getPreferredMinecraftVersions } from './modpack.service';
+import { getPreferredMinecraftVersions } from '../utils/minecraft-utils';
 
 const allMcVersions = [
   '1.16.5',
