@@ -134,7 +134,14 @@ export default function ModpackRoute() {
 
       {projectId && (
         // TODO: go back until modal is actually closed
-        <ProjectPageModal projectId={projectId} onClose={history.goBack} />
+        <ProjectPageModal
+          projectId={projectId}
+          onClose={history.goBack}
+          fileBaseFilters={[
+            `modLoader:${modpack.modLoader}`,
+            `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
+          ]}
+        />
       )}
 
       {fileModal && (

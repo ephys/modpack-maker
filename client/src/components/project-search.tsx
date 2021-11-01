@@ -25,6 +25,7 @@ import {
 import { isLoadedUrql } from '../api/urql';
 import useDebounce from '../utils/use-debounce';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
+import { Chips } from './chips';
 import { LinearProgress } from './linear-progress';
 import { PageModal, usePageModalContext } from './page-modal';
 import { ProjectAvatar } from './project-avatar';
@@ -128,7 +129,11 @@ export function ProjectSearch(props: ProjectSearchProps) {
         </FormControl>
       </div>
       <div>
-        {baseFilters.map((filter, i) => <Chip key={i} label={filter} />)}
+        {baseFilters.length > 0 && (
+          <Chips>
+            {baseFilters.map((filter, i) => <Chip key={i} label={filter} />)}
+          </Chips>
+        )}
         {searchUrql.data && `${searchUrql.data.projects.totalCount} compatible mods`}
       </div>
       {!isLoadedUrql(searchUrql) ? (

@@ -262,6 +262,33 @@ export enum ProjectSource {
 export type TQuery = {
   __typename: 'Query',
   jar?: Maybe<TModJar>,
+  /**
+   * *Returns the jars of a project matching the search query.*
+   * Uses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)
+   *
+   * ### Supported fields (mods):
+   *
+   * Mods fields combinations `(modLoader AND minecraftVersion)` are checked per-mod instead of per-jar.
+   * this means that if a jar includes two mods, one that supports modLoader and one that supports minecraftVersion, but not
+   * both at the same time, it will not be returned. A single mod needs to support both to be returned.
+   *
+   * - **modId** - returns only projects that have at least one jar containing this modId.
+   * - **modName** - returns only projects that have at least one jar containing one mod that matches modName.
+   * - **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion.
+   * - **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader.
+   *
+   * ### Supported fields (jars):
+   * Project fields combinations are checked per-projects.
+   *
+   * - **fileName** - returns only jars whose fileName matches this.
+   *
+   * ---
+   *
+   * If no field is provided (Example 2), it'll be interpreted as a wildcard search on the fileName field.
+   *
+   * Example 1: `modLoader:FORGE minecraftVersion:(1.16.4 OR 1.16.5)`
+   * Example 2: `Quark-r2.4-315` (interpreted as `fileName:"*Quark-r2.4-315*"`).
+   */
   jars: TModJarConnection,
   modpack?: Maybe<TModpack>,
   modpacks: TModpack[],
@@ -319,6 +346,7 @@ export type TQueryJarsArgs = {
   limit?: Maybe<Scalars['Int']>,
   offset?: Maybe<Scalars['Int']>,
   project: Scalars['ID'],
+  query?: Maybe<Scalars['String']>,
 };
 
 export type TQueryModpackArgs = {
@@ -469,6 +497,7 @@ export type TProjectPageJarsQueryVariables = Exact<{
   id: Scalars['ID'],
   offset: Scalars['Int'],
   limit: Scalars['Int'],
+  query: Scalars['String'],
 }>;
 
 export type TProjectPageJarsQuery = { __typename: 'Query', jars: { __typename: 'ModJarConnection', totalCount: number, nodes: Array<{ __typename: 'ModJar', id: string, fileName: string, releaseType: ReleaseType, downloadUrl: string, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader }> }> } };
@@ -642,8 +671,8 @@ export function useProjectPageQuery(options: Omit<Urql.UseQueryArgs<TProjectPage
 }
 
 export const ProjectPageJarsDocument = /* #__PURE__ */ gql`
-    query ProjectPageJars($id: ID!, $offset: Int!, $limit: Int!) {
-  jars(project: $id, offset: $offset, limit: $limit) {
+    query ProjectPageJars($id: ID!, $offset: Int!, $limit: Int!, $query: String!) {
+  jars(project: $id, offset: $offset, limit: $limit, query: $query) {
     nodes {
       id
       fileName

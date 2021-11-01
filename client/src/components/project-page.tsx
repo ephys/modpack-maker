@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -10,10 +11,12 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import type { ComponentProps, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { EMPTY_ARRAY } from '../../../common/utils';
 import type { TProject } from '../api/graphql.generated';
 import { useProjectPageJarsQuery, useProjectPageQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
+import { Chips } from './chips';
 import { URL_KEY_FILE_MODAL } from './jar-details-modal';
 import { NotFoundErrorDisplay } from './not-found-error-display';
 import { PageModal } from './page-modal';
@@ -31,7 +34,7 @@ export const URL_KEY_PROJECT_PAGE = 'project';
 export function ProjectPageModal(props: Props) {
   return (
     <PageModal onClose={props.onClose}>
-      <ProjectPage projectId={props.projectId} />
+      <ProjectPage projectId={props.projectId} fileBaseFilters={props.fileBaseFilters} />
     </PageModal>
   );
 }
@@ -43,6 +46,7 @@ const URL_KEY_PROJECT_PAGE_TAB = 'project-tab';
 
 type ProjectPageProps = {
   projectId: string,
+  fileBaseFilters?: string[],
 };
 
 export function ProjectPage(props: ProjectPageProps) {
@@ -106,7 +110,7 @@ export function ProjectPage(props: ProjectPageProps) {
         </TabPanel>
 
         <TabPanel activeTab={activeTab} tab={1}>
-          {() => <FilesPanel project={project} />}
+          {() => <FilesPanel project={project} baseFilters={props.fileBaseFilters} />}
         </TabPanel>
       </Box>
     </>
@@ -144,10 +148,12 @@ function TabPanel(props: TabPanelProps) {
 
 type FilesPanelProps = {
   project: { id: TProject['id'] },
+  baseFilters?: string[],
 };
 
 // TODO: when viewed from modpack, set default filters to match modpack (clearable)
 function FilesPanel(props: FilesPanelProps) {
+  const baseFilters: readonly string[] = props.baseFilters ?? EMPTY_ARRAY;
   const search = useSearchParams();
   const page = Math.max(Number(search.get('page') || 1), 1);
 
@@ -157,6 +163,7 @@ function FilesPanel(props: FilesPanelProps) {
       id: props.project.id,
       limit: elementsPerPage,
       offset: (page - 1) * elementsPerPage,
+      query: baseFilters.join(' '),
     },
   });
 
@@ -169,10 +176,19 @@ function FilesPanel(props: FilesPanelProps) {
   }
 
   const jars = filesUrql.data.jars.nodes;
-  const pageCount = Math.ceil(filesUrql.data.jars.totalCount / elementsPerPage);
+  const matchingCount = filesUrql.data.jars.totalCount;
+  const pageCount = Math.ceil(matchingCount / elementsPerPage);
 
   return (
     <>
+      {baseFilters.length > 0 && (
+        <div style={{ display: 'flex' }}>
+          <Chips>
+            {baseFilters.map((filter, i) => <Chip key={i} label={filter} />)}
+          </Chips>
+          {matchingCount} matching files
+        </div>
+      )}
       <List>
         {jars.map(jar => {
           return (

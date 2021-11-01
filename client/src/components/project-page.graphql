@@ -11,8 +11,8 @@ query ProjectPage($id: ID!) {
   }
 }
 
-query ProjectPageJars($id: ID!, $offset: Int!, $limit: Int!) {
-  jars(project: $id, offset: $offset, limit: $limit) {
+query ProjectPageJars($id: ID!, $offset: Int!, $limit: Int!, $query: String!) {
+  jars(project: $id, offset: $offset, limit: $limit, query: $query) {
     nodes {
       id
       fileName
