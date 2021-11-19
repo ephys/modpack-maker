@@ -67,7 +67,6 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<TModMeta[]> {
     }
 
     completeMods.push(mod);
-
   }
 
   return completeMods;
@@ -75,22 +74,6 @@ export async function getModMetasFromJar(modJar: Buffer): Promise<TModMeta[]> {
 
 function isMetaComplete(t: Partial<TModMeta>): t is TModMeta {
   return t.loader != null && t.name != null && t.version != null && t.modId != null;
-}
-
-function mergeModMeta(main: Partial<TModMeta>, toAdd: Partial<TModMeta>): Partial<TModMeta> {
-  for (const key of Object.keys(toAdd)) {
-    if (key === 'modId' && toAdd[key] === 'examplemod') {
-      continue;
-    }
-
-    if (main[key]) {
-      continue;
-    }
-
-    main[key] = toAdd[key];
-  }
-
-  return main;
 }
 
 /*
@@ -221,12 +204,14 @@ export function getMetaFromModsToml(fileContents): Array<Partial<TModMeta>> {
 
     dependencies.sort((a, b) => a.modId.localeCompare(b.modId));
 
+    const isForge = manifest.modLoader === 'javafml' || manifest.modLoader === 'scorge' || dependencies.find(dep => dep.modId === 'forge');
+
     const meta: Partial<TModMeta> = omitFalsy({
       version,
       name: manifestMod.displayName || null,
       modId: modId || null,
       // only forge uses TOML
-      loader: manifest.modLoader === 'javafml' ? ModLoader.FORGE : null,
+      loader: isForge ? ModLoader.FORGE : null,
       dependencies,
       minecraftVersionRange,
     });
