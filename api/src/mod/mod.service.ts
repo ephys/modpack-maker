@@ -7,6 +7,7 @@ import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Injectable } from '@nestjs/common';
 import DataLoader from 'dataloader';
 import uniq from 'lodash/uniq.js';
+import uniqBy from 'lodash/uniqBy.js';
 import type { Node } from 'lucene';
 import type { Response } from 'node-fetch';
 import fetch from 'node-fetch';
@@ -279,9 +280,11 @@ LIMIT ${keys.length};
     const mods = await this.getModsInJar(jar, { modLoader });
 
     // @ts-expect-error
-    const result: ModJar[] = (await Promise.all(
+    let result: ModJar[] = (await Promise.all(
       mods.map(async mod => this.#findJarUpdatesDl.load([mod.modId, jar.projectId, modLoader, minecraftVersion])),
     )).filter(val => val != null);
+
+    result = uniqBy(result, item => item.internalId);
 
     if (result.length === 1 && result[0].internalId === jar.internalId) {
       return [];
