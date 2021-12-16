@@ -63,14 +63,14 @@ export function normalizePagination(
     return {
       before: pagination.before ? defaultDecodeCursor(pagination.before) : null,
       after: pagination.after ? defaultDecodeCursor(pagination.after) : null,
-      last: pagination.last ? clamp(1, pagination.last, maxReturnCount) : null,
-      first: first ? clamp(1, first, maxReturnCount) : null,
+      last: pagination.last != null ? clamp(1, pagination.last, maxReturnCount) : null,
+      first: first != null ? clamp(1, first, maxReturnCount) : null,
     };
   }
 
   // offset pagination
   return {
-    limit: pagination.limit ?? maxReturnCount,
+    limit: clamp(1, pagination.limit ?? maxReturnCount, maxReturnCount),
     offset: pagination.offset ?? 0,
   };
 }
