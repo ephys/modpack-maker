@@ -179,6 +179,8 @@ function FilesPanel(props: FilesPanelProps) {
   const matchingCount = filesUrql.data.jars.totalCount;
   const pageCount = Math.ceil(matchingCount / elementsPerPage);
 
+  // TODO: display compatibility warning if file does not explicitely support modpack's minecraft version
+
   return (
     <>
       {baseFilters.length > 0 && (
