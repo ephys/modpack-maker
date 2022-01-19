@@ -36,7 +36,7 @@ export const urqlClient = createClient({
         GqlModDependency: () => null,
         ModpackMod: () => null,
       },
-      storage: makeDefaultStorage({ idbName: 'modpack-urql' }),
+      // storage: makeDefaultStorage({ idbName: 'modpack-urql' }),
       updates: {
         Mutation: {
           replaceModpackJar(
