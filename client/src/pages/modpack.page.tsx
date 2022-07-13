@@ -362,6 +362,8 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion }
       jar: jarId,
       modpackVersion: modpackVersion.id,
     });
+
+    // TODO: refresh mod list
   }, [jarId, modpackVersion.id, isLibrary]);
 
   return (

@@ -11,6 +11,7 @@ import { ChipReleaseType, Chips } from './chips';
 import css from './jar-details.module.scss';
 import { Modal } from './modal';
 import { NotFoundErrorDisplay } from './not-found-error-display';
+import { useSnackbar } from './snackbar.js';
 import { UrqlErrorDisplay } from './urql-error-display';
 
 type Props = {
@@ -51,6 +52,7 @@ type JarDetailsProps = {
 function JarDetails(props: JarDetailsProps) {
   const { jar, modpackId } = props;
 
+  const addSnack = useSnackbar();
   const callAddJar = useAddJarToModpackMutation();
   // TODO: async callback
   // TODO: on success, add snack with action "return to modpack"
@@ -58,6 +60,10 @@ function JarDetails(props: JarDetailsProps) {
     await callAddJar({
       modpackVersion: modpackId!,
       jar: jar.id,
+    });
+
+    addSnack('Added to modpack', {
+      type: 'success',
     });
   }, [jar.id]);
 

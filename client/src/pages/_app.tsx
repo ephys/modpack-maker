@@ -3,6 +3,7 @@ import { createTheme as createMuiTheme, ThemeProvider } from '@mui/material/styl
 import type { ReactNode } from 'react';
 import { Provider } from 'urql';
 import { urqlClient } from '../api/urql';
+import { SnackbarProvider } from '../components/snackbar.js';
 
 const theme = createMuiTheme({
   palette: {
@@ -26,7 +27,9 @@ export default function App(props: Props) {
   return (
     <Provider value={urqlClient}>
       <ThemeProvider theme={theme}>
-        {props.children}
+        <SnackbarProvider>
+          {props.children}
+        </SnackbarProvider>
       </ThemeProvider>
     </Provider>
   );

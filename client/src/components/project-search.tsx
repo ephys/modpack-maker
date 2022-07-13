@@ -30,7 +30,7 @@ import { LinearProgress } from './linear-progress';
 import { PageModal, usePageModalContext } from './page-modal';
 import { ProjectAvatar } from './project-avatar';
 import { URL_KEY_PROJECT_PAGE } from './project-page';
-import { SourceIcon } from './source-icon';
+import { WithSourceIcon } from './source-icon';
 import { UrqlErrorDisplay } from './urql-error-display';
 
 type Props = {
@@ -158,7 +158,9 @@ export function ProjectSearch(props: ProjectSearchProps) {
                     search: `${URL_KEY_PROJECT_PAGE}=${encodeURIComponent(project.id)}`,
                   }}>
                     <ListItemAvatar sx={{ marginRight: '16px' }}>
-                      <ProjectAvatar src={project.iconUrl} />
+                      <WithSourceIcon source={project.source} >
+                        <ProjectAvatar src={project.iconUrl} />
+                      </WithSourceIcon>
                     </ListItemAvatar>
                     <ListItemText
                       primary={project.name}
@@ -180,8 +182,6 @@ export function ProjectSearch(props: ProjectSearchProps) {
                         </>
                       )}
                     />
-
-                    <SourceIcon source={project.source} />
                   </ListItemButton>
                 </ListItem>
               );

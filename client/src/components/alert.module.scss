@@ -1,0 +1,86 @@
+@use 'sass:color';
+
+.alert {
+  width: stretch;
+  margin-bottom: 16px;
+  padding: 6px 16px;
+
+  background: var(--bg-color);
+  border: 1px var(--color) solid;
+  color: var(--color);
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  border-radius: 4px;
+}
+
+.centered {
+  width: fit-content;
+  margin: 16px auto;
+}
+
+.message {
+  display: flex;
+  width: 100%;
+  padding: 8px 0;
+
+  .shrink & {
+    width: auto;
+  }
+}
+
+.error {
+  --color: rgb(244, 199, 199);
+  --bg-color: #160b0b;
+}
+
+.warn {
+  --color: rgb(255, 226, 183);
+  --bg-color: #191207;
+}
+
+.info {
+  --color: rgb(184, 231, 251);
+  --bg-color: #071318;
+}
+
+.success {
+  --color: rgb(204, 232, 205);
+  --bg-color: #0c130d;
+}
+
+.icon.icon {
+  fill: var(--color);
+  margin-right: 8px;
+  margin-top: 1px;
+}
+
+.contents {
+  flex: 1;
+
+  & > :first-child {
+    margin-top: 0;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.actions {
+  margin-left: auto;
+  padding-left: 12px;
+  //margin-right: -10px;
+  margin-bottom: 4px;
+  margin-top: 4px;
+}
+
+.alertAction.alertAction {
+  text-transform: uppercase;
+  font-weight: bold;
+
+  & + .alertAction {
+    margin-left: 8px;
+  }
+}
