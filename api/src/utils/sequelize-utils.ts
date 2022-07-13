@@ -8,11 +8,10 @@ import type {
   WhereOptions,
   UniqueConstraintError,
 } from 'sequelize';
-import SequelizePkg from 'sequelize';
+import { col as builtInCol, Utils as SequelizeUtilPkg } from 'sequelize';
 import type { ModelCtor as STModelCtor, Model as STModel } from 'sequelize-typescript';
-import * as SequelizeUtilPkg from 'sequelize/lib/utils.js';
-import type { ModelAttributeColumnOptions } from 'sequelize/types/lib/model';
-import type { Col } from 'sequelize/types/lib/utils';
+import type { ModelAttributeColumnOptions } from 'sequelize/lib/model';
+import type { Col } from 'sequelize/lib/utils';
 import { Op, DataTypes } from '../esm-compat/sequelize-esm';
 
 const { mapWhereFieldNames } = SequelizeUtilPkg;
@@ -353,7 +352,7 @@ export function greaterThan(val) {
 }
 
 export function col(entity: ModelType<any>, column: string): Col {
-  return SequelizePkg.col(attributeNameToColumn(entity, column));
+  return builtInCol(attributeNameToColumn(entity, column));
 }
 
 export const POSTGRE_SMALLINT_MAX_VALUE = 32767;

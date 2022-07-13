@@ -5,7 +5,7 @@ import { Job } from 'bull';
 import fetch from 'node-fetch';
 import minecraftVersion from '../../../common/minecraft-versions.json';
 import { ModLoader } from '../../../common/modloaders';
-import { getCurseForgeModFiles, getCurseReleaseType } from '../curseforge.api';
+import { getCurseReleaseType, iterateCurseForgeModFileList } from '../curseforge.api';
 import type { TCurseFile } from '../curseforge.api';
 import { InjectSequelize } from '../database/database.providers';
 import { Sequelize, Op } from '../esm-compat/sequelize-esm';
@@ -54,7 +54,11 @@ export class CurseforgeJarCrawlerProcessor {
     this.logger.log(`Processing ${projectSourceType} mod ${sourceProjectId}`);
 
     try {
-      const files = await getCurseForgeModFiles(sourceProjectId);
+      const files: TCurseFile[] = [];
+      for await (const file of iterateCurseForgeModFileList(sourceProjectId, { pageSize: 50 })) {
+        files.push(file);
+      }
+
       const fileIds: string[] = files.map(file => String(file.id));
 
       const existingFiles = await ModJar.findAll({
@@ -89,11 +93,15 @@ export class CurseforgeJarCrawlerProcessor {
         this.logger.log(`Processing CURSEFORGE file ${fileId} (${file.displayName})`);
 
         try {
+          if (file.downloadUrl == null) {
+            throw new Error('MISSING_DOWNLOAD_URL');
+          }
+
           // eslint-disable-next-line no-await-in-loop
           await this.processFile(file, cfProject);
         } catch (e) {
           this.logger.error(`Processing CURSEFORGE file ${fileId} (${file.displayName}) failed:`);
-          this.logger.error(e.message);
+          this.logger.error(e);
 
           const error = e.message;
           if (cfProject.failedFiles[fileId] !== error) {
@@ -122,7 +130,7 @@ export class CurseforgeJarCrawlerProcessor {
 
   private async processFile(sourceFileMeta: TCurseFile, project: Project): Promise<void> {
 
-    const supportedPlatforms = sourceFileMeta.gameVersion.map(version => version.toUpperCase());
+    const supportedPlatforms = sourceFileMeta.gameVersions.map(version => version.toUpperCase());
     const supportedMcVersions = new Set<string>();
     for (const platform of supportedPlatforms) {
       if (minecraftVersion.includes(platform)) {
@@ -211,7 +219,9 @@ export async function getModVersionsFromJar(jarUrl: string, supportedMcVersions:
 }
 
 // TODO: verify sha
-export async function downloadModFile(url, retryAttempts = 3) {
+export async function downloadModFile(url: string, retryAttempts = 3) {
+  assert(typeof url === 'string', 'url must be a string');
+
   try {
     const result = await fetch(url);
 

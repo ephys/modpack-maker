@@ -71,7 +71,6 @@ export class ModJar extends DB.Model<ModJar, TModJarCreationAttributes> {
   sourceFileId: string;
 
   @DB.AllowNull(false)
-  @DB.Unique
   @DB.Column(DB.DataType.TEXT)
   @GraphQl(() => String)
   /**

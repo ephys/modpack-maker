@@ -47,7 +47,6 @@ const ProjectSearchLuceneConfig: TLuceneToSqlConfig = {
     minecraftVersion: 'text[]',
   },
   whereBuilder: {
-    // @ts-expect-error
     minecraftVersion: (node: Node) => {
       if (isNodeTerm(node)) {
         return contains(node.term);
@@ -125,7 +124,6 @@ class ProjectSearchService {
     // TODO: support detecting MCCreator mods
 
     return sequelizeFindByCursor({
-      // @ts-expect-error
       model: Project,
       order: [[orderKey, orderDir]],
       ...(isCursorPagination(pagination) ? pagination : { first: pagination.limit }),

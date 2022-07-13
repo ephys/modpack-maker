@@ -48,7 +48,6 @@ const JarSearchLuceneConfig: TLuceneToSqlConfig = {
     minecraftVersion: 'text[]',
   },
   whereBuilder: { // TODO: dedupe
-    // @ts-expect-error
     minecraftVersion: (node: Node) => {
       if (isNodeTerm(node)) {
         return contains(node.term);
@@ -195,7 +194,6 @@ class ModService {
         '$mv.supportedModLoader$': key[2],
       }, Sequelize.where(
         Sequelize.cast(Sequelize.col('mv.supportedMinecraftVersions'), 'text[]'),
-        // @ts-expect-error
         overlap(...acceptedMinecraftVersions),
       )));
     }
@@ -302,7 +300,6 @@ LIMIT ${keys.length};
     pagination = normalizePagination(pagination, 20);
 
     return sequelizeFindByCursor({
-      // @ts-expect-error
       model: ModJar,
       order: [['releaseDate', 'DESC']],
       ...(isCursorPagination(pagination) ? pagination : { first: pagination.limit }),

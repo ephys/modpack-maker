@@ -38,6 +38,7 @@
     "cls-hooked": "^4.2.2",
     "core-js": "^3.18.3",
     "dataloader": "^2.0.0",
+    "dotenv": "^16.0.1",
     "express": "^4.17.1",
     "jszip": "^3.7.1",
     "lodash": "^4.17.21",
@@ -56,7 +57,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^7.4.0",
     "semver": "^7.3.5",
-    "sequelize": "^6.8.0",
+    "sequelize": "^6.19.2",
     "sequelize-typescript": "^2.1.1",
     "unified": "^10.1.0"
   },

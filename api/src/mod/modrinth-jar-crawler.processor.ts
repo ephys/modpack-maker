@@ -90,7 +90,7 @@ export class ModrinthJarCrawlerProcessor {
           await this.processFile(file, project);
         } catch (e) {
           this.logger.error(`Processing ${projectSourceType} file ${file.id} (${file.name}) failed:`);
-          this.logger.error(e.message);
+          this.logger.error(e);
 
           const error = e.message;
           if (project.failedFiles[file.id] !== error) {

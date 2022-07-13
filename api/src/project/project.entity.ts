@@ -22,7 +22,20 @@ export type TProjectCreationAttributes = {
   failedFiles?: TFileErrors,
 };
 
-@DB.Table
+@DB.Table({
+  indexes: [
+    {
+      name: 'source-id',
+      unique: true,
+      fields: ['sourceId', 'sourceType'],
+    },
+    {
+      name: 'source-slug',
+      unique: true,
+      fields: ['sourceSlug', 'sourceType'],
+    },
+  ],
+})
 @ObjectType()
 class Project extends DB.Model<Project, TProjectCreationAttributes> {
   @Field(() => String, { name: 'id' })
@@ -34,18 +47,14 @@ class Project extends DB.Model<Project, TProjectCreationAttributes> {
 
   @Field(() => String)
   @DB.AllowNull(false)
-  @DB.Unique('source-id')
   @DB.Column(DB.DataType.TEXT)
   sourceId: string;
 
   @DB.AllowNull(true)
-  @DB.Unique('source-id')
-  @DB.Unique('source-slug')
   @DB.Column(DB.DataType.ENUM(...Object.values(ProjectSource)))
   sourceType: ProjectSource;
 
   @DB.AllowNull(true)
-  @DB.Unique('source-slug')
   @DB.Column(DB.DataType.TEXT)
   /** slug is null if project was deleted */
   sourceSlug: string | null;

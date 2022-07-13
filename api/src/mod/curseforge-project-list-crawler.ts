@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Queue } from 'bull';
 import { Sequelize } from 'sequelize-typescript';
+import type { TCurseFile } from '../curseforge.api';
 import { getCurseForgeModCategories, iterateCurseForgeModList } from '../curseforge.api';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
 import { Op, QueryTypes } from '../esm-compat/sequelize-esm';
@@ -11,7 +12,7 @@ import { Project, ProjectSource } from '../project/project.entity';
 import { lastItem } from '../utils/generic-utils';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
 export type TFetchJarQueueData = [sourceType: ProjectSource, sourceId: string];
 
@@ -57,9 +58,9 @@ export class CurseforgeProjectListCrawler {
   ) {
     // prevent fetching CurseForge on every refresh
     // TODO: persist last crawl to disk & re-use instead
-    if (process.env.NODE_ENV !== 'development') {
-      void this.handleCron();
-    }
+    // if (process.env.NODE_ENV !== 'development') {
+    void this.handleCron();
+    // }
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
@@ -105,7 +106,7 @@ export class CurseforgeProjectListCrawler {
         lastSourceEditAt: new Date(itemLastUpdate),
         versionListUpToDate: false,
         name: item.name,
-        iconUrl: item.attachments.find(attachement => attachement.isDefault)?.url ?? '',
+        iconUrl: item.logo?.url ?? '',
         description: item.summary,
       });
     }
@@ -135,7 +136,7 @@ export class CurseforgeProjectListCrawler {
     const allItems = new Map<number, TProjectCreationAttributes>();
 
     for (const category of categories) {
-      this.logger.log(`fetching category ${category.name}`);
+      this.logger.log(`fetching category ${category.name} (id ${category.id} - ${category.url})`);
 
       let itemCount = 0;
 
@@ -154,7 +155,7 @@ export class CurseforgeProjectListCrawler {
           lastSourceEditAt: new Date(lastUpload),
           versionListUpToDate: false,
           name: item.name,
-          iconUrl: item.attachments.find(attachement => attachement.isDefault)?.url ?? '',
+          iconUrl: item.logo?.url ?? '',
           description: item.summary,
         });
 
@@ -176,11 +177,9 @@ export class CurseforgeProjectListCrawler {
 }
 
 function getLastEditDate(curseProject): string | null {
-  const mostRecentFile = lastItem(curseProject.latestFiles);
+  const mostRecentFile: TCurseFile | undefined = lastItem(curseProject.latestFiles);
 
-  // FIXME Typings
-  // @ts-expect-error
-  return mostRecentFile?.fileDate;
+  return mostRecentFile?.fileDate ?? null;
 }
 
 export async function upsertUpdatedProjects(
@@ -197,7 +196,6 @@ export async function upsertUpdatedProjects(
       attributes: ['sourceId', 'sourceSlug', 'sourceType'],
       where: Sequelize.and(
         { sourceType: projectSource },
-        // @ts-expect-error
         Sequelize.or({
           sourceId: { [Op.in]: itemsArray.map(item => item.sourceId) },
         }, {
