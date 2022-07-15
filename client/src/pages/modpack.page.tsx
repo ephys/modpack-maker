@@ -27,6 +27,7 @@ import {
 import { isLoadedUrql } from '../api/urql';
 import { MoreMenu } from '../components/action-menu';
 import { AnyLink } from '../components/any-link';
+import { CurrentModpackProvider } from '../components/current-modpack-provider.js';
 import DropZone, { getAsStringAsync } from '../components/dropzone';
 import { JarDetailsModal, URL_KEY_FILE_MODAL } from '../components/jar-details-modal';
 import { ProjectPageModal, URL_KEY_PROJECT_PAGE } from '../components/project-page';
@@ -116,42 +117,44 @@ export default function ModpackRoute() {
       <Helmet>
         <title>Modpack</title>
       </Helmet>
-      {/* TODO: display blurred version of modpack (image to reduce load) */}
-      {!projectSearchOpen && !projectId && (
-        <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
-      )}
+      <CurrentModpackProvider modpack={modpack}>
+        {/* TODO: display blurred version of modpack (image to reduce load) */}
+        {!projectSearchOpen && !projectId && (
+          <ModpackView modpack={modpack} modpackVersion={modpackVersion} />
+        )}
 
-      {projectSearchOpen && (
-        <ProjectSearchModal
+        {projectSearchOpen && (
+          <ProjectSearchModal
           // TODO: onClose should goBack until the search is closed
-          onClose={history.goBack}
-          baseFilters={[
-            `modLoader:${modpack.modLoader}`,
-            `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
-          ]}
-        />
-      )}
+            onClose={history.goBack}
+            baseFilters={[
+              `modLoader:${modpack.modLoader}`,
+              `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
+            ]}
+          />
+        )}
 
-      {projectId && (
+        {projectId && (
         // TODO: go back until modal is actually closed
-        <ProjectPageModal
-          projectId={projectId}
-          onClose={history.goBack}
-          fileBaseFilters={[
-            `modLoader:${modpack.modLoader}`,
-            `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
-          ]}
-        />
-      )}
+          <ProjectPageModal
+            projectId={projectId}
+            onClose={history.goBack}
+            fileBaseFilters={[
+              `modLoader:${modpack.modLoader}`,
+              `minecraftVersion:[${getFirstSemverMajorVersion(modpack.minecraftVersion)} TO ${modpack.minecraftVersion}]`,
+            ]}
+          />
+        )}
 
-      {fileModal && (
+        {fileModal && (
         // TODO: go back until modal is actually closed
-        <JarDetailsModal
-          jarId={fileModal}
-          onClose={history.goBack}
-          modpackId={modpackVersion.id}
-        />
-      )}
+          <JarDetailsModal
+            jarId={fileModal}
+            onClose={history.goBack}
+            modpackId={modpackVersion.id}
+          />
+        )}
+      </CurrentModpackProvider>
     </>
   );
 }

@@ -1,41 +1,51 @@
 query ModpackView($modpackId: ID!, $versionIndex: Int!) {
   modpack(id: $modpackId) {
-    id
-    minecraftVersion
-    modLoader
-    name
+    ...Modpack
     version(index: $versionIndex) {
-      id
-      downloadUrl
-      name
       installedJars {
-        addedAt
-        isLibraryDependency
         jar {
-          id
-          downloadUrl
-          fileName
-          releaseType
-          project {
-            id
-          }
           updatedVersion(matchingModpack: $modpackId) {
             fileName
             id
             releaseType
           }
-          mods(matchingModpack: $modpackId) {
-            id
+        }
+      }
+    }
+  }
+}
+
+fragment Modpack on Modpack {
+  id
+  minecraftVersion
+  modLoader
+  name
+  version(index: $versionIndex) {
+    id
+    downloadUrl
+    name
+    installedJars {
+      addedAt
+      isLibraryDependency
+      jar {
+        id
+        downloadUrl
+        fileName
+        releaseType
+        project {
+          id
+        }
+        mods(matchingModpack: $modpackId) {
+          id
+          modId
+          modVersion
+          name
+          supportedMinecraftVersions
+          supportedModLoader
+          dependencies {
             modId
-            modVersion
-            name
-            supportedMinecraftVersions
-            supportedModLoader
-            dependencies {
-              modId
-              versionRange
-              type
-            }
+            versionRange
+            type
           }
         }
       }

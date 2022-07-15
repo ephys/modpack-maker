@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import type { DependencyList } from 'react';
+import { useCallback, useState } from 'react';
 import { useSnackbar } from '../components/snackbar';
 import type { MaybePromise } from './typing.js';
 
@@ -19,6 +20,7 @@ export type TOpStatus<Res> = {
 
 export function useAsyncCallback<Args extends any[], Res>(
   callback: CallOperationIn<Args, Res>,
+  dependencies: DependencyList,
   responseCallbacks?: ResponseCallbacks<Res>,
 ): [CallOperationOut<Args, Res>, TOpStatus<Res>] {
   const addSnack = useSnackbar();
@@ -29,8 +31,7 @@ export function useAsyncCallback<Args extends any[], Res>(
     data: undefined,
   });
 
-  async function callMutation(...args: Args) {
-
+  const callMutation = useCallback(async (...args: Args) => {
     setStatus({
       ...mutationStatus,
       loading: true,
@@ -50,6 +51,7 @@ export function useAsyncCallback<Args extends any[], Res>(
       };
     } catch (e) {
       responseCallbacks?.error?.(e);
+      console.error(e);
       addSnack('An error occurred', { type: 'error' });
 
       newStatus = {
@@ -62,7 +64,7 @@ export function useAsyncCallback<Args extends any[], Res>(
     setStatus(newStatus);
 
     return newStatus;
-  }
+  }, dependencies);
 
   return [callMutation, mutationStatus];
 }

@@ -1,23 +1,23 @@
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import type { ComponentProps } from 'react';
-import { useCallback } from 'react';
 import type { TJarModalQuery } from '../api/graphql.generated';
-import { useAddJarToModpackMutation, useJarModalQuery } from '../api/graphql.generated';
+import { useJarModalQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
+import { jarInModpack, useAddJarToModpack, useRemoveJarFromModpack } from '../utils/modpack-utils.js';
 import { RightAlignedActions } from './actions/right-aligned-actions';
 import { AnyLink } from './any-link';
 import { ChipReleaseType, Chips } from './chips';
+import { useCurrentModpack } from './current-modpack-provider.js';
 import css from './jar-details.module.scss';
 import { Modal } from './modal';
 import { NotFoundErrorDisplay } from './not-found-error-display';
-import { useSnackbar } from './snackbar.js';
 import { UrqlErrorDisplay } from './urql-error-display';
 
 type Props = {
   jarId: string,
   onClose: ComponentProps<typeof Modal>['onClose'],
-} & Pick<JarDetailsProps, 'modpackId'>;
+};
 
 // TODO: loadable
 export function JarDetailsModal(props: Props) {
@@ -36,7 +36,7 @@ export function JarDetailsModal(props: Props) {
       ) : fileUrql.data.jar == null ? (
         <NotFoundErrorDisplay />
       ) : (
-        <JarDetails jar={fileUrql.data.jar} modpackId={props.modpackId} />
+        <JarDetails jar={fileUrql.data.jar} />
       )}
     </Modal>
   );
@@ -44,28 +44,16 @@ export function JarDetailsModal(props: Props) {
 
 type JarDetailsProps = {
   jar: NonNullable<TJarModalQuery['jar']>,
-  modpackId?: string,
 };
 
 // TODO: warn when jar is not compatible with modpack
 
 function JarDetails(props: JarDetailsProps) {
-  const { jar, modpackId } = props;
+  const { jar } = props;
 
-  const addSnack = useSnackbar();
-  const callAddJar = useAddJarToModpackMutation();
-  // TODO: async callback
-  // TODO: on success, add snack with action "return to modpack"
-  const addToModpack = useCallback(async () => {
-    await callAddJar({
-      modpackVersion: modpackId!,
-      jar: jar.id,
-    });
-
-    addSnack('Added to modpack', {
-      type: 'success',
-    });
-  }, [jar.id]);
+  const currentModpack = useCurrentModpack();
+  const [addJarToModpack] = useAddJarToModpack();
+  const [removeJarFromModpack] = useRemoveJarFromModpack();
 
   return (
     <article>
@@ -96,8 +84,10 @@ function JarDetails(props: JarDetailsProps) {
       <p>Not yet available</p>
 
       <RightAlignedActions>
-        {modpackId && (
-          <Button onClick={addToModpack}>Add to modpack</Button>
+        {currentModpack == null ? null : jarInModpack(currentModpack, jar.id) ? (
+          <Button onClick={() => void removeJarFromModpack(jar.id)}>Remove from modpack</Button>
+        ) : (
+          <Button onClick={() => void addJarToModpack(jar.id)}>Add to modpack</Button>
         )}
         <Button component={AnyLink} to={jar.downloadUrl}>Download</Button>
       </RightAlignedActions>

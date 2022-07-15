@@ -1,6 +1,9 @@
+import AddIcon from '@mui/icons-material/Add';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -15,8 +18,10 @@ import { EMPTY_ARRAY } from '../../../common/utils';
 import type { TProject } from '../api/graphql.generated';
 import { useProjectPageJarsQuery, useProjectPageQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
+import { jarInModpack, modsInModpack, useAddJarToModpack } from '../utils/modpack-utils.js';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
 import { Chips } from './chips';
+import { useCurrentModpack } from './current-modpack-provider.js';
 import { URL_KEY_FILE_MODAL } from './jar-details-modal';
 import { NotFoundErrorDisplay } from './not-found-error-display';
 import { PageModal } from './page-modal';
@@ -167,6 +172,9 @@ function FilesPanel(props: FilesPanelProps) {
     },
   });
 
+  const currentModpack = useCurrentModpack();
+  const [addJarToModpack] = useAddJarToModpack();
+
   if (!isLoadedUrql(filesUrql)) {
     return <CircularProgress />;
   }
@@ -193,10 +201,25 @@ function FilesPanel(props: FilesPanelProps) {
       )}
       <List>
         {jars.map(jar => {
+          const jarMods = jar.mods.map(mod => mod.modId);
+
           return (
             <ListItem
               key={jar.id}
               disablePadding
+              secondaryAction={!currentModpack ? (
+                null
+              ) : jarInModpack(currentModpack, jar.id) ? (
+                <Chip label="Installed" />
+              ) : modsInModpack(currentModpack, jarMods) ? (
+                <Button onClick={async () => alert('nyi')}>
+                  <AddIcon /> Replace with this version
+                </Button>
+              ) : (
+                <Button onClick={async () => addJarToModpack(jar.id)}>
+                  <AddIcon /> Add to modpack
+                </Button>
+              )}
             >
               <ListItemButton
                 component={Link}
