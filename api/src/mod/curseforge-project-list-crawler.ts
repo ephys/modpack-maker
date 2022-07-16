@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Queue } from 'bull';
 import { Sequelize } from 'sequelize-typescript';
+import mcVersions from '../../../common/minecraft-versions.json';
 import type { TCurseFile } from '../curseforge.api';
 import { getCurseForgeModCategories, iterateCurseForgeModList } from '../curseforge.api';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers';
@@ -12,7 +13,7 @@ import { Project, ProjectSource } from '../project/project.entity';
 import { lastItem } from '../utils/generic-utils';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
 
 export type TFetchJarQueueData = [sourceType: ProjectSource, sourceId: string];
 
@@ -56,15 +57,19 @@ export class CurseforgeProjectListCrawler {
     @Inject(SEQUELIZE_PROVIDER) private readonly sequelize: Sequelize,
     @InjectQueue(FETCH_CURSE_JARS_QUEUE) private readonly fetchCurseJarsQueue: Queue<TFetchJarQueueData>,
   ) {
-    // prevent fetching CurseForge on every refresh
-    // TODO: persist last crawl to disk & re-use instead
-    // if (process.env.NODE_ENV !== 'development') {
-    void this.handleCron();
-    // }
+    void this.#executeRefresh();
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
+    try {
+      await this.#executeRefresh();
+    } catch (e) {
+      this.logger.error(new Error('Periodic CurseForge refresh failed', { cause: e }));
+    }
+  }
+
+  async #executeRefresh() {
     const lastUpdateStr: string = await Project.max('lastSourceEditAt', {
       where: {
         sourceType: ProjectSource.CURSEFORGE,
@@ -133,37 +138,42 @@ export class CurseforgeProjectListCrawler {
     // each.
     // Alternative option was to fetch by game version.
     const categories = await getCurseForgeModCategories();
+    // These categories include more than 10k items, so we'll filter by game version too.
+    const categoriesToSplit = [434];
     const allItems = new Map<number, TProjectCreationAttributes>();
 
     for (const category of categories) {
-      this.logger.log(`fetching category ${category.name} (id ${category.id} - ${category.url})`);
+      const mcVersionFilters = categoriesToSplit.includes(category.id) ? mcVersions : ['1.18.2'];
+      for (const gameVersion of mcVersionFilters) {
+        this.logger.log(`fetching category ${category.name} (id ${category.id} - ${category.url}) for mc ${gameVersion}`);
 
-      let itemCount = 0;
+        let itemCount = 0;
 
-      // eslint-disable-next-line no-await-in-loop
-      for await (const item of iterateCurseForgeModList({ pageSize: PAGE_SIZE, categoryId: category.id })) {
-        const lastUpload = getLastEditDate(item);
+        // eslint-disable-next-line no-await-in-loop
+        for await (const item of iterateCurseForgeModList({ pageSize: PAGE_SIZE, categoryId: category.id, gameVersion })) {
+          const lastUpload = getLastEditDate(item);
 
-        if (lastUpload == null) {
-          continue;
+          if (lastUpload == null) {
+            continue;
+          }
+
+          allItems.set(item.id, {
+            sourceType: ProjectSource.CURSEFORGE,
+            sourceId: String(item.id),
+            sourceSlug: item.slug,
+            lastSourceEditAt: new Date(lastUpload),
+            versionListUpToDate: false,
+            name: item.name,
+            iconUrl: item.logo?.url ?? '',
+            description: item.summary,
+          });
+
+          itemCount++;
         }
 
-        allItems.set(item.id, {
-          sourceType: ProjectSource.CURSEFORGE,
-          sourceId: String(item.id),
-          sourceSlug: item.slug,
-          lastSourceEditAt: new Date(lastUpload),
-          versionListUpToDate: false,
-          name: item.name,
-          iconUrl: item.logo?.url ?? '',
-          description: item.summary,
-        });
-
-        itemCount++;
+        this.logger.log(`Found a total of ${itemCount} mods in category ${category.name} for mc ${gameVersion}`);
+        this.logger.log('---');
       }
-
-      this.logger.log(`Found a total of ${itemCount} mods in category ${category.name}`);
-      this.logger.log('---');
     }
 
     this.logger.log(`Retrieved a total of ${allItems.size} mods from curseforge`);

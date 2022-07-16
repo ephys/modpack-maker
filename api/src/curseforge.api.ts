@@ -5,12 +5,13 @@ import retryAsPromised from 'retry-as-promised';
 import { uriTag } from '../../common/url-utils';
 import { ReleaseType } from './mod/mod-jar.entity';
 
-// https://twitchappapi.docs.apiary.io/#/reference/0/
+// https://docs.curseforge.com
 
 type TSearchModsParams = {
   pageSize: number,
   page: number,
   categoryId?: number,
+  gameVersion?: string,
 };
 
 const MINECRAFT_GAME_ID = 432;
@@ -59,6 +60,10 @@ export async function searchCurseForgeModList(params: TSearchModsParams): Promis
 
   if (params.categoryId) {
     search.set('categoryId', String(params.categoryId));
+  }
+
+  if (params.gameVersion) {
+    search.set('gameVersion', String(params.gameVersion));
   }
 
   const uri = `/v1/mods/search?${search.toString()}`;
