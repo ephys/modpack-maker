@@ -155,6 +155,12 @@ type Project {
   id: String!
   jars(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int): [ModJarConnection!]!
   longDescription: String!
+
+  """
+  Works like `longDescription`,
+  but returns null if the the value has not been loaded & cached yet.
+  """
+  longDescriptionIfReady: String
   name: String!
   source: ProjectSource!
   sourceId: String!

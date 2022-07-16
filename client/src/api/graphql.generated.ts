@@ -2,7 +2,6 @@ import { gql } from 'urql';
 import * as Urql from './urql';
 
 export type Maybe<T> = T | null;
-export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
@@ -98,7 +97,7 @@ export type TModJar = {
 };
 
 export type TModJarModsArgs = {
-  matchingModpack?: InputMaybe<Scalars['ID']>,
+  matchingModpack?: Maybe<Scalars['ID']>,
 };
 
 export type TModJarUpdatedVersionArgs = {
@@ -216,18 +215,23 @@ export type TProject = {
   id: Scalars['String'],
   jars: TModJarConnection[],
   longDescription: Scalars['String'],
+  /**
+   * Works like `longDescription`,
+   * but returns null if the the value has not been loaded & cached yet.
+   */
+  longDescriptionIfReady?: Maybe<Scalars['String']>,
   name: Scalars['String'],
   source: ProjectSource,
   sourceId: Scalars['String'],
 };
 
 export type TProjectJarsArgs = {
-  after?: InputMaybe<Scalars['String']>,
-  before?: InputMaybe<Scalars['String']>,
-  first?: InputMaybe<Scalars['Int']>,
-  last?: InputMaybe<Scalars['Int']>,
-  limit?: InputMaybe<Scalars['Int']>,
-  offset?: InputMaybe<Scalars['Int']>,
+  after?: Maybe<Scalars['String']>,
+  before?: Maybe<Scalars['String']>,
+  first?: Maybe<Scalars['Int']>,
+  last?: Maybe<Scalars['Int']>,
+  limit?: Maybe<Scalars['Int']>,
+  offset?: Maybe<Scalars['Int']>,
 };
 
 export type TProjectConnection = {
@@ -340,14 +344,14 @@ export type TQueryJarArgs = {
 };
 
 export type TQueryJarsArgs = {
-  after?: InputMaybe<Scalars['String']>,
-  before?: InputMaybe<Scalars['String']>,
-  first?: InputMaybe<Scalars['Int']>,
-  last?: InputMaybe<Scalars['Int']>,
-  limit?: InputMaybe<Scalars['Int']>,
-  offset?: InputMaybe<Scalars['Int']>,
+  after?: Maybe<Scalars['String']>,
+  before?: Maybe<Scalars['String']>,
+  first?: Maybe<Scalars['Int']>,
+  last?: Maybe<Scalars['Int']>,
+  limit?: Maybe<Scalars['Int']>,
+  offset?: Maybe<Scalars['Int']>,
   project: Scalars['ID'],
-  query?: InputMaybe<Scalars['String']>,
+  query?: Maybe<Scalars['String']>,
 };
 
 export type TQueryModpackArgs = {
@@ -359,15 +363,15 @@ export type TQueryProjectArgs = {
 };
 
 export type TQueryProjectsArgs = {
-  after?: InputMaybe<Scalars['String']>,
-  before?: InputMaybe<Scalars['String']>,
-  first?: InputMaybe<Scalars['Int']>,
-  last?: InputMaybe<Scalars['Int']>,
-  limit?: InputMaybe<Scalars['Int']>,
-  offset?: InputMaybe<Scalars['Int']>,
-  order?: InputMaybe<ProjectSearchSortOrder>,
-  orderDir?: InputMaybe<ProjectSearchSortOrderDirection>,
-  query?: InputMaybe<Scalars['String']>,
+  after?: Maybe<Scalars['String']>,
+  before?: Maybe<Scalars['String']>,
+  first?: Maybe<Scalars['Int']>,
+  last?: Maybe<Scalars['Int']>,
+  limit?: Maybe<Scalars['Int']>,
+  offset?: Maybe<Scalars['Int']>,
+  order?: Maybe<ProjectSearchSortOrder>,
+  orderDir?: Maybe<ProjectSearchSortOrderDirection>,
+  query?: Maybe<Scalars['String']>,
 };
 
 export enum ReleaseType {
@@ -450,49 +454,55 @@ export type TAddJarToModpackMutationVariables = Exact<{
   input: TAddJarToModpackInput,
 }>;
 
-export type TAddJarToModpackMutation = { __typename: 'Mutation', addJarToModpack: { __typename: 'AddJarToModpackPayload', error?: { __typename: 'AddJarToModpackError', code: AddJarToModpackErrorCodes } | null, node?: { __typename: 'ModpackVersion', id: string } | null } };
+export type TAddJarToModpackMutation = { __typename: 'Mutation', addJarToModpack: { __typename: 'AddJarToModpackPayload', error?: { __typename: 'AddJarToModpackError', code: AddJarToModpackErrorCodes } | null | undefined, node?: { __typename: 'ModpackVersion', id: string } | null | undefined } };
 
 export type TCreateModpackMutationVariables = Exact<{
   input: TCreateModpackInput,
 }>;
 
-export type TCreateModpackMutation = { __typename: 'Mutation', createModpack: { __typename: 'CreateModpackPayload', node?: { __typename: 'Modpack', id: string, lastVersionIndex: number } | null } };
+export type TCreateModpackMutation = { __typename: 'Mutation', createModpack: { __typename: 'CreateModpackPayload', node?: { __typename: 'Modpack', id: string, lastVersionIndex: number } | null | undefined } };
 
 export type TCreateNewModpackVersionMutationVariables = Exact<{
   input: TCreateNewModpackVersionInput,
 }>;
 
-export type TCreateNewModpackVersionMutation = { __typename: 'Mutation', createNewModpackVersion: { __typename: 'CreateNewModpackVersionPayload', error?: { __typename: 'CreateNewModpackVersionError', code: CreateNewModpackVersionErrorCodes } | null, node?: { __typename: 'ModpackVersion', versionIndex: number } | null } };
+export type TCreateNewModpackVersionMutation = { __typename: 'Mutation', createNewModpackVersion: { __typename: 'CreateNewModpackVersionPayload', error?: { __typename: 'CreateNewModpackVersionError', code: CreateNewModpackVersionErrorCodes } | null | undefined, node?: { __typename: 'ModpackVersion', versionIndex: number } | null | undefined } };
 
 export type TRemoveJarFromModpackMutationVariables = Exact<{
   input: TRemoveJarFromModpackInput,
 }>;
 
-export type TRemoveJarFromModpackMutation = { __typename: 'Mutation', removeJarFromModpack: { __typename: 'RemoveJarFromModpackPayload', node?: { __typename: 'ModpackVersion', id: string } | null, error?: { __typename: 'RemoveJarFromModpackError', code: RemoveJarFromModpackErrorCodes } | null } };
+export type TRemoveJarFromModpackMutation = { __typename: 'Mutation', removeJarFromModpack: { __typename: 'RemoveJarFromModpackPayload', node?: { __typename: 'ModpackVersion', id: string } | null | undefined, error?: { __typename: 'RemoveJarFromModpackError', code: RemoveJarFromModpackErrorCodes } | null | undefined } };
 
 export type TReplaceModpackJarMutationVariables = Exact<{
   input: TReplaceModpackJarInput,
 }>;
 
-export type TReplaceModpackJarMutation = { __typename: 'Mutation', replaceModpackJar: { __typename: 'ReplaceModpackJarPayload', node?: { __typename: 'ModpackVersion', id: string } | null, error?: { __typename: 'ReplaceModpackJarError', code: ReplaceModpackJarErrorCodes } | null } };
+export type TReplaceModpackJarMutation = { __typename: 'Mutation', replaceModpackJar: { __typename: 'ReplaceModpackJarPayload', node?: { __typename: 'ModpackVersion', id: string } | null | undefined, error?: { __typename: 'ReplaceModpackJarError', code: ReplaceModpackJarErrorCodes } | null | undefined } };
 
 export type TSetModpackJarIsLibraryMutationVariables = Exact<{
   input: TSetModpackJarIsLibraryInput,
 }>;
 
-export type TSetModpackJarIsLibraryMutation = { __typename: 'Mutation', setModpackJarIsLibrary: { __typename: 'SetModpackJarIsLibraryPayload', node?: { __typename: 'ModpackMod', isLibraryDependency: boolean } | null, error?: { __typename: 'SetModpackJarIsLibraryError', code: SetModpackJarIsLibraryErrorCodes } | null } };
+export type TSetModpackJarIsLibraryMutation = { __typename: 'Mutation', setModpackJarIsLibrary: { __typename: 'SetModpackJarIsLibraryPayload', node?: { __typename: 'ModpackMod', isLibraryDependency: boolean } | null | undefined, error?: { __typename: 'SetModpackJarIsLibraryError', code: SetModpackJarIsLibraryErrorCodes } | null | undefined } };
 
 export type TJarModalQueryVariables = Exact<{
   id: Scalars['ID'],
 }>;
 
-export type TJarModalQuery = { __typename: 'Query', jar?: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, type: DependencyType, versionRange?: string | null }> }> } | null };
+export type TJarModalQuery = { __typename: 'Query', jar?: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, type: DependencyType, versionRange?: string | null | undefined }> }> } | null | undefined };
 
 export type TProjectPageQueryVariables = Exact<{
   id: Scalars['ID'],
 }>;
 
-export type TProjectPageQuery = { __typename: 'Query', project?: { __typename: 'Project', id: string, iconUrl: string, description: string, longDescription: string, homepage: string, source: ProjectSource, name: string, sourceId: string } | null };
+export type TProjectPageQuery = { __typename: 'Query', project?: { __typename: 'Project', id: string, iconUrl: string, description: string, longDescriptionIfReady?: string | null | undefined, homepage: string, source: ProjectSource, name: string, sourceId: string } | null | undefined };
+
+export type TProjectDescriptionQueryVariables = Exact<{
+  id: Scalars['ID'],
+}>;
+
+export type TProjectDescriptionQuery = { __typename: 'Query', project?: { __typename: 'Project', longDescriptionIfReady?: string | null | undefined } | null | undefined };
 
 export type TProjectPageJarsQueryVariables = Exact<{
   id: Scalars['ID'],
@@ -518,9 +528,9 @@ export type TModpackViewQueryVariables = Exact<{
   versionIndex: Scalars['Int'],
 }>;
 
-export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, project: { __typename: 'Project', id: string }, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null, type: DependencyType }> }> } }> } | null } | null };
+export type TModpackViewQuery = { __typename: 'Query', modpack?: { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, updatedVersion: Array<{ __typename: 'ModJar', fileName: string, id: string, releaseType: ReleaseType }>, project: { __typename: 'Project', id: string }, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined } | null | undefined };
 
-export type TModpackFragment = { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, project: { __typename: 'Project', id: string }, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null, type: DependencyType }> }> } }> } | null };
+export type TModpackFragment = { __typename: 'Modpack', id: string, minecraftVersion: string, modLoader: ModLoader, name: string, version?: { __typename: 'ModpackVersion', id: string, downloadUrl: string, name: string, installedJars: Array<{ __typename: 'ModpackMod', addedAt: string, isLibraryDependency: boolean, jar: { __typename: 'ModJar', id: string, downloadUrl: string, fileName: string, releaseType: ReleaseType, project: { __typename: 'Project', id: string }, mods: Array<{ __typename: 'ModVersion', id: string, modId: string, modVersion: string, name: string, supportedMinecraftVersions: string[], supportedModLoader: ModLoader, dependencies: Array<{ __typename: 'GqlModDependency', modId: string, versionRange?: string | null | undefined, type: DependencyType }> }> } }> } | null | undefined };
 
 export type TModpackListViewQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -689,7 +699,7 @@ export const JarModalDocument = /* #__PURE__ */ gql`
 }
     `;
 
-export function useJarModalQuery(options: Omit<Urql.UseQueryArgs<TJarModalQueryVariables>, 'query'>) {
+export function useJarModalQuery(options: Omit<Urql.UseQueryArgs<TJarModalQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TJarModalQuery>({ query: JarModalDocument, ...options });
 }
 
@@ -699,7 +709,7 @@ export const ProjectPageDocument = /* #__PURE__ */ gql`
     id
     iconUrl
     description
-    longDescription
+    longDescriptionIfReady
     homepage
     source
     name
@@ -708,8 +718,20 @@ export const ProjectPageDocument = /* #__PURE__ */ gql`
 }
     `;
 
-export function useProjectPageQuery(options: Omit<Urql.UseQueryArgs<TProjectPageQueryVariables>, 'query'>) {
+export function useProjectPageQuery(options: Omit<Urql.UseQueryArgs<TProjectPageQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TProjectPageQuery>({ query: ProjectPageDocument, ...options });
+}
+
+export const ProjectDescriptionDocument = /* #__PURE__ */ gql`
+    query ProjectDescription($id: ID!) {
+  project(id: $id) {
+    longDescriptionIfReady
+  }
+}
+    `;
+
+export function useProjectDescriptionQuery(options: Omit<Urql.UseQueryArgs<TProjectDescriptionQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<TProjectDescriptionQuery>({ query: ProjectDescriptionDocument, ...options });
 }
 
 export const ProjectPageJarsDocument = /* #__PURE__ */ gql`
@@ -734,7 +756,7 @@ export const ProjectPageJarsDocument = /* #__PURE__ */ gql`
 }
     `;
 
-export function useProjectPageJarsQuery(options: Omit<Urql.UseQueryArgs<TProjectPageJarsQueryVariables>, 'query'>) {
+export function useProjectPageJarsQuery(options: Omit<Urql.UseQueryArgs<TProjectPageJarsQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TProjectPageJarsQuery>({ query: ProjectPageJarsDocument, ...options });
 }
 
@@ -763,7 +785,7 @@ export const ProjectSearchDocument = /* #__PURE__ */ gql`
 }
     `;
 
-export function useProjectSearchQuery(options: Omit<Urql.UseQueryArgs<TProjectSearchQueryVariables>, 'query'>) {
+export function useProjectSearchQuery(options: Omit<Urql.UseQueryArgs<TProjectSearchQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TProjectSearchQuery>({ query: ProjectSearchDocument, ...options });
 }
 
@@ -786,7 +808,7 @@ export const ModpackViewDocument = /* #__PURE__ */ gql`
 }
     ${ModpackFragmentDoc}`;
 
-export function useModpackViewQuery(options: Omit<Urql.UseQueryArgs<TModpackViewQueryVariables>, 'query'>) {
+export function useModpackViewQuery(options: Omit<Urql.UseQueryArgs<TModpackViewQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TModpackViewQuery>({ query: ModpackViewDocument, ...options });
 }
 
@@ -802,6 +824,6 @@ export const ModpackListViewDocument = /* #__PURE__ */ gql`
 }
     `;
 
-export function useModpackListViewQuery(options?: Omit<Urql.UseQueryArgs<TModpackListViewQueryVariables>, 'query'>) {
+export function useModpackListViewQuery(options: Omit<Urql.UseQueryArgs<TModpackListViewQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TModpackListViewQuery>({ query: ModpackListViewDocument, ...options });
 }

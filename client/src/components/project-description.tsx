@@ -1,13 +1,29 @@
+import CircularProgress from '@mui/material/CircularProgress';
 import classNames from 'classnames';
 import type { TProject } from '../api/graphql.generated';
+import { useProjectDescriptionQuery } from '../api/graphql.generated';
+import { isLoadedUrql } from '../api/urql.js';
 import css from './project-description.module.scss';
 
 type Props = {
-  project: Pick<TProject, 'source' | 'homepage' | 'longDescription'>,
+  project: Pick<TProject, 'source' | 'homepage' | 'longDescription' | 'id'>,
 };
 
 export function ProjectDescription(props: Props) {
   const { project } = props;
+
+  const forceLoadedDescriptionUrql = useProjectDescriptionQuery({
+    variables: {
+      id: project.id,
+    },
+    pause: project.longDescription !== null,
+  });
+
+  if (project.longDescription == null && !isLoadedUrql(forceLoadedDescriptionUrql)) {
+    return <CircularProgress />;
+  }
+
+  const description = project.longDescription ?? forceLoadedDescriptionUrql.data?.project?.longDescriptionIfReady;
 
   // TODO: use XML-to-JSX
   // TODO: redirect links to curseforge and modrinth projects
@@ -20,7 +36,7 @@ export function ProjectDescription(props: Props) {
   // TODO: remove titles whose content.trim().length = 0
   return (
     <div className={classNames(css.projectDescription, css[project.source.toLowerCase()])}>
-      <div dangerouslySetInnerHTML={{ __html: project.longDescription }} />
+      <div dangerouslySetInnerHTML={{ __html: description }} />
     </div>
   );
 }

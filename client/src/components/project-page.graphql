@@ -3,11 +3,17 @@ query ProjectPage($id: ID!) {
     id
     iconUrl
     description
-    longDescription
+    longDescriptionIfReady
     homepage
     source
     name
     sourceId
+  }
+}
+
+query ProjectDescription($id: ID!) {
+  project(id: $id) {
+    longDescriptionIfReady
   }
 }
 

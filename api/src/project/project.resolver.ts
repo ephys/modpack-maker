@@ -73,6 +73,16 @@ class ProjectResolver {
     // TODO: handle errors
     return fetchCurseProjectDescription(sourceId);
   }
+
+  @ResolveField('longDescriptionIfReady', () => String, {
+    nullable: true, description: `
+Works like \`longDescription\`,
+but returns null if the the value has not been loaded & cached yet.
+  `.trim(),
+  })
+  async getProjectLongDescriptionIfReady(): Promise<string | null> {
+    return null;
+  }
 }
 
 export { ProjectResolver, ProjectConnection };
