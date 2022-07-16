@@ -7,7 +7,7 @@ import classnames from 'classnames';
 import type { ComponentProps } from 'react';
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link, useHistory, useParams } from 'react-router-dom';
+import { Link, useHistory, useLocation, useParams } from 'react-router-dom';
 import {
   getFirstSemverMajorVersion,
   getMostCompatibleMcVersion,
@@ -33,6 +33,7 @@ import { JarDetailsModal, URL_KEY_FILE_MODAL } from '../components/jar-details-m
 import { ProjectPageModal, URL_KEY_PROJECT_PAGE } from '../components/project-page';
 import { ProjectSearchModal, URL_KEY_PROJECT_LIBRARY_PAGE } from '../components/project-search';
 import { UrqlErrorDisplay } from '../components/urql-error-display';
+import { useRemoveJarFromModpack } from '../utils/modpack-utils.js';
 import { useSearchParams } from '../utils/use-search-params';
 import css from './modpack.module.scss';
 
@@ -349,13 +350,9 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion }
 
   const jarId = jar.jar.id;
 
-  const callRemoveJarFromModpack = useRemoveJarFromModpackMutation();
-  const removeJar = useCallback(async () => {
-    await callRemoveJarFromModpack({
-      jar: jarId,
-      modpackVersion: modpackVersion.id,
-    });
-  }, [jarId, modpackVersion.id]);
+  const location = useLocation();
+
+  const [removeJar] = useRemoveJarFromModpack();
 
   const isLibrary = props.jar.isLibraryDependency;
   const callSetModpackJarIsLibrary = useSetModpackJarIsLibraryMutation();
@@ -371,7 +368,7 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion }
 
   return (
     <div className={css.actions}>
-      <AnyLink to={{ search: `${URL_KEY_PROJECT_PAGE}=${encodeURIComponent(jar.jar.project.id)}` }}>
+      <AnyLink to={{ ...location, search: `${URL_KEY_PROJECT_PAGE}=${encodeURIComponent(jar.jar.project.id)}` }}>
         Store Page
       </AnyLink>
       <MoreMenu
@@ -395,7 +392,7 @@ function JarActions(props: { jar: TModpackMod, modpackVersion: TModpackVersion }
           },
           {
             key: 3,
-            onClick: removeJar,
+            onClick: () => void removeJar(jarId),
             title: 'Remove from Modpack',
           },
         ]}
@@ -420,6 +417,7 @@ function ModListItem(props: TModListItemProps) {
   // TODO: warn for MC version
   // TODO: warn if dependency is missing
 
+  const location = useLocation();
   const mostCompatibleMcVersion = useMemo(
     () => getMostCompatibleMcVersion(modpack.minecraftVersion, mod.supportedMinecraftVersions),
     [modpack.minecraftVersion, mod.supportedMinecraftVersions],
@@ -511,7 +509,7 @@ function ModListItem(props: TModListItemProps) {
           {missingDependencies.map(dependency => (
             <Tag key={dependency} type="error" title={`${mod.name} depends on ${dependency}, but that mod is missing from your modpack.`}>
               Missing dependency {dependency}
-              <Link to={{ search: `${URL_KEY_PROJECT_LIBRARY_PAGE}&q=${encodeURIComponent(`modId:${dependency}`)}` }}>Add</Link>
+              <Link to={{ ...location, search: `${URL_KEY_PROJECT_LIBRARY_PAGE}&q=${encodeURIComponent(`modId:${dependency}`)}` }}>Add</Link>
               <HelpOutlined />
             </Tag>
           ))}
