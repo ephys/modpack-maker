@@ -77,6 +77,12 @@ export enum DependencyType {
   Suggests = 'suggests',
 }
 
+export type TErrorWithCount = {
+  __typename: 'ErrorWithCount',
+  count: Scalars['Int'],
+  description: Scalars['String'],
+};
+
 export type TGqlModDependency = {
   __typename: 'GqlModDependency',
   modId: Scalars['String'],
@@ -92,7 +98,11 @@ export type TModJar = {
   mods: TModVersion[],
   project: TProject,
   releaseType: ReleaseType,
-  /** returns the list of jars from the same project that are considered updated versions to this jar. */
+  /**
+   *
+   *       returns the list of jars from the same project that are considered updated versions to this jar.
+   *
+   */
   updatedVersion: TModJar[],
 };
 
@@ -268,6 +278,7 @@ export type TQuery = {
   __typename: 'Query',
   jar?: Maybe<TModJar>,
   /**
+   *
    * *Returns the jars of a project matching the search query.*
    * Uses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)
    *
@@ -293,12 +304,15 @@ export type TQuery = {
    *
    * Example 1: `modLoader:FORGE minecraftVersion:(1.16.4 OR 1.16.5)`
    * Example 2: `Quark-r2.4-315` (interpreted as `fileName:"*Quark-r2.4-315*"`).
+   *
    */
   jars: TModJarConnection,
   modpack?: Maybe<TModpack>,
   modpacks: TModpack[],
   project?: Maybe<TProject>,
+  projectErrors: TErrorWithCount[],
   /**
+   *
    * *Returns project matching the search query.*
    * Uses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)
    *
@@ -335,6 +349,7 @@ export type TQuery = {
    *    This can be used for eg. "sort by the date on which the projects first supported this minecraft version".
    * - With LastFileUpload, the used for the sort order will be the date on the most recent file matching the query was uploaded.
    *    This can be used for eg. "sort by the date on which the projects last published an update compatible with this minecraft version".
+   *
    */
   projects: TProjectConnection,
 };
@@ -522,6 +537,10 @@ export type TProjectSearchQueryVariables = Exact<{
 }>;
 
 export type TProjectSearchQuery = { __typename: 'Query', projects: { __typename: 'ProjectConnection', totalCount: number, edges: Array<{ __typename: 'ProjectEdge', cursor: string, node: { __typename: 'Project', id: string, iconUrl: string, name: string, description: string, homepage: string, source: ProjectSource } }> } };
+
+export type TErrorsPageQueryVariables = Exact<{ [key: string]: never }>;
+
+export type TErrorsPageQuery = { __typename: 'Query', projectErrors: Array<{ __typename: 'ErrorWithCount', description: string, count: number }> };
 
 export type TModpackViewQueryVariables = Exact<{
   modpackId: Scalars['ID'],
@@ -787,6 +806,19 @@ export const ProjectSearchDocument = /* #__PURE__ */ gql`
 
 export function useProjectSearchQuery(options: Omit<Urql.UseQueryArgs<TProjectSearchQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<TProjectSearchQuery>({ query: ProjectSearchDocument, ...options });
+}
+
+export const ErrorsPageDocument = /* #__PURE__ */ gql`
+    query ErrorsPage {
+  projectErrors {
+    description
+    count
+  }
+}
+    `;
+
+export function useErrorsPageQuery(options: Omit<Urql.UseQueryArgs<TErrorsPageQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<TErrorsPageQuery>({ query: ErrorsPageDocument, ...options });
 }
 
 export const ModpackViewDocument = /* #__PURE__ */ gql`

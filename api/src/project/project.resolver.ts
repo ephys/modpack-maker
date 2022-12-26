@@ -8,6 +8,7 @@ import type { IConnectionType } from '../utils/graphql-connection-utils';
 import { Connection, FuzzyPagination, sequelizeCursorToConnection } from '../utils/graphql-connection-utils';
 import { parseProjectMarkdown } from '../utils/markdown';
 import { Project, ProjectSource } from './project.entity';
+import { ErrorWithCount } from './project.service';
 import { ProjectService } from './project.service';
 
 const ProjectConnection = Connection(Project);
@@ -24,6 +25,11 @@ class ProjectResolver {
   @Query(() => Project, { name: 'project', nullable: true })
   async getProject(@Args('id', { type: () => ID }) id: string): Promise<Project | null> {
     return this.projectService.getProjectByInternalId(Number(id));
+  }
+
+  @Query(() => [ErrorWithCount], { name: 'projectErrors', nullable: false })
+  async getProjectErrors(): Promise<ErrorWithCount[]> {
+    return this.projectService.getProjectErrors();
   }
 
   @ResolveField('homepage', () => String)

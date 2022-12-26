@@ -1,0 +1,6 @@
+query ErrorsPage {
+  projectErrors {
+    description
+    count
+  }
+}

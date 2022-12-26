@@ -52,7 +52,7 @@ export async function searchCurseForgeModList(params: TSearchModsParams): Promis
     gameId: String(MINECRAFT_GAME_ID),
     index: String(params.page * params.pageSize),
     pageSize: String(params.pageSize),
-    sectionId: String(MINECRAFT_MODS_SECTION_ID),
+    classId: String(MINECRAFT_MODS_SECTION_ID),
     // sort 3 is LastUpdated
     sortField: '3',
     sortOrder: 'desc',

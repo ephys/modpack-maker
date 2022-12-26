@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { ApolloDriver } from '@nestjs/apollo';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
@@ -18,6 +19,7 @@ import { ProjectModule } from './project/project.module';
     ProjectSearchModule,
     ModpackVersionModule,
     GraphQLModule.forRoot({
+      driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), '/../schema.gql'),
       sortSchema: true,
       formatError: error => {

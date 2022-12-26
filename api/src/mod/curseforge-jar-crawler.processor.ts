@@ -225,7 +225,7 @@ export async function downloadModFile(url: string, retryAttempts = 3) {
   try {
     const result = await fetch(url);
 
-    return await result.buffer();
+    return await result.arrayBuffer();
   } catch (e) {
     if (retryAttempts > 0 && e.code === 'ETIMEDOUT') {
       return downloadModFile(url, retryAttempts - 1);
