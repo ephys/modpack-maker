@@ -15,17 +15,17 @@ export const InjectSequelize = Inject(SEQUELIZE_PROVIDER);
 const transactionNamespace = cls.createNamespace('sequelize-transaction');
 Sequelize.useCLS(transactionNamespace);
 
+const postgresUrl = process.env.POSTGRES_URL;
+if (typeof postgresUrl !== 'string') {
+  throw new Error('Provide POSTGRES_URL environment variable');
+}
+
 export const databaseProviders = [
   {
     provide: SEQUELIZE_PROVIDER,
     useFactory: async () => {
-      const sequelize = new Sequelize({
+      const sequelize = new Sequelize(postgresUrl, {
         dialect: 'postgres',
-        host: 'localhost',
-        port: 18132,
-        username: 'user',
-        password: 'password',
-        database: 'db',
         logging: false,
       });
 

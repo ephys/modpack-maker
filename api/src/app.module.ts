@@ -10,6 +10,16 @@ import { ModpackModule } from './modpack/modpack.module';
 import { ProjectSearchModule } from './project-search/project-search.module';
 import { ProjectModule } from './project/project.module';
 
+const redisHost = process.env.REDIS_HOST;
+if (typeof redisHost !== 'string') {
+  throw new Error('Provide REDIS_HOST environment variable');
+}
+
+const redisPort = process.env.REDIS_PORT;
+if (typeof redisPort !== 'string') {
+  throw new Error('Provide REDIS_PORT environment variable');
+}
+
 @Module({
   imports: [
     DatabaseModule,
@@ -43,8 +53,8 @@ import { ProjectModule } from './project/project.module';
     }),
     BullModule.forRoot({
       redis: {
-        host: 'localhost',
-        port: 19133,
+        host: redisHost,
+        port: redisPort,
       },
     }),
   ],
