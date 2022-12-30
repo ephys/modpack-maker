@@ -25,50 +25,55 @@ export class ModrinthProjectListCrawler {
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
-    const lastUpdateStr: string = await Project.max('lastSourceEditAt', {
-      where: {
-        sourceType: ProjectSource.MODRINTH,
-      },
-    });
+    try {
+      const lastUpdateStr: string = await Project.max('lastSourceEditAt', {
+        where: {
+          sourceType: ProjectSource.MODRINTH,
+        },
+      });
 
-    this.logger.log('Updating Modrinth Project List');
+      this.logger.log('Updating Modrinth Project List');
 
-    const lastUpdateAt = new Date(lastUpdateStr);
+      const lastUpdateAt = new Date(lastUpdateStr);
 
-    // using a map in case two pages return the same item
-    const modrinthProjects = new Map<string, TProjectCreationAttributes>();
+      // using a map in case two pages return the same item
+      const modrinthProjects = new Map<string, TProjectCreationAttributes>();
 
-    for await (const sourceProject of iterateModrinthModList({ pageSize: PAGE_SIZE })) {
-      const modLastModified = new Date(sourceProject.date_modified);
+      for await (const sourceProject of iterateModrinthModList({ pageSize: PAGE_SIZE })) {
+        const modLastModified = new Date(sourceProject.date_modified);
 
-      // reached last mod we fetched
-      if (modLastModified.getTime() < lastUpdateAt.getTime()) {
-        break;
+        // reached last mod we fetched
+        if (modLastModified.getTime() < lastUpdateAt.getTime()) {
+          break;
+        }
+
+        const id = unprefix(sourceProject.mod_id, 'local-');
+
+        modrinthProjects.set(id, {
+          sourceType: ProjectSource.MODRINTH,
+          sourceId: id,
+          sourceSlug: sourceProject.slug,
+          lastSourceEditAt: modLastModified,
+          versionListUpToDate: false,
+          description: sourceProject.description,
+          name: sourceProject.title,
+          iconUrl: sourceProject.icon_url,
+        });
       }
 
-      const id = unprefix(sourceProject.mod_id, 'local-');
+      this.logger.log(`Found a total of ${modrinthProjects.size} item(s) to update`);
 
-      modrinthProjects.set(id, {
-        sourceType: ProjectSource.MODRINTH,
-        sourceId: id,
-        sourceSlug: sourceProject.slug,
-        lastSourceEditAt: modLastModified,
-        versionListUpToDate: false,
-        description: sourceProject.description,
-        name: sourceProject.title,
-        iconUrl: sourceProject.icon_url,
-      });
+      await upsertUpdatedProjects(
+        Array.from(modrinthProjects.values()),
+        this.sequelize,
+        ProjectSource.MODRINTH,
+      );
+
+      await refreshStaleJarLists(ProjectSource.MODRINTH, this.fetchModrinthJarsQueue, this.sequelize, this.logger);
+    } catch (e) {
+      console.error('Refreshing modrinth project list failed');
+      console.error(e);
     }
-
-    this.logger.log(`Found a total of ${modrinthProjects.size} item(s) to update`);
-
-    await upsertUpdatedProjects(
-      Array.from(modrinthProjects.values()),
-      this.sequelize,
-      ProjectSource.MODRINTH,
-    );
-
-    await refreshStaleJarLists(ProjectSource.MODRINTH, this.fetchModrinthJarsQueue, this.sequelize, this.logger);
   }
 }
 
