@@ -18,7 +18,7 @@ import type {
 export type { UseQueryArgs };
 
 export const urqlClient = createClient({
-  url: 'http://localhost:8080/graphql',
+  url: location.protocol + '//' + location.hostname + ':8080/graphql',
   requestPolicy: 'cache-and-network',
   // fetchOptions: () => {
   // TODO
