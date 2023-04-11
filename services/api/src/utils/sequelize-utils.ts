@@ -231,14 +231,6 @@ export function notEqual(item) {
   return { [Op.ne]: item };
 }
 
-export function and(...opts) {
-  return { [Op.and]: opts };
-}
-
-export function or(...opts) {
-  return { [Op.or]: opts };
-}
-
 export function iLike(val) {
   return { [Op.iLike]: val };
 }

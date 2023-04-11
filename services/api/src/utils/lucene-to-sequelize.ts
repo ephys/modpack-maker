@@ -1,6 +1,6 @@
 import { EMPTY_ARRAY } from '@ephys/fox-forge';
 import type { WhereOptions } from '@sequelize/core';
-import { Op, sql } from '@sequelize/core';
+import { Op, Value, sql } from '@sequelize/core';
 import { parse as parseLucene } from 'lucene';
 import type { AST, LeftOnlyAST, Node, NodeField, NodeRangedTerm, NodeTerm, Operator } from 'lucene';
 import { iLike, not } from './sequelize-utils.js';
@@ -126,7 +126,7 @@ function processNamedLuceneNode(node: Node, config: TLuceneToSqlConfig): WhereOp
   const castAs = config.cast?.[node.field] ?? 'text';
 
   return sql.where(
-    sql.cast(sql.identifier(attributeName), castAs),
+    sql.cast(sql.attribute(attributeName), castAs),
     processLuceneNodePart(node, node.field, config),
   );
 }
@@ -315,5 +315,5 @@ function luceneTermToSqlLike(node: NodeTerm): WhereOptions {
 
   out += term.slice(lastIndex, term.length);
 
-  return iLike(sql`${out}`);
+  return iLike(new Value(out));
 }

@@ -2,7 +2,7 @@ import { minecraftVersions, parseMinecraftVersionThrows, serializeMinecraftVersi
 import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Inject } from '@nestjs/common';
-import { Op, QueryTypes, Sequelize, sql } from '@sequelize/core';
+import { Op, QueryTypes, Sequelize, and, sql } from '@sequelize/core';
 import type { Node } from 'lucene';
 import { SEQUELIZE_PROVIDER } from '../database/database.providers.js';
 import { ModJar } from '../mod/mod-jar.entity.js';
@@ -12,7 +12,7 @@ import { isNormalizedCursorPagination, normalizePagination } from '../utils/grap
 import type { TLuceneToSqlConfig } from '../utils/lucene-to-sequelize.js';
 import { isNodeTerm, luceneToSequelize } from '../utils/lucene-to-sequelize.js';
 import { getMinecraftVersionsInRange } from '../utils/minecraft-utils.js';
-import { and, andWhere, buildOrder, buildWhereComponent, contains, notEqual, overlap } from '../utils/sequelize-utils.js';
+import { andWhere, buildOrder, contains, notEqual, overlap, where } from '../utils/sequelize-utils.js';
 
 export enum ProjectSearchSortOrderDirection {
   DESC = 'DESC',
@@ -63,12 +63,12 @@ const ProjectSearchLuceneConfig: TLuceneToSqlConfig = {
     },
   },
   attributeMap: {
-    minecraftVersion: 'jars.mods.supportedMinecraftVersions',
-    modLoader: 'jars.mods.supportedModLoader',
-    modId: 'jars.mods.modId',
-    modName: 'jars.mods.displayName',
-    projectName: 'name',
-    source: 'sourceType',
+    minecraftVersion: '$jars.mods.supportedMinecraftVersions$',
+    modLoader: '$jars.mods.supportedModLoader$',
+    modId: '$jars.mods.modId$',
+    modName: '$jars.mods.displayName$',
+    projectName: '$name$',
+    source: '$sourceType$',
   },
 };
 
@@ -143,7 +143,7 @@ class ProjectSearchService {
               ${luceneQueryWhere ? andWhere(luceneQueryWhere, Project, 'p2') : ''}
             GROUP BY p2."internalId"
           ) p1
-          WHERE ${buildWhereComponent(paginationWhere, Project, 'p1')}
+          ${where(paginationWhere, Project, 'p1')}
           ORDER BY ${buildOrder(query.order, 'p1', Project)}
           LIMIT ${query.limit} ${!isNormalizedCursorPagination(pagination) ? `OFFSET ${pagination.offset}` : ''};
         `, {

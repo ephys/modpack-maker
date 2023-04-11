@@ -9,7 +9,7 @@ import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Injectable } from '@nestjs/common';
 import type { WhereOptions } from '@sequelize/core';
-import { QueryTypes, Sequelize } from '@sequelize/core';
+import { QueryTypes, Sequelize, and, or } from '@sequelize/core';
 import DataLoader from 'dataloader';
 import uniq from 'lodash/uniq.js';
 import uniqBy from 'lodash/uniqBy.js';
@@ -28,7 +28,7 @@ import {
   getPreferredMinecraftVersions,
   minecraftVersionComparator,
 } from '../utils/minecraft-utils.js';
-import { and, buildWhereComponent, contains, isIn, or, overlap } from '../utils/sequelize-utils.js';
+import { contains, isIn, overlap, where } from '../utils/sequelize-utils.js';
 import { ModJar } from './mod-jar.entity.js';
 import { ModVersion } from './mod-version.entity.js';
 
@@ -65,11 +65,11 @@ const JarSearchLuceneConfig: TLuceneToSqlConfig = {
     },
   },
   attributeMap: {
-    minecraftVersion: 'mods.supportedMinecraftVersions',
-    modLoader: 'mods.supportedModLoader',
-    modId: 'mods.modId',
-    modName: 'mods.displayName',
-    fileName: 'fileName',
+    minecraftVersion: '$mods.supportedMinecraftVersions$',
+    modLoader: '$mods.supportedModLoader$',
+    modId: '$mods.modId$',
+    modName: '$mods.displayName$',
+    fileName: '$fileName$',
   },
 };
 
@@ -232,7 +232,7 @@ SELECT rank() OVER (
 ) rank, mv."modId",  mv."supportedModLoader", mv."supportedMinecraftVersions", j.*
 FROM "ModJars" j
   INNER JOIN "ModVersions" mv ON mv."jarId" = j."internalId"
-WHERE ${buildWhereComponent(or(...queries), ModJar, 'j')}
+${where(or(...queries), ModJar, 'j')}
 ORDER BY rank, mv."modId", j."projectId", mv."supportedModLoader", mv."supportedMinecraftVersions"
 LIMIT ${keys.length};
     `, {
@@ -310,7 +310,6 @@ LIMIT ${keys.length};
       findAll: async query => {
         return ModJar.findAll({
           ...query,
-
           include: {
             association: ModJar.associations.mods,
             required: true,

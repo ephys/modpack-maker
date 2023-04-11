@@ -1,8 +1,8 @@
-import { Op, sql } from '@sequelize/core';
+import { Op, and, or, sql } from '@sequelize/core';
 import type { Node } from 'lucene';
 import type { TLuceneToSqlConfig } from './lucene-to-sequelize.js';
 import { isNodeTerm, luceneToSequelize } from './lucene-to-sequelize.js';
-import { and, contains, iLike, not, or } from './sequelize-utils.js';
+import { contains, iLike, not } from './sequelize-utils.js';
 
 const LuceneConfig: TLuceneToSqlConfig = {
   ranges: ['minecraftVersion'],
