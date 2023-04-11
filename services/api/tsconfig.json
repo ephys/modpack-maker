@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "declaration": false,
+    "module": "Node16",
+    "noImplicitAny": false,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
+    "target": "ES2022",
+    "sourceMap": false,
+    "lib": ["ES2022", "dom", "dom.iterable"],
+    "resolveJsonModule": true,
+    "moduleResolution": "Node16",
+    "skipLibCheck": true
+  },
+  "include": [
+    "*.ts",
+    "src/**/*"
+  ]
+}
