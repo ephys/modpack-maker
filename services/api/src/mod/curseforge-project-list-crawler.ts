@@ -68,6 +68,10 @@ export class CurseforgeProjectListCrawler {
   }
 
   async #executeRefresh() {
+    if (process.env.DISABLE_CURSEFORGE === '1') {
+      return;
+    }
+
     const lastUpdateStr: string = await Project.max('lastSourceEditAt', {
       where: {
         sourceType: ProjectSource.CURSEFORGE,

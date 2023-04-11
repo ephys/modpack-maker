@@ -25,6 +25,10 @@ export class ModrinthProjectListCrawler {
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
+    if (process.env.DISABLE_MODRINTH === '1') {
+      return;
+    }
+
     try {
       const lastUpdateStr: string = await Project.max('lastSourceEditAt', {
         where: {
@@ -47,7 +51,7 @@ export class ModrinthProjectListCrawler {
           break;
         }
 
-        const id = unprefix(sourceProject.mod_id, 'local-');
+        const id = unprefix(sourceProject.project_id, 'local-');
 
         modrinthProjects.set(id, {
           sourceType: ProjectSource.MODRINTH,

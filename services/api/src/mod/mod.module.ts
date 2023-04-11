@@ -23,6 +23,10 @@ import { ModrinthProjectListCrawler } from './modrinth-project-list-crawler.js';
     }),
     BullModule.registerQueue({
       name: FETCH_MODRINTH_JARS_QUEUE,
+      limiter: {
+        max: 100,
+        duration: 60_000,
+      },
     }),
     forwardRef(() => ProjectModule),
   ],

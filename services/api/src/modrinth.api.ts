@@ -16,30 +16,92 @@ export enum ModrinthCategory {
   fabric = 'fabric',
 }
 
-export type TModrinthProject = {
-  mod_id: string,
-  slug: string,
-  author: string,
-  title: string,
-  description: string,
-  categories: ModrinthCategory[],
-  versions: string[], // minecraft versions
-  downloads: number,
-  follows: number,
-  page_url: string,
-  icon_url: string,
-  author_url: string,
-  date_created: string,
-  date_modified: string,
-  latest_version: string, // minecraft version
-  license: string, // mit, custom
-  client_side: 'optional' | 'required' | 'unsupported',
-  server_side: 'optional' | 'required' | 'unsupported',
-};
+export interface ModrinthDonationPage {
+  id: string;
+  platform: string;
+  url: string;
+}
 
-export async function *iterateModrinthModList(params: Omit<TSearchModsParams, 'page'>): AsyncGenerator<TModrinthProject> {
+export interface ModrinthProjectSearchResult {
+  author: string;
+  categories: ModrinthCategory[];
+  client_side: ModrinthRequirementType;
+  color: number;
+  date_created: string;
+  date_modified: string;
+  description: string;
+  display_categories: ModrinthCategory[];
+  downloads: number;
+  featured_gallery: string;
+  follows: number;
+  gallery: string[];
+  icon_url: string;
+  latest_version: string;
+  license: string;
+  project_id: string;
+  project_type: 'mod' | 'modpack';
+  server_side: ModrinthRequirementType;
+  slug: string;
+  title: string;
+  versions: string[];
+}
+
+export type ModrinthRequirementType = 'optional' | 'required' | 'unsupported';
+
+export interface ModrinthProject {
+  approved: string;
+  author_url: string;
+  /** long description */
+  body: string;
+  body_url: string;
+  categories: ModrinthCategory[];
+  client_side: 'optional' | 'required' | 'unsupported';
+  color: string;
+  date_created: string; // minecraft versions
+  date_modified: string;
+  /** short description */
+  description: string;
+  discord_url: string;
+  donation_urls: ModrinthDonationPage[];
+  downloads: number;
+  follows: number;
+  gallery: Array<{
+    url: string,
+    featured: boolean,
+    title: string,
+    description: string,
+    created: string,
+    ordering: number,
+  }>;
+  game_versions: string[];
+  icon_url: string;
+  issues_url: string;
+  latest_version: string;
+  license: {
+    id: string,
+    name: string,
+    url: string,
+  };
+  loaders: string[]; // minecraft version
+  moderator_message: string | null; // mit, custom
+  page_url: string;
+  project_id: string;
+  project_type: 'mod' | 'modpack';
+  published: string;
+  server_side: 'optional' | 'required' | 'unsupported';
+  slug: string;
+  source_url: string;
+  status: string;
+  team: string;
+  title: string;
+  updated: string;
+  versions: string[];
+  wiki_url: string;
+}
+
+export async function *iterateModrinthModList(params: Omit<TSearchModsParams, 'page'>): AsyncGenerator<ModrinthProject> {
   let page = 0;
-  let hits: TModrinthProject[];
+  let hits: ModrinthProject[];
 
   do {
     // eslint-disable-next-line no-await-in-loop
@@ -65,16 +127,17 @@ type TModrinthPage<T> = {
   total_hits: number,
 };
 
-export async function getModrinthModListPage(params: TSearchModsParams): Promise<TModrinthPage<TModrinthProject>> {
+export async function getModrinthModListPage(params: TSearchModsParams): Promise<TModrinthPage<ModrinthProject>> {
 
   const search = new URLSearchParams({
     // sort order
     index: 'updated',
     limit: String(params.pageSize),
     offset: String(params.page * params.pageSize),
+    project_type: 'mod',
   });
 
-  const uri = `/mod?${search.toString()}`;
+  const uri = `/search?${search.toString()}`;
 
   return fetchModrinthApi(uri);
 }
@@ -108,7 +171,7 @@ export type TModrinthProjectVersionFile = {
 };
 
 export async function getModrinthModFiles(modrinthProjectId: string): Promise<TModrinthProjectVersion[]> {
-  return fetchModrinthApi(`/mod/${encodeURIComponent(modrinthProjectId)}/version`, {
+  return fetchModrinthApi(`/project/${encodeURIComponent(modrinthProjectId)}/version`, {
     headers: {
       'User-Agent': 'User-Agent: ephys/modpack-maker/dev (zoe@ephys.dev)',
     },
@@ -116,7 +179,7 @@ export async function getModrinthModFiles(modrinthProjectId: string): Promise<TM
 }
 
 async function fetchModrinthApi<T>(path, options?: RequestInit): Promise<T> {
-  const res = await fetch(`https://api.modrinth.com/api/v1${path}`, options);
+  const res = await fetch(`https://api.modrinth.com/v2${path}`, options);
 
   if (!res.ok) {
     throw new Error(`Could not fetch modrinth ${path}: ${res.status} - ${res.statusText} ${await res.text()}`);
@@ -136,7 +199,7 @@ export function getModrinthReleaseType(releaseTypeId: TModrinthProjectVersion['v
 
 export async function getModrinthProjectDescription(sourceId: string): Promise<string> {
 
-  const response = await fetchModrinthApi<TModrinthProject & { body: string, body_url: string }>(`/mod/${encodeURIComponent(sourceId)}`);
+  const response = await fetchModrinthApi<ModrinthProject & { body: string, body_url: string }>(`/project/${encodeURIComponent(sourceId)}`);
   if (response.body) {
     return response.body;
   }
