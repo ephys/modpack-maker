@@ -1,3 +1,10 @@
+import {
+  getFirstSemverMajorVersion,
+  getMostCompatibleMcVersion,
+  isMcVersionLikelyCompatibleWith,
+  parseMinecraftVersionThrows,
+  uriTag,
+} from '@ephys/modpack-maker-common';
 import HelpOutlined from '@mui/icons-material/HelpOutlined';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -8,13 +15,6 @@ import type { ComponentProps } from 'react';
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useHistory, useLocation, useParams } from 'react-router-dom';
-import {
-  getFirstSemverMajorVersion,
-  getMostCompatibleMcVersion,
-  isMcVersionLikelyCompatibleWith,
-  parseMinecraftVersionThrows,
-} from '../../../common/minecraft-utils';
-import { uriTag } from '../../../common/url-utils';
 import type { TModpackViewQuery } from '../api/graphql.generated';
 import {
   DependencyType,
@@ -460,7 +460,7 @@ function ModListItem(props: TModListItemProps) {
       }
     }
 
-    return Array.from(ids).sort();
+    return [...ids].sort();
   }, [mod.modId, modpackVersion.installedJars]);
 
   return (
@@ -535,7 +535,7 @@ const supportedUrls = new Set(['text/uri-list', 'text/x-moz-url']);
 
 async function urlItemFilter(items: DataTransferItemList) {
   const data = await Promise.all(
-    Array.from(items)
+    [...items]
       .filter(item => {
         return item.kind === 'string' && supportedUrls.has(item.type);
       })
@@ -551,7 +551,7 @@ async function urlItemFilter(items: DataTransferItemList) {
         const uri = new URL(item);
 
         return uri.protocol === 'http:' || uri.protocol === 'https:';
-      } catch (e) {
+      } catch {
         return false;
       }
     });

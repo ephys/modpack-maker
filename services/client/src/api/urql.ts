@@ -1,4 +1,5 @@
 import type { NonUndefined } from '@ephys/fox-forge';
+import { assert } from '@ephys/modpack-maker-common';
 import { devtoolsExchange } from '@urql/devtools';
 import type { Cache } from '@urql/exchange-graphcache';
 import { cacheExchange } from '@urql/exchange-graphcache';
@@ -6,16 +7,15 @@ import { makeDefaultStorage } from '@urql/exchange-graphcache/default-storage';
 import type { DocumentNode } from 'graphql';
 import { useCallback, useMemo } from 'react';
 import type { OperationContext, UseQueryArgs, UseQueryState } from 'urql';
-import { createClient, useQuery as useUrqlQuery, useMutation as useUrqlMutation, dedupExchange, fetchExchange } from 'urql';
-import { assert } from '../../../common/assert';
+import { createClient, dedupExchange, fetchExchange, useMutation as useUrqlMutation, useQuery as useUrqlQuery } from 'urql';
 import type {
-  TAddJarToModpackMutation, TAddJarToModpackMutationVariables,
-  TRemoveJarFromModpackMutation, TRemoveJarFromModpackMutationVariables,
+  TAddJarToModpackMutation,
+  TAddJarToModpackMutationVariables,
+  TRemoveJarFromModpackMutation,
+  TRemoveJarFromModpackMutationVariables,
   TReplaceModpackJarMutation,
   TReplaceModpackJarMutationVariables,
 } from './graphql.generated';
-
-export type { UseQueryArgs };
 
 export const urqlClient = createClient({
   url: `${location.protocol}//${location.hostname}:8080/graphql`,
@@ -184,3 +184,5 @@ export function isLoadedUrql<Data, Error>(state: UseQueryState<Data, Error>): st
 
   return state.data !== undefined || state.error != null;
 }
+
+export { type UseQueryArgs } from 'urql';

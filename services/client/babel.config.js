@@ -10,6 +10,7 @@ module.exports = {
   ],
   plugins: [
     'macros',
+    '@babel/plugin-syntax-import-assertions',
   ],
   overrides: [{
     test: [

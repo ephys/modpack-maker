@@ -1,3 +1,4 @@
+import { EMPTY_ARRAY, EMPTY_OBJECT } from '@ephys/fox-forge';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
@@ -16,12 +17,7 @@ import type { ComponentProps } from 'react';
 import { useCallback, useEffect } from 'react';
 import { useIntl } from 'react-intl';
 import { Link, useHistory, useLocation } from 'react-router-dom';
-import { EMPTY_ARRAY, EMPTY_OBJECT } from '../../../common/utils';
-import {
-  ProjectSearchSortOrder,
-  ProjectSearchSortOrderDirection,
-  useProjectSearchQuery,
-} from '../api/graphql.generated';
+import { ProjectSearchSortOrder, ProjectSearchSortOrderDirection, useProjectSearchQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
 import useDebounce from '../utils/use-debounce';
 import { modifySearch, useSearchParams } from '../utils/use-search-params';
@@ -212,7 +208,7 @@ function decodeCursor(cursor: string) {
   try {
     // should really not be doing this, cursor are opaque and could be anything
     return JSON.parse(atob(cursor));
-  } catch (e) {
+  } catch {
     return EMPTY_OBJECT;
   }
 }

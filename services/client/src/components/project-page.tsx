@@ -1,9 +1,9 @@
+import { EMPTY_ARRAY } from '@ephys/fox-forge';
 import AddIcon from '@mui/icons-material/Add';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
-import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -14,7 +14,6 @@ import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import type { ComponentProps, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { EMPTY_ARRAY } from '../../../common/utils';
 import type { TProject } from '../api/graphql.generated';
 import { useProjectPageJarsQuery, useProjectPageQuery } from '../api/graphql.generated';
 import { isLoadedUrql } from '../api/urql';
