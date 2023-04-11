@@ -1,4 +1,4 @@
-import type { ModLoader } from '@ephys/modpack-maker-common/modloaders.js';
+import type { ModLoader } from '@ephys/modpack-maker-common';
 import { Inject, Injectable } from '@nestjs/common';
 import { Sequelize } from '@sequelize/core';
 import { InjectSequelize } from '../database/database.providers.js';

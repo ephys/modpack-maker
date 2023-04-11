@@ -1,5 +1,4 @@
-import { parseMinecraftVersionThrows, serializeMinecraftVersion } from '@ephys/modpack-maker-common/minecraft-utils.js';
-import minecraftVersions from '@ephys/modpack-maker-common/minecraft-versions.json';
+import { minecraftVersions, parseMinecraftVersionThrows, serializeMinecraftVersion } from '@ephys/modpack-maker-common';
 import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Inject } from '@nestjs/common';

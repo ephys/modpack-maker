@@ -21,7 +21,6 @@ export enum ReleaseType {
 @GraphQlObject()
 export class ModJar extends Model<InferAttributes<ModJar>, InferCreationAttributes<ModJar>> {
 
-  @DB.NotNull
   @DB.PrimaryKey
   @DB.AutoIncrement
   @DB.Attribute(DataTypes.INTEGER)

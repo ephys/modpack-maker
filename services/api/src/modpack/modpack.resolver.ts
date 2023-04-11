@@ -1,5 +1,4 @@
-import minecraftVersions from '@ephys/modpack-maker-common/minecraft-versions.json';
-import { ModLoader } from '@ephys/modpack-maker-common/modloaders.js';
+import { ModLoader, minecraftVersions } from '@ephys/modpack-maker-common';
 import { IsEnum, IsIn, MaxLength, MinLength } from 'class-validator';
 import {
   Args,

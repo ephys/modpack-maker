@@ -1,5 +1,4 @@
-import { parseMinecraftVersionThrows } from '@ephys/modpack-maker-common/minecraft-utils.js';
-import minecraftVersion from '@ephys/modpack-maker-common/minecraft-versions.json';
+import { minecraftVersions, parseMinecraftVersionThrows } from '@ephys/modpack-maker-common';
 import semver from 'semver';
 
 export function minecraftVersionComparator(order: 'DESC' | 'ASC') {
@@ -24,7 +23,7 @@ export function minecraftVersionComparator(order: 'DESC' | 'ASC') {
 export function getMinecraftVersionsInRange(range: string): string[] {
   const valid: string[] = [];
 
-  for (const version of minecraftVersion) {
+  for (const version of minecraftVersions) {
     const coercedVersion = semver.coerce(version);
     if (coercedVersion == null) {
       throw new Error(`Could not parse minecraft version: ${version}`);
@@ -56,5 +55,3 @@ export function getPreferredMinecraftVersions(mainVersionStr: string, existingMc
 
   return validMcVersions;
 }
-
-export { parseMinecraftVersion } from '@ephys/modpack-maker-common/minecraft-utils.js';

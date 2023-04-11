@@ -1,4 +1,4 @@
-import mcVersions from '@ephys/modpack-maker-common/minecraft-versions.json';
+import { minecraftVersions } from '@ephys/modpack-maker-common';
 import { InjectQueue } from '@nestjs/bull';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -141,7 +141,7 @@ export class CurseforgeProjectListCrawler {
     const allItems = new Map<number, TProjectCreationAttributes>();
 
     for (const category of categories) {
-      const mcVersionFilters = categoriesToSplit.has(category.id) ? mcVersions : ['1.18.2'];
+      const mcVersionFilters = categoriesToSplit.has(category.id) ? minecraftVersions : ['1.18.2'];
       for (const gameVersion of mcVersionFilters) {
         this.logger.log(`fetching category ${category.name} (id ${category.id} - ${category.url}) for mc ${gameVersion}`);
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { uriTag } from '@ephys/modpack-maker-common/url-utils.js';
+import { uriTag } from '@ephys/modpack-maker-common';
 import type { RequestInit } from 'node-fetch';
 import fetch from 'node-fetch';
 import { retryAsPromised } from 'retry-as-promised';

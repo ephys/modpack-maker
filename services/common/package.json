@@ -1,4 +1,10 @@
 {
   "name": "@ephys/modpack-maker-common",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc --outDir dist"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
 }

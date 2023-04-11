@@ -90,7 +90,7 @@ export function getMostCompatibleMcVersion(requestedStr: string, availableStr: s
   return availableStr[0];
 }
 
-function sqlSort<T>(array: T[], orders): T[] {
+function sqlSort<T>(array: T[], orders: Array<[(input: T) => string | number | bigint | boolean, 'DESC' | 'ASC']>): T[] {
   return array.sort((a, b) => {
     for (const [order, direction] of orders) {
       const aValue = typeof order === 'function' ? order(a) : a[order];
@@ -107,7 +107,7 @@ function sqlSort<T>(array: T[], orders): T[] {
   });
 }
 
-function comparePrimitives(a, b): number {
+function comparePrimitives(a: any, b: any): number {
   const type = typeof a;
   if (type !== typeof b) {
     throw new Error('a & b do not have the same type');

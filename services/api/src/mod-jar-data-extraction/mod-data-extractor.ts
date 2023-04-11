@@ -1,5 +1,5 @@
 import { isString } from '@ephys/fox-forge';
-import { ModLoader } from '@ephys/modpack-maker-common/modloaders.js';
+import { ModLoader } from '@ephys/modpack-maker-common';
 import Toml from '@iarna/toml';
 import Zip from 'jszip';
 import { DependencyType } from '../mod/dependency-type.js';

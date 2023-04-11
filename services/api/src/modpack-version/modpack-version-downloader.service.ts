@@ -3,7 +3,7 @@ import childProcess from 'node:child_process';
 import fsCb from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '@ephys/modpack-maker-common/minecraft-utils.js';
+import { getMostCompatibleMcVersion, isMcVersionLikelyCompatibleWith } from '@ephys/modpack-maker-common';
 import { Inject } from '@nestjs/common';
 import { rimraf } from 'rimraf';
 import { ModJar } from '../mod/mod-jar.entity.js';

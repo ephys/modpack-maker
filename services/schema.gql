@@ -1,0 +1,280 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AddJarToModpackError {
+  code: AddJarToModpackErrorCodes!
+  message: String!
+}
+
+enum AddJarToModpackErrorCodes {
+  JAR_NOT_FOUND
+  MODPACK_NOT_FOUND
+}
+
+input AddJarToModpackInput {
+  jar: ID!
+  modpackVersion: ID!
+}
+
+type AddJarToModpackPayload {
+  error: AddJarToModpackError
+  node: ModpackVersion
+}
+
+input CreateModpackInput {
+  minecraftVersion: String!
+  modLoader: ModLoader!
+  name: String!
+}
+
+type CreateModpackPayload {
+  node: Modpack
+}
+
+type CreateNewModpackVersionError {
+  code: CreateNewModpackVersionErrorCodes!
+  message: String!
+}
+
+enum CreateNewModpackVersionErrorCodes {
+  MODPACK_NOT_FOUND
+}
+
+input CreateNewModpackVersionInput {
+  fromModpackVersion: ID!
+  name: String!
+}
+
+type CreateNewModpackVersionPayload {
+  error: CreateNewModpackVersionError
+  node: ModpackVersion
+}
+
+enum DependencyType {
+  breaks
+  conflicts
+  depends
+  recommends
+  suggests
+}
+
+type ErrorWithCount {
+  count: Int!
+  description: String!
+}
+
+type GqlModDependency {
+  modId: String!
+  type: DependencyType!
+  versionRange: String
+}
+
+type ModJar {
+  downloadUrl: String!
+  fileName: String!
+  id: ID!
+  mods(matchingModpack: ID): [ModVersion!]!
+  project: Project!
+  releaseType: ReleaseType!
+
+  "\n      returns the list of jars from the same project that are considered updated versions to this jar.\n    "
+  updatedVersion(matchingModpack: ID!): [ModJar!]!
+}
+
+type ModJarConnection {
+  edges: [ModJarEdge!]!
+  nodes: [ModJar!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ModJarEdge {
+  cursor: String!
+  node: ModJar!
+}
+
+enum ModLoader {
+  FABRIC
+  FORGE
+}
+
+type ModVersion {
+  dependencies: [GqlModDependency!]!
+  id: ID!
+  modId: String!
+  modVersion: String!
+  name: String!
+  supportedMinecraftVersions: [String!]!
+  supportedModLoader: ModLoader!
+}
+
+type Modpack {
+  id: ID!
+  lastVersion: ModpackVersion!
+  lastVersionIndex: Int!
+  minecraftVersion: String!
+  modLoader: ModLoader!
+  name: String!
+  version(index: Int!): ModpackVersion
+}
+
+type ModpackMod {
+  addedAt: String!
+  isLibraryDependency: Boolean!
+  jar: ModJar!
+}
+
+type ModpackVersion {
+  downloadUrl: String!
+  id: ID!
+  installedJars: [ModpackMod!]!
+  name: String!
+  versionIndex: Int!
+}
+
+type Mutation {
+  addJarToModpack(input: AddJarToModpackInput!): AddJarToModpackPayload!
+  createModpack(input: CreateModpackInput!): CreateModpackPayload!
+  createNewModpackVersion(input: CreateNewModpackVersionInput!): CreateNewModpackVersionPayload!
+  removeJarFromModpack(input: RemoveJarFromModpackInput!): RemoveJarFromModpackPayload!
+  replaceModpackJar(input: ReplaceModpackJarInput!): ReplaceModpackJarPayload!
+  setModpackJarIsLibrary(input: SetModpackJarIsLibraryInput!): SetModpackJarIsLibraryPayload!
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+type Project {
+  description: String!
+  homepage: String!
+  iconUrl: String!
+  id: String!
+  jars(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int): [ModJarConnection!]!
+  longDescription: String!
+
+  """
+  Works like `longDescription`,
+  but returns null if the the value has not been loaded & cached yet.
+  """
+  longDescriptionIfReady: String
+  name: String!
+  source: ProjectSource!
+  sourceId: String!
+}
+
+type ProjectConnection {
+  edges: [ProjectEdge!]!
+  nodes: [Project!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ProjectEdge {
+  cursor: String!
+  node: Project!
+}
+
+enum ProjectSearchSortOrder {
+  FirstFileUpload
+  LastFileUpload
+  ProjectName
+}
+
+enum ProjectSearchSortOrderDirection {
+  ASC
+  DESC
+}
+
+enum ProjectSource {
+  CURSEFORGE
+  MODRINTH
+}
+
+type Query {
+  jar(id: ID!): ModJar
+
+  "\n*Returns the jars of a project matching the search query.*  \nUses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)\n\n### Supported fields (mods):\n\nMods fields combinations `(modLoader AND minecraftVersion)` are checked per-mod instead of per-jar.\nthis means that if a jar includes two mods, one that supports modLoader and one that supports minecraftVersion, but not\nboth at the same time, it will not be returned. A single mod needs to support both to be returned.\n\n- **modId** - returns only projects that have at least one jar containing this modId.\n- **modName** - returns only projects that have at least one jar containing one mod that matches modName.\n- **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion.\n- **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader.\n\n### Supported fields (jars):\nProject fields combinations are checked per-projects.\n\n- **fileName** - returns only jars whose fileName matches this.\n\n---\n\nIf no field is provided (Example 2), it'll be interpreted as a wildcard search on the fileName field.\n\nExample 1: `modLoader:FORGE minecraftVersion:(1.16.4 OR 1.16.5)`  \nExample 2: `Quark-r2.4-315` (interpreted as `fileName:\"*Quark-r2.4-315*\"`).\n"
+  jars(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int, project: ID!, query: String! = ""): ModJarConnection!
+  modpack(id: ID!): Modpack
+  modpacks: [Modpack!]!
+  project(id: ID!): Project
+  projectErrors: [ErrorWithCount!]!
+
+  "\n*Returns project matching the search query.*  \nUses [lucene syntax](https://lucene.apache.org/core/2_9_4/queryparsersyntax.html)\n\n### Supported fields (mods):\n\nMods fields combinations `(modLoader AND minecraftVersion)` are checked per-mod instead of per-project.\nthis means that if a Project has two jars, one that supports modLoader and one that supports minecraftVersion, but not\nboth at the same time, it will not be returned. A single jar needs to support both to be returned.\n\n- **modId** - returns only projects that have at least one jar containing this modId.\n- **modName** - returns only projects that have at least one jar containing one mod that matches modName.\n- **minecraftVersion** - returns only projects that have at least one jar containing one mod that supports minecraftVersion.\n- **modLoader** - returns only projects that have at least one jar containing one mod that uses this modLoader.\n\n### Supported fields (projects):\nProject fields combinations are checked per-projects.\n\n- **projectName** - returns only projects that have at least one jar containing one mod that matches projectName.\n- **tags** - returns only projects that have this tag listed.\n- **source** - returns only projects that have been fetched from a specific source. Supported values: `modrinth` or `curseforge`.\n\n---\n\nIf no field is provided (Example 2), it'll be interpreted as a wildcard search on the projectName field.\n\nExample 1: `modId:magic-feather name:\"Magic Feather\" modLoader:FORGE minecraftVersion:(1.16.4 OR 1.16.5)`  \nExample 2: `Magic Feather` (interpreted as `projectName:\"*Magic Feather*\"`).\n\n---\n\nThe sort-order is query-aware. Meaning that if the query specifies a `minecraftVersion` or a `modLoader` field:\n\n- With FirstFileUpload, the date used for the sort order will be the date on the oldest file matching the query was uploaded.\n   This can be used for eg. \"sort by the date on which the projects first supported this minecraft version\".\n- With LastFileUpload, the used for the sort order will be the date on the most recent file matching the query was uploaded.\n   This can be used for eg. \"sort by the date on which the projects last published an update compatible with this minecraft version\".\n"
+  projects(after: String, before: String, first: Int, last: Int, limit: Int, offset: Int, order: ProjectSearchSortOrder! = ProjectName, orderDir: ProjectSearchSortOrderDirection! = ASC, query: String = ""): ProjectConnection!
+}
+
+enum ReleaseType {
+  ALPHA
+  BETA
+  STABLE
+}
+
+type RemoveJarFromModpackError {
+  code: RemoveJarFromModpackErrorCodes!
+  message: String!
+}
+
+enum RemoveJarFromModpackErrorCodes {
+  JAR_NOT_FOUND
+  MODPACK_NOT_FOUND
+}
+
+input RemoveJarFromModpackInput {
+  jar: ID!
+  modpackVersion: ID!
+}
+
+type RemoveJarFromModpackPayload {
+  error: RemoveJarFromModpackError
+  node: ModpackVersion
+}
+
+type ReplaceModpackJarError {
+  code: ReplaceModpackJarErrorCodes!
+  message: String!
+}
+
+enum ReplaceModpackJarErrorCodes {
+  JAR_NOT_FOUND
+  MODPACK_NOT_FOUND
+  NEW_JAR_NOT_FOUND
+}
+
+input ReplaceModpackJarInput {
+  modpackVersion: ID!
+  newJars: [ID!]!
+  oldJar: ID!
+}
+
+type ReplaceModpackJarPayload {
+  error: ReplaceModpackJarError
+  node: ModpackVersion
+}
+
+type SetModpackJarIsLibraryError {
+  code: SetModpackJarIsLibraryErrorCodes!
+  message: String!
+}
+
+enum SetModpackJarIsLibraryErrorCodes {
+  JAR_NOT_FOUND
+  JAR_NOT_IN_MODPACK
+  MODPACK_NOT_FOUND
+}
+
+input SetModpackJarIsLibraryInput {
+  isLibrary: Boolean!
+  jar: ID!
+  modpackVersion: ID!
+}
+
+type SetModpackJarIsLibraryPayload {
+  error: SetModpackJarIsLibraryError
+  node: ModpackMod
+}

@@ -1,5 +1,4 @@
-import minecraftVersion from '@ephys/modpack-maker-common/minecraft-versions.json';
-import { ModLoader } from '@ephys/modpack-maker-common/modloaders.js';
+import { ModLoader, minecraftVersions } from '@ephys/modpack-maker-common';
 import type { InferAttributes, InferCreationAttributes } from '@sequelize/core';
 import { DataTypes, Model, NonAttribute } from '@sequelize/core';
 import * as DB from '@sequelize/core/decorators-legacy';
@@ -69,7 +68,7 @@ export class ModVersion extends Model<InferAttributes<ModVersion>, InferCreation
   declare modVersion: string;
 
   @DB.NotNull
-  @DB.Attribute(DataTypes.ARRAY(DataTypes.ENUM(...minecraftVersion)))
+  @DB.Attribute(DataTypes.ARRAY(DataTypes.ENUM(...minecraftVersions)))
   @GraphQl(() => [String], { name: 'supportedMinecraftVersions' })
   /**
    * Which versions of Minecraft are supported by this mod.

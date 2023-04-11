@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import minecraftVersion from '@ephys/modpack-maker-common/minecraft-versions.json';
+import { minecraftVersions } from '@ephys/modpack-maker-common';
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Op, Sequelize } from '@sequelize/core';
@@ -132,7 +132,7 @@ export class ModrinthJarCrawlerProcessor {
     const supportedMcVersions = new Set<string>();
 
     for (const platform of supportedPlatforms) {
-      if (minecraftVersion.includes(platform)) {
+      if (minecraftVersions.includes(platform)) {
         supportedMcVersions.add(platform);
         continue;
       }

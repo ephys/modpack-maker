@@ -1,5 +1,4 @@
-import minecraftVersion from '@ephys/modpack-maker-common/minecraft-versions.json';
-import { ModLoader } from '@ephys/modpack-maker-common/modloaders.js';
+import { ModLoader, minecraftVersions } from '@ephys/modpack-maker-common';
 import { DataTypes, Model } from '@sequelize/core';
 import * as DB from '@sequelize/core/decorators-legacy';
 import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '../esm-compat/nest-graphql-esm.js';
@@ -44,7 +43,7 @@ export class Modpack extends Model<Modpack, TModpackCreationAttributes> {
 
   @GraphQl(() => String)
   @DB.NotNull
-  @DB.Attribute(DataTypes.ENUM(...minecraftVersion))
+  @DB.Attribute(DataTypes.ENUM(...minecraftVersions))
   declare minecraftVersion: string;
 
   @GraphQl(() => Int)
