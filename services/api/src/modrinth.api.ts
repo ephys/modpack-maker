@@ -179,6 +179,7 @@ export async function getModrinthModFiles(modrinthProjectId: string): Promise<TM
 }
 
 async function fetchModrinthApi<T>(path, options?: RequestInit): Promise<T> {
+  // TODO: throttle requests to avoid rate limiting instead of throttling bull.
   const res = await fetch(`https://api.modrinth.com/v2${path}`, options);
 
   if (!res.ok) {
