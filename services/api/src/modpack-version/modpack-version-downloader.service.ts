@@ -45,7 +45,7 @@ export class ModpackVersionDownloaderService {
       this.modpackService.getModpackByIid(modpackVersion.modpackId),
     ]);
 
-    assert(modpack != null);
+    assert(modpack != null, 'Modpack is null');
 
     const compatibleJars = allJars.filter(jar => {
       assert(jar.mods != null && jar.mods.length > 0, 'downloadModpackToFileStream: expected jar to eagerly include mods');

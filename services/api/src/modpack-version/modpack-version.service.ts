@@ -25,7 +25,7 @@ export class ModpackVersionService {
   async getLastModpackVersion(modpack: Modpack): Promise<ModpackVersion> {
     const out = await this.getModpackVersion(modpack, modpack.lastVersionIndex);
 
-    assert(out != null);
+    assert(out != null, 'modpack version is null');
 
     return out;
   }
@@ -51,7 +51,7 @@ export class ModpackVersionService {
 
   async getModpackVersionModpack(modpackVersion: ModpackVersion): Promise<Modpack> {
     const modpack = await this.modpackService.getModpackByIid(modpackVersion.modpackId);
-    assert(modpack != null);
+    assert(modpack != null, 'modpack is null');
 
     return modpack;
   }

@@ -149,8 +149,8 @@ export function where(clauseOrWhere: string | WhereOptions, model?: ModelStatic<
     return `WHERE ${clauseOrWhere}`;
   }
 
-  assert(model != null);
-  assert(mainAlias != null);
+  assert(model != null, 'model is null');
+  assert(mainAlias != null, 'main alias is null');
 
   return where(buildWhereComponent(clauseOrWhere, model, mainAlias));
 }
@@ -166,8 +166,8 @@ export function andWhere(clauseOrWhere: string | WhereOptions | null, model?: Mo
     return `AND ${clauseOrWhere}`;
   }
 
-  assert(model != null);
-  assert(mainAlias != null);
+  assert(model != null, 'model is null');
+  assert(mainAlias != null, 'main alias is null');
 
   return andWhere(buildWhereComponent(clauseOrWhere, model, mainAlias));
 }

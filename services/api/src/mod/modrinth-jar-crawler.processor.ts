@@ -70,7 +70,7 @@ export class ModrinthJarCrawlerProcessor {
         },
       });
 
-      assert(project != null);
+      assert(project != null, 'local version of modrinth project does not exist');
 
       for (const file of files) {
         // file has already been processed

@@ -75,7 +75,7 @@ export class CurseforgeJarCrawlerProcessor {
         },
       });
 
-      assert(cfProject != null);
+      assert(cfProject != null, 'local version of curseforge project does not exist');
 
       for (const file of files) {
         const fileId = String(file.id);

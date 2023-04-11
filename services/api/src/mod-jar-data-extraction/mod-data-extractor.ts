@@ -119,7 +119,7 @@ function getMetaFromFabricManifest(fileContents): Partial<TModMeta> {
         type,
       };
 
-      isString.assert(version);
+      isString.assert(version, 'version is not a string');
 
       if (version !== '*') {
         dep.versionRange = version;
