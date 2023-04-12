@@ -12,14 +12,14 @@ import type {
 import toArray from 'lodash/toArray.js';
 
 /**
- * Akin to Sequelize.Model.update() but updates one row only.
+ * Akin to Model.update() but updates one row only.
  * On mariadb/mysql, the affected row count will be limited to 1.
  * On other databases, if more than one row was updated, a fatal error will be thrown to warn the developer
  * that their query is wrong.
  *
  * @param model - The sequelize model on which the update will be executed.
- * @param values - Param 1 of Sequelize.Model.update
- * @param options - Param 2 of Sequelize.Model.update
+ * @param values - Param 1 of Model.update
+ * @param options - Param 2 of Model.update
  * @returns The updated instance or null if none matched.
  */
 export async function updateOne<M extends Model>(
@@ -49,13 +49,13 @@ export async function updateOne<M extends Model>(
 }
 
 /**
- * Akin to Sequelize.Model.destroy() but deletes one row only.
+ * Akin to Model.destroy() but deletes one row only.
  * On mariadb/mysql, the affected row count will be limited to 1.
  * On other databases, if more than one row was deleted, a fatal error will be thrown to warn the developer
  * that their query is wrong.
  *
  * @param model - The sequelize model on which the delete will be executed.
- * @param options - Param 2 of Sequelize.Model.delete
+ * @param options - Param 2 of Model.delete
  * @returns true: a row was deleted, false: no row was deleted.
  */
 export async function destroyOne(model: ModelStatic<any>, options?: DestroyOptions): Promise<boolean> {

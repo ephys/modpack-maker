@@ -15,16 +15,47 @@ const PAGE_SIZE = 100;
 @Injectable()
 export class ModrinthProjectListCrawler {
   private readonly logger = new Logger(ModrinthProjectListCrawler.name);
+  #refreshing = false;
+  #shouldDoCompleteCrawl = false;
 
   constructor(
     @Inject(SEQUELIZE_PROVIDER) private readonly sequelize: Sequelize,
     @InjectQueue(FETCH_MODRINTH_JARS_QUEUE) private readonly fetchModrinthJarsQueue: Queue,
   ) {
-    void this.handleCron();
+    void this.requestRefresh();
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
+    try {
+      await this.requestRefresh();
+    } catch (error) {
+      this.logger.error(new Error('Periodic CurseForge refresh failed', { cause: error }));
+    }
+  }
+
+  async requestRefresh(opts?: { complete?: boolean }): Promise<void> {
+    if (opts?.complete) {
+      this.#shouldDoCompleteCrawl = true;
+    }
+
+    if (this.#refreshing) {
+      this.logger.warn('Skipping refresh request because another one is already running');
+
+      return;
+    }
+
+    try {
+      this.#refreshing = true;
+
+      await this.#executeRefresh();
+      this.#shouldDoCompleteCrawl = false;
+    } finally {
+      this.#refreshing = false;
+    }
+  }
+
+  async #executeRefresh(): Promise<void> {
     if (process.env.DISABLE_MODRINTH === '1') {
       return;
     }
@@ -47,7 +78,7 @@ export class ModrinthProjectListCrawler {
         const modLastModified = new Date(sourceProject.date_modified);
 
         // reached last mod we fetched
-        if (modLastModified.getTime() < lastUpdateAt.getTime()) {
+        if (!this.#shouldDoCompleteCrawl && modLastModified.getTime() < lastUpdateAt.getTime()) {
           break;
         }
 

@@ -50,24 +50,47 @@ export async function refreshStaleJarLists(
 @Injectable()
 export class CurseforgeProjectListCrawler {
   private readonly logger = new Logger(CurseforgeProjectListCrawler.name);
+  #refreshing = false;
+  #shouldDoCompleteCrawl = false;
 
   constructor(
     @Inject(SEQUELIZE_PROVIDER) private readonly sequelize: Sequelize,
     @InjectQueue(FETCH_CURSE_JARS_QUEUE) private readonly fetchCurseJarsQueue: Queue<TFetchJarQueueData>,
   ) {
-    void this.#executeRefresh();
+    void this.requestRefresh();
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
     try {
-      await this.#executeRefresh();
+      await this.requestRefresh();
     } catch (error) {
       this.logger.error(new Error('Periodic CurseForge refresh failed', { cause: error }));
     }
   }
 
-  async #executeRefresh() {
+  async requestRefresh(opts?: { complete?: boolean }): Promise<void> {
+    if (opts?.complete) {
+      this.#shouldDoCompleteCrawl = true;
+    }
+
+    if (this.#refreshing) {
+      this.logger.warn('Skipping refresh request because another one is already running');
+
+      return;
+    }
+
+    try {
+      this.#refreshing = true;
+
+      await this.#executeRefresh();
+      this.#shouldDoCompleteCrawl = false;
+    } finally {
+      this.#refreshing = false;
+    }
+  }
+
+  async #executeRefresh(): Promise<void> {
     if (process.env.DISABLE_CURSEFORGE === '1') {
       return;
     }
@@ -78,7 +101,7 @@ export class CurseforgeProjectListCrawler {
       },
     });
 
-    if (!lastUpdateStr) {
+    if (!lastUpdateStr || this.#shouldDoCompleteCrawl) {
       await this.doInitialCurseFetch();
 
       return;
@@ -130,7 +153,7 @@ export class CurseforgeProjectListCrawler {
   }
 
   private async doInitialCurseFetch() {
-    this.logger.log('Doing first curseforge crawl');
+    this.logger.log('Executing complete CurseForge project list crawl (as opposed to incremental update)');
 
     // during first fetch, we get every page
     // in subsequent fetches, we only go as far as the highest dateModified we stored in DB
@@ -145,14 +168,18 @@ export class CurseforgeProjectListCrawler {
     const allItems = new Map<number, TProjectCreationAttributes>();
 
     for (const category of categories) {
-      const mcVersionFilters = categoriesToSplit.has(category.id) ? minecraftVersions : ['1.18.2'];
+      const mcVersionFilters = categoriesToSplit.has(category.id) ? minecraftVersions : ['*'];
       for (const gameVersion of mcVersionFilters) {
         this.logger.log(`fetching category ${category.name} (id ${category.id} - ${category.url}) for mc ${gameVersion}`);
 
         let itemCount = 0;
 
         // eslint-disable-next-line no-await-in-loop
-        for await (const item of iterateCurseForgeModList({ pageSize: PAGE_SIZE, categoryId: category.id, gameVersion })) {
+        for await (const item of iterateCurseForgeModList({
+          pageSize: PAGE_SIZE,
+          categoryId: category.id,
+          gameVersion: gameVersion === '*' ? undefined : gameVersion,
+        })) {
           const lastUpload = getLastEditDate(item);
 
           if (lastUpload == null) {

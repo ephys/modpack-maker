@@ -1,6 +1,6 @@
 import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
-import Sequelize, { Op } from '@sequelize/core';
+import { Op, sql } from '@sequelize/core';
 import { Queue } from 'bull';
 import type { ProjectSource } from '../project/project.entity.js';
 import { Project } from '../project/project.entity.js';
@@ -16,7 +16,7 @@ class ModDiscoveryService {
     filter = filter.toLowerCase().trim();
 
     const projects = (await Project.findAll({
-      where: Sequelize.literal(`"failedFiles"::text <> '{}'`),
+      where: sql`"failedFiles"::text <> '{}'`,
     })).filter(project => {
       for (const error of Object.values(project.failedFiles)) {
         if (error.toLowerCase().includes(filter)) {

@@ -9,7 +9,7 @@ import type { FindByCursorResult } from '@ephys/sequelize-cursor-pagination';
 import { sequelizeFindByCursor } from '@ephys/sequelize-cursor-pagination';
 import { Injectable } from '@nestjs/common';
 import type { WhereOptions } from '@sequelize/core';
-import { QueryTypes, Sequelize, and, or } from '@sequelize/core';
+import { QueryTypes, Sequelize, and, or, sql } from '@sequelize/core';
 import DataLoader from 'dataloader';
 import uniq from 'lodash/uniq.js';
 import uniqBy from 'lodash/uniqBy.js';
@@ -189,8 +189,8 @@ class ModService {
         '$mv.modId$': key[0],
         '$j.projectId$': key[1],
         '$mv.supportedModLoader$': key[2],
-      }, Sequelize.where(
-        Sequelize.cast(Sequelize.col('mv.supportedMinecraftVersions'), 'text[]'),
+      }, sql.where(
+        sql.cast(sql.attribute('$mv.supportedMinecraftVersions$'), 'text[]'),
         overlap(...acceptedMinecraftVersions),
       )));
     }
