@@ -9,8 +9,7 @@ import type { TModrinthProjectVersion } from '../modrinth.api.js';
 import { getModrinthModFiles, getModrinthReleaseType } from '../modrinth.api.js';
 import { Project, ProjectSource } from '../project/project.entity.js';
 import { generateId } from '../utils/generic-utils.js';
-import type { PartialModVersion } from './curseforge-jar-crawler.processor.js';
-import { getModVersionsFromJar } from './curseforge-jar-crawler.processor.js';
+import { extractJarInfo } from './curseforge-jar-crawler.processor.js';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler.js';
 import { ModJar } from './mod-jar.entity.js';
 import { ModVersion } from './mod-version.entity.js';
@@ -140,24 +139,26 @@ export class ModrinthJarCrawlerProcessor {
       throw new Error(`[Modrinth File ${sourceFileMeta.id}] Unknown Platform: ${platform}`);
     }
 
-    const mods: PartialModVersion[] = await getModVersionsFromJar(file.url, supportedMcVersions);
-    if (mods.length === 0) {
+    const { byteLength, sha512, modVersions } = await extractJarInfo(file.url, supportedMcVersions);
+    if (modVersions.length === 0) {
       throw new Error('No mod found in jar');
     }
 
     const modJar = ModJar.build({
-      externalId: generateId(),
-      projectId: project.internalId,
-      fileName: file.filename,
-      sourceFileId: String(sourceFileMeta.id),
+      byteLength,
       downloadUrl: file.url,
-      releaseType: getModrinthReleaseType(sourceFileMeta.version_type),
+      externalId: generateId(),
+      fileName: file.filename,
+      projectId: project.internalId,
       releaseDate: sourceFileMeta.date_published,
+      releaseType: getModrinthReleaseType(sourceFileMeta.version_type),
+      sha512,
+      sourceFileId: String(sourceFileMeta.id),
     });
 
     await this.sequelize.transaction(async transaction => {
       await modJar.save({ transaction });
-      await Promise.all(mods.map(async mod => {
+      await Promise.all(modVersions.map(async mod => {
         return ModVersion.create({
           ...mod,
           jarId: modJar.internalId,

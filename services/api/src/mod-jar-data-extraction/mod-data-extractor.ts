@@ -18,7 +18,7 @@ export type TModMeta = {
 
 // FIXME: bow infinity fix uses "bifmod.info" :/
 
-export async function getModMetasFromJar(modJar: Buffer): Promise<TModMeta[]> {
+export async function getModMetasFromJar(modJar: ArrayBuffer): Promise<TModMeta[]> {
   const data = await Zip.loadAsync(modJar);
 
   const hasNewForge = data.files['META-INF/mods.toml'];

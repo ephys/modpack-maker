@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import * as crypto from 'node:crypto';
 import type { ExcludeNullProperties, ExcludePropertiesOfType } from '@ephys/fox-forge';
 import { ModLoader, minecraftVersions } from '@ephys/modpack-maker-common';
 import { Process, Processor } from '@nestjs/bull';
@@ -151,24 +152,26 @@ export class CurseforgeJarCrawlerProcessor {
     }
 
     // modJar.bundledMods
-    const mods: PartialModVersion[] = await getModVersionsFromJar(sourceFileMeta.downloadUrl, supportedMcVersions);
-    if (mods.length === 0) {
+    const { modVersions, sha512, byteLength } = await extractJarInfo(sourceFileMeta.downloadUrl, supportedMcVersions);
+    if (modVersions.length === 0) {
       throw new Error('No mod found in jar');
     }
 
     const modJar = ModJar.build({
-      externalId: generateId(),
-      projectId: project.internalId,
-      fileName: sourceFileMeta.fileName,
-      sourceFileId: String(sourceFileMeta.id),
+      byteLength,
       downloadUrl: sourceFileMeta.downloadUrl,
-      releaseType: getCurseReleaseType(sourceFileMeta.releaseType),
+      externalId: generateId(),
+      fileName: sourceFileMeta.fileName,
+      projectId: project.internalId,
       releaseDate: sourceFileMeta.fileDate,
+      releaseType: getCurseReleaseType(sourceFileMeta.releaseType),
+      sha512,
+      sourceFileId: String(sourceFileMeta.id),
     });
 
     await this.sequelize.transaction(async transaction => {
       await modJar.save({ transaction });
-      await Promise.all(mods.map(async mod => {
+      await Promise.all(modVersions.map(async mod => {
         return ModVersion.create({
           ...mod,
           jarId: modJar.internalId,
@@ -182,10 +185,19 @@ export class CurseforgeJarCrawlerProcessor {
 
 export type PartialModVersion = Omit<Attributes<ModVersion>, 'jarId'>;
 
-// TODO: store jar size
-export async function getModVersionsFromJar(jarUrl: string, supportedMcVersions: Set<string>): Promise<PartialModVersion[]> {
+export interface JarInfo {
+  sha512: ArrayBuffer;
+  byteLength: number;
+  modVersions: PartialModVersion[];
+}
+
+export async function extractJarInfo(jarUrl: string, supportedMcVersions: Set<string>): Promise<JarInfo> {
   const fileBuffer = await downloadModFile(jarUrl);
-  const modMetas = await getModMetasFromJar(fileBuffer);
+
+  const [modMetas, sha512] = await Promise.all([
+    getModMetasFromJar(fileBuffer),
+    crypto.subtle.digest('sha512', fileBuffer),
+  ]);
 
   const mods: PartialModVersion[] = [];
 
@@ -219,11 +231,11 @@ export async function getModVersionsFromJar(jarUrl: string, supportedMcVersions:
     });
   }
 
-  return mods;
+  return { modVersions: mods, byteLength: fileBuffer.byteLength, sha512 };
 }
 
 // TODO: verify sha
-export async function downloadModFile(url: string, retryAttempts = 3) {
+export async function downloadModFile(url: string, retryAttempts = 3): Promise<ArrayBuffer> {
   assert(typeof url === 'string', 'url must be a string');
 
   try {

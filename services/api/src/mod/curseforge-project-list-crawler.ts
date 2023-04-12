@@ -212,6 +212,8 @@ export class CurseforgeProjectListCrawler {
       this.sequelize,
       ProjectSource.CURSEFORGE,
     );
+
+    await refreshStaleJarLists(ProjectSource.CURSEFORGE, this.fetchCurseJarsQueue, this.sequelize, this.logger);
   }
 }
 

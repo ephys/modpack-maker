@@ -1,7 +1,7 @@
 import type { InferAttributes, InferCreationAttributes, NonAttribute } from '@sequelize/core';
 import { CreationOptional, DataTypes, Model } from '@sequelize/core';
 import * as DB from '@sequelize/core/decorators-legacy';
-import { Field as GraphQl, ObjectType as GraphQlObject, ID } from '../esm-compat/nest-graphql-esm.js';
+import { Field as GraphQl, ObjectType as GraphQlObject, ID, Int } from '../esm-compat/nest-graphql-esm.js';
 import type { ModpackMod } from '../modpack-version/modpack-mod.entity.js';
 import { tsEnum } from '../utils/sequelize-utils.js';
 import type { ModVersion } from './mod-version.entity.js';
@@ -37,8 +37,6 @@ export class ModJar extends Model<InferAttributes<ModJar>, InferCreationAttribut
   @GraphQl(() => ReleaseType)
   /**
    * Mod version, retrieved from internal files
-   *
-   * @type {number}
    */
   declare releaseType: ReleaseType;
 
@@ -54,8 +52,6 @@ export class ModJar extends Model<InferAttributes<ModJar>, InferCreationAttribut
   @DB.Attribute(DataTypes.TEXT)
   /**
    * For ID of the file in the source (curse / modrinth)'s database
-   *
-   * @type {number}
    */
   declare sourceFileId: string;
 
@@ -64,8 +60,6 @@ export class ModJar extends Model<InferAttributes<ModJar>, InferCreationAttribut
   @GraphQl(() => String)
   /**
    * Where this version can be downloaded
-   *
-   * @type {number}
    */
   declare downloadUrl: string;
 
@@ -74,10 +68,18 @@ export class ModJar extends Model<InferAttributes<ModJar>, InferCreationAttribut
   @GraphQl(() => String)
   /**
    * Where this version can be downloaded
-   *
-   * @type {number}
    */
   declare fileName: string;
+
+  @DB.Attribute(DataTypes.INTEGER)
+  @GraphQl(() => Int)
+  /**
+   * The length in bytes of this file
+   */
+  declare byteLength: number | null;
+
+  @DB.Attribute(DataTypes.BLOB)
+  declare sha512: ArrayBuffer | null;
 
   /** Declared by {@link ModpackMod#jar} */
   declare inModpacks: NonAttribute<ModpackMod[]>;
