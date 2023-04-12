@@ -71,6 +71,7 @@ type GqlModDependency {
 }
 
 type ModJar {
+  byteLength: Int!
   downloadUrl: String!
   fileName: String!
   id: ID!

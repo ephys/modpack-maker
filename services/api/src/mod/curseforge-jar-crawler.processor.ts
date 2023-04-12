@@ -196,7 +196,7 @@ export async function extractJarInfo(jarUrl: string, supportedMcVersions: Set<st
 
   const [modMetas, sha512] = await Promise.all([
     getModMetasFromJar(fileBuffer),
-    crypto.subtle.digest('sha512', fileBuffer),
+    crypto.subtle.digest('sha-512', fileBuffer),
   ]);
 
   const mods: PartialModVersion[] = [];
