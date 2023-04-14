@@ -9,11 +9,18 @@ import type { TModrinthProjectVersion } from '../modrinth.api.js';
 import { getModrinthModFiles, getModrinthReleaseType } from '../modrinth.api.js';
 import { Project, ProjectSource } from '../project/project.entity.js';
 import { generateId } from '../utils/generic-utils.js';
+import { parseSafeIntegerOrThrow } from '../utils/parse-int.js';
 import { extractJarInfo } from './curseforge-jar-crawler.processor.js';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler.js';
 import { ModJar } from './mod-jar.entity.js';
 import { ModVersion } from './mod-version.entity.js';
 import { FETCH_MODRINTH_JARS_QUEUE } from './mod.constants.js';
+
+if (!process.env.MODRINTH_JAR_CRAWLER_CONCURRENCY) {
+  throw new Error('env MODRINTH_JAR_CRAWLER_CONCURRENCY is not set');
+}
+
+const modrinthJarConcurrency = parseSafeIntegerOrThrow(process.env.MODRINTH_JAR_CRAWLER_CONCURRENCY);
 
 @Processor(FETCH_MODRINTH_JARS_QUEUE)
 export class ModrinthJarCrawlerProcessor {
@@ -25,7 +32,7 @@ export class ModrinthJarCrawlerProcessor {
 
   // TODO: dedupe code with curseforge-jar-crawler.processor.ts
   @Process({
-    concurrency: 10,
+    concurrency: modrinthJarConcurrency,
   })
   async fetchCurseProjectFiles(job: Job<TFetchJarQueueData>) {
     const projectSourceType = job.data[0];

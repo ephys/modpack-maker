@@ -14,10 +14,17 @@ import { InjectSequelize } from '../database/database.providers.js';
 import { getModMetasFromJar } from '../mod-jar-data-extraction/mod-data-extractor.js';
 import { Project, ProjectSource } from '../project/project.entity.js';
 import { generateId } from '../utils/generic-utils.js';
+import { parseSafeIntegerOrThrow } from '../utils/parse-int.js';
 import type { TFetchJarQueueData } from './curseforge-project-list-crawler.js';
 import { ModJar } from './mod-jar.entity.js';
 import { ModVersion } from './mod-version.entity.js';
 import { FETCH_CURSE_JARS_QUEUE } from './mod.constants.js';
+
+if (!process.env.CURSE_JAR_CRAWLER_CONCURRENCY) {
+  throw new Error('env CURSE_JAR_CRAWLER_CONCURRENCY is not set');
+}
+
+const curseJarConcurrency = parseSafeIntegerOrThrow(process.env.CURSE_JAR_CRAWLER_CONCURRENCY);
 
 @Processor(FETCH_CURSE_JARS_QUEUE)
 export class CurseforgeJarCrawlerProcessor {
@@ -28,7 +35,7 @@ export class CurseforgeJarCrawlerProcessor {
   ) {}
 
   @Process({
-    concurrency: 10,
+    concurrency: curseJarConcurrency,
   })
   async fetchCurseProjectFiles(job: Job<TFetchJarQueueData>) {
     const projectSourceType = job.data[0];
